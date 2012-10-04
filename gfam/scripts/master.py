@@ -210,9 +210,13 @@ class GFamMasterScript(CommandLineApp):
         depends=jaccard
         infile=jaccard
 
+        [build_new_domains]
+        depends=cca
+        infile=cca
+
         [find_domain_arch]
-        depends=assignment_source_filter, cca
-        infile=assignment_source_filter, cca
+        depends=assignment_source_filter, build_new_domains
+        infile=assignment_source_filter, build_new_domains
 
         [label_assignment]
         depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
@@ -221,6 +225,10 @@ class GFamMasterScript(CommandLineApp):
         [overrep]
         depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
         infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
+
+	[hmm]
+	depends=cca
+	infile=seqslicer,file.new_domains_table
 
         """)
 
@@ -598,6 +606,9 @@ min_term_size=1
 
 [generated]
 
+# File with the new domains table
+file.new_domains_table=%(folder.work)s/new_domains_table.tab
+
 # File in which the unassigned sequence fragments are stored
 file.unassigned_fragments=%(folder.work)s/unassigned_fragments.ffa
 
@@ -609,4 +620,8 @@ file.domain_architecture_details=%(folder.output)s/domain_architecture_details.t
 
 # File containing genome-level domain architecture statistics
 file.domain_architecture_stats=%(folder.output)s/domain_architecture_stats.txt
+
+# Directory where the cluster sequences, alignments and hmms are stored
+file.dir_hmms=%(folder.output)s/hmms
 """
+

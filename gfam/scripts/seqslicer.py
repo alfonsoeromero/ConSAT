@@ -15,7 +15,7 @@ __license__ = "GPL"
 
 class SeqSlicerApp(CommandLineApp):
     """\
-    Usage: %prog [options] [slice_file] sequences_file
+    Usage: %prog [options] [slice_file] [output_file] sequences_file
 
     Given a sequence database in FASTA format and a list of regions
     to be sliced from those sequences, generates another FASTA file
@@ -65,7 +65,6 @@ class SeqSlicerApp(CommandLineApp):
                 action="store_true",
                 help="keep original sequence IDs even if this will duplicate "
                      "existing IDs in the output file.")
-
         return parser
 
     def load_sequences(self, seq_file):
@@ -80,6 +79,7 @@ class SeqSlicerApp(CommandLineApp):
 
     def run_real(self):
         """Runs the application and returns the exit code"""
+        self.output_file = None
 
         if len(self.args) == 1:
             slice_file = "-"
@@ -87,6 +87,10 @@ class SeqSlicerApp(CommandLineApp):
         elif len(self.args) == 2:
             slice_file = self.args[0]
             seq_file = self.args[1]
+        elif len(self.args) == 3:
+            slice_file = self.args[0]
+            seq_file = self.args[2]
+            self.output_file = self.args[1]
         else:
             self.parser.print_help()
             return 1
@@ -99,6 +103,9 @@ class SeqSlicerApp(CommandLineApp):
         self.log.info("Processing input file: %s..." % slice_file)
 
         writer = fasta.Writer(sys.stdout)
+        if self.output_file is not None:
+            self.output_fd = open(output_file,"r")
+            writer_file = fasta.Writer(output_fd)
 
         for line in open_anything(slice_file):
             parts = line.strip().split()
@@ -153,6 +160,12 @@ class SeqSlicerApp(CommandLineApp):
                     id=new_id, name=record.name, description="")
             writer.write(new_record)
 
+            if output_file is not None:
+                writer_file.write(new_record)
+
+        if output_file is not None:
+            output_fd.close()
 
 if __name__ == "__main__":
     sys.exit(SeqSlicerApp().run())
+
