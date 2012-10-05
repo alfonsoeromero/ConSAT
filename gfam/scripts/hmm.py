@@ -4,12 +4,15 @@
 import optparse
 import sys
 import os
+import errno
 from subprocess import call
 
 from gfam import fasta
 from collections import defaultdict
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
+from gfam.sequence import SeqRecord
+
 
 __author__  = "Alfonso E. Romero"
 __email__   = "aeromero@cs.rhul.ac.uk"
@@ -35,15 +38,15 @@ class HMM(CommandLineApp):
     short_name = "hmm"
 
     def __init__(self, *args, **kwds):
-        super(HMMp, self).__init__(*args, **kwds)
+        super(HMM, self).__init__(*args, **kwds)
 
     def create_parser(self):
         """Creates the command line parser for this application"""
-        parser = super(HMMp, self).create_parser()
-        parser.add_option("-d", "--directory",
+        parser = super(HMM, self).create_parser()
+        parser.add_option("--dir",
                 dest="directory", metavar="FILE",
                 help="directory where the HMMs will be stored",
-                config_key="generated:file.dir_hmms",
+                config_key="generated/file.dir_hmms",
                 default=None)
 
         return parser
@@ -53,8 +56,8 @@ class HMM(CommandLineApp):
 
         table_file_desc = open(table_file, 'r')
         for line in table_file_desc:
-            fields = line.split("\t")
-            table[field[0]] = fields[1:]
+            fields = line.strip().split("\t")
+            table[fields[0]] = fields[1:]
         table_file_desc.close()
 
         return table 
@@ -65,8 +68,8 @@ class HMM(CommandLineApp):
         try:
             os.makedirs(maindir)
         except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+            if exception.errno != errno.EEXIST:
+                raise
 
         if not maindir.endswith(os.path.sep):
             maindir += os.path.sep
@@ -76,24 +79,24 @@ class HMM(CommandLineApp):
         try:
             os.makedirs(self.sequences_dir)
         except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+            if exception.errno != errno.EEXIST:
+                raise
 
         # 3.- ... the alignments directory
         self.alignments_dir = maindir + "alignments"
         try:
             os.makedirs(self.alignments_dir)
         except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+            if exception.errno != errno.EEXIST:
+                raise
 
         # 4.- ... and the hmms directory
         self.hmms_dir = maindir + "hmms"
         try:
-            os.makedirs(hmms_dir)
+            os.makedirs(self.hmms_dir)
         except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+            if exception.errno != errno.EEXIST:
+                raise
 
     def separate_sequences(self, table, sequences_file):
         """Separates the fasta sequence file in individual fasta files,
@@ -101,13 +104,13 @@ class HMM(CommandLineApp):
         reader = fasta.Parser(open_anything(sequences_file))
         seqs = dict(((seq.id, seq) for seq in reader))
 
-	for cluster_name,cluser_seqs in table.iteritems():
+	for cluster_name,cluster_seqs in table.iteritems():
             output_file_name = self.sequences_dir + os.path.sep + cluster_name
-            output_fd = open(output_file_name + ".faa", "r")
+            output_fd = open(output_file_name + ".faa", "w")
             writer = fasta.Writer(output_fd)
 
             for sequence in cluster_seqs:
-                obj = SeqRecord(self.seqs[sequence], sequence, "", "")
+                obj = SeqRecord(seqs[sequence].seq, sequence, "", "")
                 writer.write(obj)
 
             output_fd.close()
@@ -120,8 +123,8 @@ class HMM(CommandLineApp):
         for cluster in cluster_names:
             seq = seq_dir + cluster + ".faa"
             align = align_dir + cluster + ".sto"
-
-            call(["clustalo", "-i " + seq_dir, "--outfmt=st", "-o " + align])
+            print >> sys.stderr, "CLUSTER: ", cluster
+            call(["clustalo", "--infile=" + seq, "--outfmt=st", "--outfile=" + align])
 	# no errors are checked, in the future the call should be checked
 
     def building_hmms(self, cluster_names):
@@ -161,4 +164,4 @@ class HMM(CommandLineApp):
         self.building_hmms(table.keys())
 
 if __name__ == "__main__":
-    sys.exit(HMMp().run())
+    sys.exit(HMM().run())

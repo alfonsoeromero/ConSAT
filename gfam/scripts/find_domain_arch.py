@@ -91,7 +91,7 @@ class FindDomainArchitectureApp(CommandLineApp):
         table_file = open(self.options.new_domains_table, "w")
         with redirected(stdout=table_file):
             for cluster_name in sorted(table.keys()):
-                print cluster_name "\t" "\t".join(table[cluster_name])
+                print cluster_name + "\t" + "\t".join(table[cluster_name])
         table_file.close()
 
     def run_real(self):
@@ -230,7 +230,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                                   unassigned_app.seq_ids_to_length[seq_id])
 
     def process_clustering_file(self, fname):
-        table = defauldict()
+        table = defaultdict()
         f = open(fname)
         idx = 1
         for line in f:

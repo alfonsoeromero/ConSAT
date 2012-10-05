@@ -160,10 +160,10 @@ class SeqSlicerApp(CommandLineApp):
                     id=new_id, name=record.name, description="")
             writer.write(new_record)
 
-            if output_file is not None:
+	    if self.output_file is not None:
                 writer_file.write(new_record)
 
-        if output_file is not None:
+	if self.output_file is not None:
             output_fd.close()
 
 if __name__ == "__main__":

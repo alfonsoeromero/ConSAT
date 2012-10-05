@@ -210,13 +210,9 @@ class GFamMasterScript(CommandLineApp):
         depends=jaccard
         infile=jaccard
 
-        [build_new_domains]
-        depends=cca
-        infile=cca
-
         [find_domain_arch]
-        depends=assignment_source_filter, build_new_domains
-        infile=assignment_source_filter, build_new_domains
+        depends=assignment_source_filter, cca
+        infile=assignment_source_filter, cca
 
         [label_assignment]
         depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
@@ -226,9 +222,9 @@ class GFamMasterScript(CommandLineApp):
         depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
         infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
 
-	[hmm]
-	depends=cca
-	infile=seqslicer,file.new_domains_table
+        [hmm]
+        depends=cca
+        infile=seqslicer,file.new_domains_table
 
         """)
 
@@ -372,7 +368,10 @@ class GFamMasterScript(CommandLineApp):
         shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
         self.log.info("Exported overrepresentation analysis to %s." % outfile)
 
-###########################################################################
+        # Run the HMMs
+        self.modula.run("hmm", force=self.options.force)
+	
+	###########################################################################
 
 CONFIGURATION_FILE_TEMPLATE = """\
 ###########################################################################
