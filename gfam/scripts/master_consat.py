@@ -202,12 +202,12 @@ class ConSATMasterScript(CommandLineApp):
         infile=assignment_source_filter, hmm_scan
 
         [label_assignment]
-        depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
-        infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
+        depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
+        infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
 
         [overrep]
-        depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
-        infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch
+        depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
+        infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
 
         """)
 
@@ -333,8 +333,8 @@ class ConSATMasterScript(CommandLineApp):
 
         # Run and export the inferred domain architectures
         outfile = os.path.join(outfolder, "domain_architectures.tab")
-        self.modula.run("find_domain_arch", force=self.options.force)
-        shutil.copy(self.modula.storage_engine.get_filename("find_domain_arch"),
+        self.modula.run("find_domain_arch_with_hmms", force=self.options.force)
+        shutil.copy(self.modula.storage_engine.get_filename("find_domain_arch_with_hmms"),
                 outfile)
         self.log.info("Exported domain architectures to %s." % outfile)
 
@@ -351,9 +351,6 @@ class ConSATMasterScript(CommandLineApp):
         shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
         self.log.info("Exported overrepresentation analysis to %s." % outfile)
 
-        # Run the HMMs
-        self.modula.run("hmm", force=self.options.force)
-	
 	###########################################################################
 
 CONFIGURATION_FILE_TEMPLATE = """\
