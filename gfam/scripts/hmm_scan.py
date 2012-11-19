@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""All-against-all BLASTing of a given set of sequences.
-
+"""HMM scan of a set of pre-trained models in putative protein
+domains against a set of sequences
 """
 
 from __future__ import with_statement
@@ -10,6 +10,7 @@ import os.path
 import subprocess
 import sys
 import tempfile
+import operator
 
 from gfam import fasta
 from gfam.scripts import CommandLineApp
@@ -28,7 +29,7 @@ class HMMScanApp(CommandLineApp):
     runs hmm_scan an returns the hits of the HMM models in a file
     with the format:
 
-    	ID_SEQUENCEi:j ID_MODEL EVALUE
+        ID_SEQUENCE:i-j ID_MODEL EVALUE
 
    where i and j are positions in the sequence, and EVALUE is the
    expected value returned by the HMM tool    
@@ -84,13 +85,20 @@ class HMMScanApp(CommandLineApp):
                     self.error("cannot find %s in system path" % util)
             setattr(self.options, optkey, os.path.abspath(path))
 
-
         # we create a temporal file to store the HMM output
         hmm_output = self.create_temp_file()
-        self.press_hmm_library()
-        self.run_hmm_scan(hmm_output)
-        self.process_hmm_output(hmm_output)
- 
+        if not self.press_hmm_library():
+            return 1
+        if not self.run_hmm_scan(hmm_output):
+            return 1
+
+        table = self.process_hmm_output(hmm_output)
+        self.write_table(table)
+
+    def write_table(self, table):
+        for entry in table:
+            print entry.join(" "), "\n" 
+
     def press_hmm_library(self):
         """Runs ``hmmpress`` on the collection of HMM to make
 	it a binary file an make it able to be run with hmm_scan
@@ -117,6 +125,7 @@ class HMMScanApp(CommandLineApp):
                 return False
 
             self.log.info("HMM models pressed")
+        return True
 
 
     def get_tool_cmdline(self, tool_name, args = None):
@@ -154,16 +163,71 @@ class HMMScanApp(CommandLineApp):
         # Nothing succeeded
         return None
 
-    def process_hmm_output(self, hmm_output):
-        current_sequence = None
-        with open(hmm_output) as f:
-	    for line in f:
-                if not line.startswith("#"):
-                    words = line.split
-		    [seq, _, _, model, _, _, score, _, _, _, _, _, _, _, _, sfrom, sto] = words[0:5]
+    def process_hmm_line(self, line):
+        """Process a line coming from the tabular output of HMMer, taking
+        the following fields as a list: sequence, model, evalue, starting
+        position of the hit, ending position of the hit, and returning the
+        list
+        """
+        fields = line.split()
+        return [fields[0], fields[3], fields[6], fields[15], fields[16]]
 
-                    if current_sequence is None:
-                        current_sequence = seq
+    def process_hmm_output(self, hmm_output):
+        """Process the tabular output from a HMMer execution, returning a
+        list of lists, where each element of the list contains three elements:
+        IDsequence:begin-end, HMM_model producing the hit AND score of the hit
+        (evalue"""
+        hits_per_sequence = dict()
+        # first, we retrieve all hits per sequence
+        with open(hmm_output) as f:
+            for line in f:
+                if not line.startswith("#"):
+		    [seq, model, score, sfrom, sto] = process_hmm_line(line)
+                    hit = [model, sfrom, sto, score]
+                    if seq not in hits_per_sequence:
+                        hits_per_sequence[seq] = [hit]
+                    else:
+                        hits_per_sequence[seq].append(hit)
+
+        # second, an assignment table is built for all sequences,
+        # combining hits
+        assignment_table = []
+        for (sequence, hits) in hits_per_sequence.iteritems():
+            sorted_hits = sort_hits_by_length(hits)
+            accepted_hits = []
+            for hit in sorted_hits:
+                if not overlaps(hit, accepted_hits):
+                    accepted_hits.append(hit)
+            [real_sequence, limits] = sequence.split(":")
+            [base_begin, base_end] = limits.split("-")
+
+            # here we create the following table ID_SEQUENCE:i-j ID_MODEL EVALUE
+            for hit in accepted_hits:
+                [hit_model, hit_begin, hit_end, hit_score] = hit
+                length = int(hit_end) - int(hit_end) + 1
+                begin = int(base_begin) + int(hit_begin) - 1
+                end = begin + length - 1
+                new_seq = real_sequence + str(":") + str(begin) + "-" + str(end)
+                assignment_table.append([new_seq, hit_model, score])
+        return assignment_table
+
+    def overlaps(self, hit, accepted_hits):
+        """Checks whether a given hit [model, begin, start, score] overlaps with a certain
+        list of hits. The score is not considered at all to check the overlap, just the
+        positions
+        """
+        for accepted_hit in accepted_hits:
+            if max(0, min(hit[2], accepted_hit[2]) - max(hit[1], accepted[1])) > 0:
+                return True
+        return False
+        
+    def sort_hits_by_length(self, hits):
+        """Takes a list of hits [model, begin, start, score] 
+        and returns it sorted by length
+        """
+        decorated_hits = [[hit, hit[2]-hit[1]] for hit in hits]
+        decorated_hits.sort(key=itemgetter(1), reverse=True)
+        return [hit[0] for hit in decorated_hits]
 
     def run_hmm_scan(self, hmm_output_file):
         """Runs ``hmmscan`` on the given sequence file, writing the output to the
