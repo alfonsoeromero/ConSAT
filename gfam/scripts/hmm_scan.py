@@ -10,7 +10,7 @@ import os.path
 import subprocess
 import sys
 import tempfile
-import operator
+from operator import itemgetter
 
 from gfam import fasta
 from gfam.scripts import CommandLineApp
@@ -63,7 +63,6 @@ class HMMScanApp(CommandLineApp):
 
     def create_temp_file(self):
         f = tempfile.NamedTemporaryFile(delete=True)
-	print "Temporal file ", f.name, " created"
 	f.close()
 	return f.name
 
@@ -97,7 +96,7 @@ class HMMScanApp(CommandLineApp):
 
     def write_table(self, table):
         for entry in table:
-            print entry.join(" "), "\n" 
+            print " ".join(entry) 
 
     def press_hmm_library(self):
         """Runs ``hmmpress`` on the collection of HMM to make
@@ -109,15 +108,17 @@ class HMMScanApp(CommandLineApp):
             # the binaries do not exist, we create them
             self.log.info("Pressing the HMM library")
             args = []
-            args.extend(["-f", " "])
+            args.extend(["-f"])
             args.extend([self.hmm_file])
 
 	    cmd = self.get_tool_cmdline("hmmpress", args)
             if not cmd:
                 self.log.fatal("cannot find hmmpress in %s" % self.options.hmmpress_path)
                 return False
-            
-            hmmpress_prog = subprocess.Popen(args, stdin=open(os.devnull), stdout=(os.devnull))
+
+            self.log.info("Executing the following command " + str(cmd))
+
+            hmmpress_prog = subprocess.Popen(cmd, stdin=open(os.devnull), stdout=open(os.devnull))
             retcode = hmmpress_prog.wait()
 
             if retcode != 0:
@@ -182,7 +183,10 @@ class HMMScanApp(CommandLineApp):
         with open(hmm_output) as f:
             for line in f:
                 if not line.startswith("#"):
-		    [seq, model, score, sfrom, sto] = process_hmm_line(line)
+		    [model, seq, score, sfrom, sto] = self.process_hmm_line(line)
+
+                    self.log.info("Seq: " + seq + ", model: " + model + ", score: " + score + ", sfrom: " + sfrom + ", sto: " + sto)
+
                     hit = [model, sfrom, sto, score]
                     if seq not in hits_per_sequence:
                         hits_per_sequence[seq] = [hit]
@@ -193,18 +197,19 @@ class HMMScanApp(CommandLineApp):
         # combining hits
         assignment_table = []
         for (sequence, hits) in hits_per_sequence.iteritems():
-            sorted_hits = sort_hits_by_length(hits)
+            sorted_hits = self.sort_hits_by_length(hits)
             accepted_hits = []
             for hit in sorted_hits:
-                if not overlaps(hit, accepted_hits):
+                if not self.overlaps(hit, accepted_hits):
                     accepted_hits.append(hit)
+            self.log.info("Processing sequence " + sequence +"\n")
             [real_sequence, limits] = sequence.split(":")
             [base_begin, base_end] = limits.split("-")
 
             # here we create the following table ID_SEQUENCE:i-j ID_MODEL EVALUE
             for hit in accepted_hits:
                 [hit_model, hit_begin, hit_end, hit_score] = hit
-                length = int(hit_end) - int(hit_end) + 1
+                length = int(hit_end) - int(hit_begin) + 1
                 begin = int(base_begin) + int(hit_begin) - 1
                 end = begin + length - 1
                 new_seq = real_sequence + str(":") + str(begin) + "-" + str(end)
@@ -217,7 +222,7 @@ class HMMScanApp(CommandLineApp):
         positions
         """
         for accepted_hit in accepted_hits:
-            if max(0, min(hit[2], accepted_hit[2]) - max(hit[1], accepted[1])) > 0:
+            if max(0, min(int(hit[2]), int(accepted_hit[2])) - max(int(hit[1]), int(accepted_hit[1]))) > 0:
                 return True
         return False
         
@@ -225,7 +230,7 @@ class HMMScanApp(CommandLineApp):
         """Takes a list of hits [model, begin, start, score] 
         and returns it sorted by length
         """
-        decorated_hits = [[hit, hit[2]-hit[1]] for hit in hits]
+        decorated_hits = [[hit, int(hit[2])-int(hit[1])] for hit in hits]
         decorated_hits.sort(key=itemgetter(1), reverse=True)
         return [hit[0] for hit in decorated_hits]
 
@@ -241,13 +246,17 @@ class HMMScanApp(CommandLineApp):
 	args.extend(["--domtblout", hmm_output_file])
         args.extend(["--acc"])
 	args.extend(["--incE", str(self.options.evalue)])
+        args.append(self.hmm_file) #hmm database
+        args.append(self.sequence_file) #sequence file
 
         cmd = self.get_tool_cmdline("hmmscan", args)
         if not cmd:
             self.log.fatal("cannot find hmmscan in %s" % self.options.hmmscan_path)
             return False	    
 
-        hmmscan_prog = subprocess.Popen(args, stdin=open(os.devnull), stdout=open(os.devnull))
+        self.log.info("Executing " + " ".join(map(str, cmd)))
+
+        hmmscan_prog = subprocess.Popen(cmd, stdin=open(os.devnull), stdout=open(os.devnull))
         retcode = hmmscan_prog.wait()
         if retcode != 0:
             self.log.fatal("hmmscan exit code was %d, exiting..." % retcode)

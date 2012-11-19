@@ -84,15 +84,15 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                 dest="max_overlap", type=int, default=20)
         return parser
 
-    def print_new_domains_table(self, table):
-        """Prins the new domain table"""
-        self.log.info("Printing the new domains table")
-        
-        table_file = open(self.options.new_domains_table, "w")
-        with redirected(stdout=table_file):
-            for cluster_name in sorted(table.keys()):
-                print cluster_name + "\t" + "\t".join(table[cluster_name])
-        table_file.close()
+#    def print_new_domains_table(self, table):
+#        """Prins the new domain table"""
+#        self.log.info("Printing the new domains table")
+#        
+#        table_file = open(self.options.new_domains_table, "w")
+#        with redirected(stdout=table_file):
+#            for cluster_name in sorted(table.keys()):
+#                print cluster_name + "\t" + "\t".join(table[cluster_name])
+#        table_file.close()
 
     def run_real(self):
         """Runs the applications"""
@@ -120,8 +120,8 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         self.process_hmmer_file(hmmer_file)
         self.sort_by_domain_architecture()
 
-        if self.options.new_domains_table:
-           self.print_new_domains_table(table)
+#        if self.options.new_domains_table:
+#           self.print_new_domains_table(self.options.new_domains_table)
 
         for seqs in self.domain_archs.itervalues():
             seqs.sort()
@@ -172,7 +172,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             def exclude_novel_domains(domain_architecture):
                 """Excludes novel domains from a domain architecture and returns
                 the filtered domain architecture as a tuple."""
-                return tuple(a for a in domain_architecture if a not in this.hmm_domains)		
+                return tuple(a for a in domain_architecture if a not in self.hmm_domains)		
 
             archs_without_novel = set(exclude_novel_domains(arch)
                     for arch in all_archs)
@@ -231,13 +231,14 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
     def process_hmmer_file(self, fname):
         f = open(fname)
-	this.hmm_domains = set()
+	self.hmm_domains = set()
         for line in f:
+            self.log.info("Processing line: " + line)
             id_prot, model, evalue = line.strip().split() # evalue is not used, by the moment
             seq_id, _, limits = id_prot.rpartition(":")
             start, end = map(int, limits.split("-"))
             self.seqcat[seq_id].assign_(start, end, model)
-            this.hmm_domains.add(model)
+            self.hmm_domains.add(model)
         f.close()
 
     def sort_by_domain_architecture(self):

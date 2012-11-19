@@ -240,7 +240,7 @@ class ConSATMasterScript(CommandLineApp):
     def read_config(self):
         """Reads the configuration from the given file and returns an
         appropriate `ConfigParser` instance."""
-        self.options.config_file = self.options.config_file or "gfam.cfg"
+        self.options.config_file = self.options.config_file or "consat.cfg"
 
         config_file = self.options.config_file
         if not os.path.exists(config_file):
@@ -391,6 +391,10 @@ file.mapping.interpro2name=data/names.dat.gz
 
 # File containing the parent-child relationships of InterPro terms
 file.mapping.interpro_parent_child=data/ParentChildTreeFile.txt
+
+# Input file containing the HMMs used to tag unnasigned pieces, in 
+# HMMer format
+file.input.hmms=
 
 ###########################################################################
 ## Folders                                                               ##
