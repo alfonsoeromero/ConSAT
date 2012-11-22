@@ -26,7 +26,7 @@ class HMMScanApp(CommandLineApp):
     Usage: %prog [options] sequences_file hmm_file
 
     Given a sequence database in FASTA format, and a HMM file, 
-    runs hmm_scan an returns the hits of the HMM models in a file
+    runs hmmsearch an returns the hits of the HMM models in a file
     with the format:
 
         ID_SEQUENCE:i-j ID_MODEL EVALUE
@@ -43,16 +43,16 @@ class HMMScanApp(CommandLineApp):
 
         parser.add_option("-a", dest="num_threads", default=1,
                 type=int, metavar="N",
-                help="instruct hmm_scan to use N cores. This option "
-                "is passed on intact to hmm_scan. Default: %default",
+                help="instruct hmmsearch to use N cores (threads). This option "
+                "is passed on intact to hmmsearch. Default: %default",
                 config_key="num_cpu_cores"
         )
         parser.add_option("-e", dest="evalue", default=1e-2,
                 help="evalue threshold for inclusion of sequence hits. Default",
 		config_key="analysis:hmm_scan/hmmer_theshold. Default: %default"
         )
-        parser.add_option("--hmmscan-path", dest="hmmscan_path",
-                help="uses PATH as the path to the hmmscan executable",
+        parser.add_option("--hmmscan-path", dest="hmmsearch_path",
+                help="uses PATH as the path to the hmmsearch executable",
                 config_key="utilities/util.hmmscan", metavar="PATH"
         )
         parser.add_option("--hmmpress-path", dest="hmmpress_path",
@@ -73,9 +73,9 @@ class HMMScanApp(CommandLineApp):
         else:
 	    self.sequence_file, self.hmm_file = self.args
 
-        # Find hmm_scan in the current path if needed, ensure that
+        # Finds hmmsearch in the current path if needed, ensure that
         # the paths are absolute.
-        for util in ["hmmscan", "hmmpress"]:
+        for util in ["hmmsearch", "hmmpress"]:
             optkey = "%s_path" % util
             path = getattr(self.options, optkey)
             if not path:
@@ -88,7 +88,7 @@ class HMMScanApp(CommandLineApp):
         hmm_output = self.create_temp_file()
         if not self.press_hmm_library():
             return 1
-        if not self.run_hmm_scan(hmm_output):
+        if not self.run_hmm_search(hmm_output):
             return 1
 
         table = self.process_hmm_output(hmm_output)
@@ -100,7 +100,7 @@ class HMMScanApp(CommandLineApp):
 
     def press_hmm_library(self):
         """Runs ``hmmpress`` on the collection of HMM to make
-	it a binary file an make it able to be run with hmm_scan
+	it a binary file an make it able to be run with hmmsearch
 	"""
         # First, we check whether the binary files exist
         binary_filenames = [self.hmm_file + ".h3" + i for i in ["f", "i", "m", "p"]]
@@ -171,7 +171,7 @@ class HMMScanApp(CommandLineApp):
         list
         """
         fields = line.split()
-        return [fields[0], fields[3], fields[6], fields[15], fields[16]]
+        return [fields[0], fields[3], fields[6], fields[19], fields[20]]
 
     def process_hmm_output(self, hmm_output):
         """Process the tabular output from a HMMer execution, returning a
@@ -183,10 +183,8 @@ class HMMScanApp(CommandLineApp):
         with open(hmm_output) as f:
             for line in f:
                 if not line.startswith("#"):
-		    [model, seq, score, sfrom, sto] = self.process_hmm_line(line)
-
-                    self.log.info("Seq: " + seq + ", model: " + model + ", score: " + score + ", sfrom: " + sfrom + ", sto: " + sto)
-
+		    [seq, model, score, sfrom, sto] = self.process_hmm_line(line)
+                    #self.log.info("Seq: " + seq + ", model: " + model + ", score: " + score + ", sfrom: " + sfrom + ", sto: " + sto)
                     hit = [model, sfrom, sto, score]
                     if seq not in hits_per_sequence:
                         hits_per_sequence[seq] = [hit]
@@ -202,7 +200,7 @@ class HMMScanApp(CommandLineApp):
             for hit in sorted_hits:
                 if not self.overlaps(hit, accepted_hits):
                     accepted_hits.append(hit)
-            self.log.info("Processing sequence " + sequence +"\n")
+#           self.log.info("Processing sequence " + sequence +"\n")
             [real_sequence, limits] = sequence.split(":")
             [base_begin, base_end] = limits.split("-")
 
@@ -234,12 +232,12 @@ class HMMScanApp(CommandLineApp):
         decorated_hits.sort(key=itemgetter(1), reverse=True)
         return [hit[0] for hit in decorated_hits]
 
-    def run_hmm_scan(self, hmm_output_file):
-        """Runs ``hmmscan`` on the given sequence file, writing the output to the
+    def run_hmm_search(self, hmm_output_file):
+        """Runs ``hmmsearch`` on the given sequence file, writing the output to the
         given ``hmm_output_file``.
         Returns ``True`` if the execution was successful, ``False`` otherwise.
         """
-        self.log.info("Invoking hmmscan, this might take a long time...")
+        self.log.info("Invoking hmmsearch, this might take a long time...")
 
         args = []
         args.extend(["--cpu", str(self.options.num_threads)])
@@ -249,9 +247,9 @@ class HMMScanApp(CommandLineApp):
         args.append(self.hmm_file) #hmm database
         args.append(self.sequence_file) #sequence file
 
-        cmd = self.get_tool_cmdline("hmmscan", args)
+        cmd = self.get_tool_cmdline("hmmsearch", args)
         if not cmd:
-            self.log.fatal("cannot find hmmscan in %s" % self.options.hmmscan_path)
+            self.log.fatal("cannot find hmmsearch in %s" % self.options.hmmscan_path)
             return False	    
 
         self.log.info("Executing " + " ".join(map(str, cmd)))
@@ -259,10 +257,10 @@ class HMMScanApp(CommandLineApp):
         hmmscan_prog = subprocess.Popen(cmd, stdin=open(os.devnull), stdout=open(os.devnull))
         retcode = hmmscan_prog.wait()
         if retcode != 0:
-            self.log.fatal("hmmscan exit code was %d, exiting..." % retcode)
+            self.log.fatal("hmmsearch exit code was %d, exiting..." % retcode)
             return False
 
-        self.log.info("hmmscan returned successfully.")
+        self.log.info("hmmsearch returned successfully.")
         return True
 
 if __name__ == "__main__":

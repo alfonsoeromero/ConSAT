@@ -160,9 +160,12 @@ def test():
     """Short self-test routines"""
     from urllib2 import urlopen
 
-    f = urlopen("ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans/NC_005213.ffn")
-    for seq in Parser(f):
-        print seq.seq
+    #f = urlopen("ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans_Kin4_M_uid58009/NC_005213.ffn")
+    f = open("/home/local/aeromero/databases/uniprot/uniprot_trembl.fasta")
+    parser = Parser(f)
+    parser = regexp_remapper(parser, r'(\w+\|)(?P<id>\w+)(\|\w+)+')
+    for seq in parser:
+        print seq.id
 
 if __name__ == "__main__":
     test()
