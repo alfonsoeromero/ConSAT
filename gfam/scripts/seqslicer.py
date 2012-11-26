@@ -8,9 +8,9 @@ from gfam.sequence import SeqRecord
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
+__authors__  = "Tamas Nepusz, Alfonso E. Romero"
 __email__   = "tamas@cs.rhul.ac.uk"
-__copyright__ = "Copyright (c) 2010, Tamas Nepusz"
+__copyright__ = "Copyright (c) 2012, Tamas Nepusz, Alfonso E. Romero"
 __license__ = "GPL"
 
 class SeqSlicerApp(CommandLineApp):
@@ -67,15 +67,109 @@ class SeqSlicerApp(CommandLineApp):
                      "existing IDs in the output file.")
         return parser
 
-    def load_sequences(self, seq_file):
-        """Loads the sequences from the given sequence file in FASTA format"""
-        self.log.info("Loading sequences from %s..." % seq_file)
+    def load_slice_file(self, slice_file):
+        """Loads the slice file into a dictionary of lists"""
+        self.log.info("Loading slices from %s..." % slice_file)
+
+        self.parts = dict()
+
+        for line in open_anything(slice_file):
+            parts = line.strip().split()
+            if not parts:
+                continue
+            seq_id = parts[0]
+            (left, right) = (1, None)
+
+            # Three cases: (a) both limits (left,right) are specified
+            if len(parts) == 3:
+                (left, right) = (int(parts[1]), int(parts[2]))
+            elif len(parts) == 2:
+            # (b) only the right limit is specified
+                left = int(parts[1])
+            # (c) neither left nor right limits are speicified (then we set left=1)
+
+            if seq_id in self.parts:
+                self.parts[seq_id].append((left, right))
+            else:
+                self.parts[seq_id] = [(left, right)]
+
+    def process_sequences_file(self, seq_file):
+        """Processes the sequences one by one, extracting all the pieces into
+        an output fasta file"""
+        self.log.info("Processing fasta file %s..." %seq_file)
 
         parser = fasta.Parser(open_anything(seq_file))
-        parser = fasta.regexp_remapper(parser,
-                self.options.sequence_id_regexp)
+        parser = fasta.regexp_remapper(parser, 
+            self.options.sequence_id_regexp)
 
-        self.seqs = dict(((seq.id, seq) for seq in parser))
+        ids_to_process = set(self.parts.keys())
+
+        writer = fasta.Writer(sys.stdout)
+        if self.output_file is not None:
+            self.output_fd = open(output_file,"r")
+            writer_file = fasta.Writer(output_fd)
+
+        for seq in parser:
+            seq_id = seq.id
+            if seq_id not in self.parts:
+                if self.options.try_alternative_splicing:
+                    seq_id = seq_id.strip().rstrip(".1")
+                    if seq_id not in self.parts:
+                        continue
+                else:
+                    continue
+ 
+            sequence = seq.seq
+            length_seq = len(sequence)
+            ids_to_process.remove(seq_id)
+
+            for (left, right) in self.parts[seq_id]:
+
+                if left == 0:
+                    self.log.warning("Ignoring fragment ID: %s, "
+                        "requested start position is zero" % seq_id)
+                    continue
+                elif left < 0:
+                    left = length_seq + left + 1
+
+                if right is None:
+                    right = length_seq
+                elif right < 0:
+                    right = length_seq + right + 1
+                elif right > length_seq:
+                    #just in case...
+                    right = length_seq
+                elif right == 0:
+                    self.log.warning("Ignoring fragment ID: %s, "
+                        "requested end position is zero" %seq_id)
+                    continue
+
+                if left >= right:
+                    #again, just in case
+                    self.log.warning("Problem with fragment of %s, "
+                        "the right part is smaller than the left" % seq_id)
+                    continue
+
+                if not self.options.keep_ids:
+                    new_id = "%s:%d-%d" % (seq_id, left, right)
+                else:
+                    new_id = seq_id
+
+                new_record = SeqRecord(sequence[(left-1):right],
+                        id=new_id, name=seq.name, description="")
+                writer.write(new_record)
+
+	        if self.output_file is not None:
+                    writer_file.write(new_record)
+
+        if self.output_file is not None:
+            output_fd.close()
+
+        if len(ids_to_process) > 0:
+            self.log.fatal("The following identifiers of sequences (%s) were"
+                    "found in the fragments file, but not in the fasta file"
+                    % ",".join(ids_to_process))
+            return 1
 
     def run_real(self):
         """Runs the application and returns the exit code"""
@@ -95,76 +189,8 @@ class SeqSlicerApp(CommandLineApp):
             self.parser.print_help()
             return 1
 
-        self.load_sequences(seq_file)
-        self.process_file(slice_file)
-
-    def process_file(self, slice_file):
-        """Processes the given slice file"""
-        self.log.info("Processing input file: %s..." % slice_file)
-
-        writer = fasta.Writer(sys.stdout)
-        if self.output_file is not None:
-            self.output_fd = open(output_file,"r")
-            writer_file = fasta.Writer(output_fd)
-
-        for line in open_anything(slice_file):
-            parts = line.strip().split()
-            if not parts:
-                continue
-
-            seq_id, record = parts[0], None
-            try:
-                record = self.seqs[seq_id]
-            except KeyError:
-                if self.options.try_alternative_splicing:
-                    try:
-                        record = self.seqs[seq_id+".1"]
-                    except KeyError:
-                        pass
-
-            if record is None:
-                if self.options.ignore_unknown:
-                    self.log.warning("Ignoring unknown sequence ID: %s" % seq_id)
-                    continue
-                self.log.fatal("Unknown sequence ID in input file: %s" % seq_id)
-                return 1
-
-            if len(parts) == 1:
-                start, end = 1, len(record.seq)
-                new_id = record.id
-            else:
-                start = int(parts[1])
-                if len(parts) == 2:
-                    end = len(record.seq)
-                else:
-                    end = int(parts[2])
-
-            if start == 0:
-                self.log.warning("Ignoring sequence ID: %s, "
-                        "requested start position is zero" % seq_id)
-            elif end == 0:
-                self.log.warning("Ignoring sequence ID: %s, "
-                        "requested end position is zero" % seq_id)
-
-            if start < 0:
-                start = len(record.seq) + start + 1
-            if end < 0:
-                end = len(record.seq) + end + 1
-
-            if not self.options.keep_ids:
-                new_id = "%s:%d-%d" % (record.id, start, end)
-            else:
-                new_id = seq_id
-
-            new_record = SeqRecord(record.seq[(start-1):end],
-                    id=new_id, name=record.name, description="")
-            writer.write(new_record)
-
-	    if self.output_file is not None:
-                writer_file.write(new_record)
-
-	if self.output_file is not None:
-            output_fd.close()
+        self.load_slice_file(slice_file)
+        self.process_sequences_file(seq_file)
 
 if __name__ == "__main__":
     sys.exit(SeqSlicerApp().run())
