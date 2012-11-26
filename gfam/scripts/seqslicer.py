@@ -71,7 +71,7 @@ class SeqSlicerApp(CommandLineApp):
         """Loads the slice file into a dictionary of lists"""
         self.log.info("Loading slices from %s..." % slice_file)
 
-        self.parts = dict()
+        self.parts = defaultdict()
 
         for line in open_anything(slice_file):
             parts = line.strip().split()
@@ -80,18 +80,16 @@ class SeqSlicerApp(CommandLineApp):
             seq_id = parts[0]
             (left, right) = (1, None)
 
-            # Three cases: (a) both limits (left,right) are specified
-            if len(parts) == 3:
+           if len(parts) == 3:
+                # Three cases: (a) both limits (left,right) are specified
                 (left, right) = (int(parts[1]), int(parts[2]))
             elif len(parts) == 2:
-            # (b) only the right limit is specified
+                # (b) only the left limit is specified
                 left = int(parts[1])
-            # (c) neither left nor right limits are speicified (then we set left=1)
+                # (c) neither left nor right limits are specified 
+                # (this is why we se left=1 before)
 
-            if seq_id in self.parts:
-                self.parts[seq_id].append((left, right))
-            else:
-                self.parts[seq_id] = [(left, right)]
+            self.parts[seq_id].append((left, right))
 
     def process_sequences_file(self, seq_file):
         """Processes the sequences one by one, extracting all the pieces into
