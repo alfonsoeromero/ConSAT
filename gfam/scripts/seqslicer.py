@@ -80,7 +80,7 @@ class SeqSlicerApp(CommandLineApp):
             seq_id = parts[0]
             (left, right) = (1, None)
 
-           if len(parts) == 3:
+            if len(parts) == 3:
                 # Three cases: (a) both limits (left,right) are specified
                 (left, right) = (int(parts[1]), int(parts[2]))
             elif len(parts) == 2:
