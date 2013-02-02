@@ -3,6 +3,7 @@
 
 import sys
 
+from collections import defaultdict
 from gfam import fasta
 from gfam.sequence import SeqRecord
 from gfam.scripts import CommandLineApp
@@ -71,7 +72,7 @@ class SeqSlicerApp(CommandLineApp):
         """Loads the slice file into a dictionary of lists"""
         self.log.info("Loading slices from %s..." % slice_file)
 
-        self.parts = defaultdict()
+        self.parts = defaultdict(list)
 
         for line in open_anything(slice_file):
             parts = line.strip().split()
@@ -142,7 +143,7 @@ class SeqSlicerApp(CommandLineApp):
                         "requested end position is zero" %seq_id)
                     continue
 
-                if left >= right:
+                if left > right:
                     #again, just in case
                     self.log.warning("Problem with fragment of %s, "
                         "the right part is smaller than the left" % seq_id)

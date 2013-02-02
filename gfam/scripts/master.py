@@ -521,6 +521,10 @@ min_fragment_length=75
 # gene model being analysed
 sequences_file=%(file.input.sequences)s
 
+# Optional file with a set of low complexity regions, in `segmask`
+# format, which will be substracted from the set of unassigned regions 
+low_complexity_regions_file=
+
 [analysis:blast_filter]
 
 # Minimum sequence identity between two fragments to consider them
@@ -563,7 +567,10 @@ only_linked=1
 
 [analysis:find_domain_arch]
 
-# A novel domain occur in at least this number of sequences
+# A novel domain occur in at least this number of sequences. Please note
+# that we count different sequences, not fragments. Thus, the following list
+# of fragments: ["seq1:1-10", "seq1:30-35", "seq2:40-98", "seq3:1-132"] is
+# really of size 3 ("seq1", "seq2", "seq3")
 min_novel_domain_size=4
 
 [analysis:label_assignment]

@@ -39,7 +39,7 @@ class FindDomainArchitectureApp(CommandLineApp):
         parser = super(FindDomainArchitectureApp, self).create_parser()
         parser.add_option("-s", "--min-size", dest="min_size",
                 metavar="N",
-                help="consider only clusters with at least N elements as novel domains",
+                help="consider only clusters with at least N different sequences (not just fragments) as novel domains",
                 config_key="analysis:find_domain_arch/min_novel_domain_size",
                 default=2, type=int)
         parser.add_option("-S", "--sequences",
@@ -235,7 +235,8 @@ class FindDomainArchitectureApp(CommandLineApp):
         idx = 1
         for line in f:
             ids = line.strip().split()
-            if len(ids) < self.options.min_size:
+            if len(set([x.split(":",1)[0] for x in ids])) < self.options.min_size:
+#            if len(ids) < self.options.min_size:
                 continue
             domain_name = "NOVEL%05d" % idx
             sequences = []
