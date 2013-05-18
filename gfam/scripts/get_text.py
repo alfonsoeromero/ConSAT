@@ -12,19 +12,15 @@ of terms.
 The terms associated to a certain sequence can be easily retrieved with the
 files produced.
 """
-
-from collections import defaultdict
-
 import urllib
 import tempfile, shutil, os
-
 import sys
 import math
+import re
+import operator
 from os import listdir
-
+from collections import Counter, defaultdict
 from gfam.scripts import CommandLineApp
-
-from collections import Counter
 
 __author__  = "Alfonso E. Romero"
 __email__   = "aeromero@cs.rhul.ac.uk"
@@ -45,7 +41,7 @@ class GetText(CommandLineApp):
     short_name = "get_text"
 
     def __init__(self, *args, **kwds):
-        super(GetText).__init__(*args, **kwds)
+        super(GetText, self).__init__(*args, **kwds)
 
     def create_parser(self):
         """Creates the command line parser for this application"""
@@ -63,7 +59,7 @@ class GetText(CommandLineApp):
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
                 help="remap sequence IDs using REGEXP (only used in the "+
                      "FASTA file)")
-        parser.add_option("-d", "--rdf-file", dest="rdf_file", metavar="FILE",
+        parser.add_option("-f", "--rdf-file", dest="rdf_file", metavar="FILE",
                 help="RDF file containing publication abstract which can be "+
                 "downloaded from http://www.uniprot.org/citations/"+
                 "?query=citedin%3a(*)&format=*&compress=yes")
@@ -76,11 +72,11 @@ class GetText(CommandLineApp):
         """Reads the stopwords file to a set and returns it.
         If no file is provided, the standard SMART stopword
         list is donwnloaded"""
-        if not os.path.exists(fileName):
+        if fileName is None or not os.path.exists(fileName):
             # we download the SMART list
             url = "http://jmlr.csail.mit.edu/papers/volume5/lewis04a/a11-smart-stop-list/english.stop"
             fd, fileName = tempfile.mkstemp()
-            urllib.request.urlretrieve(url, fileName)
+            urllib.urlretrieve(url, fileName)
 
         self.stopwords = set([line.strip() for line in open(fileName)])
 
@@ -106,7 +102,7 @@ class GetText(CommandLineApp):
             self.error("the Mapping file should be provided")
 
         # 2.- we read the stopwords data
-        self.read_stopwords(self.stopwords_file)
+        self.read_stopwords(self.options.stopwords_file)
 
         # 3.- we check that the output directory is writable, and create the
         # names of the output files
@@ -121,58 +117,74 @@ class GetText(CommandLineApp):
         # we setup the output file names
         output_dir = os.path.normpath(self.options.output)
         self.lexicon_file = os.path.join(output_dir, "lexicon")
-        check_not_exists(self.lexicon_file)
+        self.check_not_exists(self.lexicon_file)
         self.freq_file = os.path.join(output_dir, "freq_file")
-        check_not_exists(self.freq_file)
+        self.check_not_exists(self.freq_file)
         self.weight_file = os.path.join(output_dir, "weight_file")
-        check_not_exists(self.weight_file)
+        self.check_not_exists(self.weight_file)
         self.ids_file = os.path.join(output_dir, "seq_ids_file")
-        check_not_exists(self.ids_file)
+        self.check_not_exists(self.ids_file)
         self.text_file = os.path.join(output_dir, "text_file")
-        check_not_exists(self.text_file)
+        self.check_not_exists(self.text_file)
 
         # 4.- we process the rdf file to a cache directory
         self.cachepubmed = os.path.join(output_dir, "cache_pubmed")
+        self.log.info("Preprocessing PubMed abstracts")
+        if not os.path.exists(self.cachepubmed):
+            os.makedirs(self.cachepubmed)
         self.process_rdf_file()
 
         # 5.- we call the main function to extract text of the protein
-        self.cacheuniprot = os.path.join(output_dir, "cache_uniprot")
-        self.process_fasta_file()
+        #self.cacheuniprot = os.path.join(output_dir, "cache_uniprot")
+        #self.log.info("Extracting protein descriptions")
+
+        #if not os.path.exists(self.cacheuniprot):
+        #     os.makedirs(self.cacheuniprot)
+        #self.process_fasta_file()
 
         # 5.1.- the text file is created
+        self.log.info("Creating file with all text pieces for each protein")
         self.create_text_file()
 
         # 6.- once the text has been extracted, the file is preprocessed
         #  indexed and all the output files written
+        self.log.info("Indexing the text file")
         self.index_text_file()
+        self.log.info("Creating weight file")
         self.weight_freq_file()
         # END of the module
 
     def create_text_file(self):
         seq2pmid = defaultdict(set)
+        self.log.info("Reading mapping file")
+        pattern = re.compile(";\s*")
         with open(self.options.mapping, "r") as f:
             for line in f:
                 fields = line.split("\t")
                 if len(fields[16].strip()) > 0:
                     seq_id, pmids = fields[0], fields[16]
-                    seq2pmid[seq_id] = set(pmids.split(";\s*"))
+                    seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
 
-        with open(self.text_file, "w") as out:
-            for id_prot in listdir(self.cacheuniprot):
-                file_prot = os.path.join(self.cacheuniprot, id_prot)
-                text_prot = open(file_prot, 'r').read()
-                text_pubmed = []
-                if id_prot in seq2pmid:
-                    for pmid in seq2pmid[id_prot]:
-                        pmid_file = op.path.join(self.cachepubmed, pmid)
-                        try:
-                            text_pmid = open(pmid_file, 'r').read()
-                            text_pubmed.append(text_pmid)
-                        except IOError:
-                            pass
-                out.write("%s " % id_prot)
-                out.write("%s " % text_prot)
-                out.write("%s\n" % " ".join(text_pubmed))
+        self.log.info("Writing text file")
+        with open(self.text_file, "w") as out, open(self.options.sequences_file, 'r') as f:
+            for line in f:
+                if line.startswith(">"):
+                    id_prot = line.split()[0].replace(">", "")
+                    if id_prot.find("|") != -1:
+                        id_prot = id_prot.split("|")[1]
+                    text_prot = line.split(" ",1)[1].split("OS=")[0].strip()
+
+                    text_pubmed = []
+                    if id_prot in seq2pmid:
+                        for pmid in seq2pmid[id_prot]:
+                            pmid_file = os.path.join(self.cachepubmed, str(pmid))
+                            try:
+                                text_pmid = open(pmid_file, 'r').read()
+                                text_pubmed.append(text_pmid)
+                            except IOError:
+                                pass
+                    out.write("%s %s " % (id_prot, text_prot))
+                    out.write("%s\n" % " ".join(text_pubmed))
         
     def process_rdf_file(self):
         """Process the rdf file, extracting the relevant fields into
@@ -235,7 +247,7 @@ class GetText(CommandLineApp):
         """Tokenizes and preprocesses a certain string into
         a list of strings. Yes, it can (should be) improved"""
         return [x for x in string.translate(None, (",./;'?&()")).lower().split() 
-                   if x not in self.stopwords and not is_number(x) and len(x) > 2]
+                   if x not in self.stopwords and not self.is_number(x) and len(x) > 2]
 
     def is_number(self,s):
         """Checks if a string is a number"""
@@ -250,55 +262,65 @@ class GetText(CommandLineApp):
         word_id = dict()
         seq_ids = []
 
-        # open text file
+        # open freq file as output
         with open(self.freq_file, 'w') as output:
-            for line in open(self.text_file,'r'):
+            for line in open(self.text_file, 'r'):
                 [seq_id, rest] = line.split(" ", 1)
                 seq_ids.append(seq_id)
 
                 num_tokens = []
-                for token in tokenize(rest):
+                for token in self.tokenize(rest):
                     if token not in word_id:
                         word_id[token] = len(word_id)
-                    
-                    num_token.append(word_id[token])
+                    num_tokens.append(word_id[token])
+
                 sorted_x = sorted(Counter(num_tokens).iteritems(), key=operator.itemgetter(1))
-                for word_id, count in sorted_x:
-                    freq[word_id] += 1
+                output.write("%s " % seq_id)
+                for id_word, count in sorted_x:
+                    freq[id_word] += 1
                     # write freq file
-                    output.write(str(word_id) + ":" + str(count) + " ")
+                    output.write("%i:%i " % (id_word, count))
                 output.write('\n')                        
+
+        self.N = len(seq_ids)
 
         # write lexicon
         with open(self.lexicon_file, 'w') as lexicon:
             for word, id_word in word_id.items():
-                lexicon.write(" ".join([word, str(id_word), str(freq[id_word]), "\n"]))
+                lexicon.write("%s %i %i\n" % (word, id_word, freq[id_word]))
                 
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
             for protein in seq_ids:
-                lexicon.write(protein + "\n")
+                proteins_file.write("%s\n" % protein)
 
     def weight_freq_file(self):
         """Reads the frequency file and produces the frequency file"""
         # we read the lexicon file
         freq = dict()
         for line in open(self.lexicon_file,'r'):
-            [numid, _, doc_freq] = text.split()
+            [_, numid, doc_freq] = line.split()
             freq[int(numid)] = int(doc_freq)
 
-        # we read the frequency file
-        with open(self.freq_file, 'w') as output_file:
+        # we read the frequency file and write it
+        with open(self.weight_file, 'w') as output_file:
             for line in open(self.freq_file,'r'):
                 fields = line.split()
                 seq_id = fields.pop(0)
                 features = [i.split(":") for i in fields]
                 output_features = [seq_id]
                 for feat in features:
-                    l = [feat[0], str( math.log( float(self.N)/freq(int(feat[0])) ) * float(feat[1]) )]
+                    l = [str(feat[0]), str( math.log( float(self.N)/freq[int(feat[0])] ) * float(feat[1]) )]
                     output_features.append(":".join(l))
                 output_file.write(" ".join(output_features))
                 output_file.write('\n')
+
+    def check_not_exists(self, filename):
+        try:
+            with open(filename):
+                self.error("The file " + filename + " already exists")
+        except IOError:
+            pass
 
 if __name__ == "__main__":
     sys.exit(GetText().run())

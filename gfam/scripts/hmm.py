@@ -123,7 +123,7 @@ class HMM(CommandLineApp):
         for cluster in cluster_names:
             seq = seq_dir + cluster + ".faa"
             align = align_dir + cluster + ".sto"
-            print >> sys.stderr, "CLUSTER: ", cluster
+            #print >> sys.stderr, "CLUSTER: ", cluster
             call(["clustalo", "--infile=" + seq, "--outfmt=st", "--outfile=" + align])
 	# no errors are checked, in the future the call should be checked
 
