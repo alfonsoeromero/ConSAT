@@ -250,10 +250,14 @@ def test():
     """Simple smoke testing for the OBO parser"""
     parser = Parser("gene_ontology.1_2.obo")
     count = 0
-    for _ in parser:
+    for stanza in parser:
         count += 1
-        if count % 1000 == 0:
-            print "%d stanzas processed" % count
+        try:
+            print stanza.tags["namespace"][0]
+        except KeyError:
+            print stanza.tags["id"][0] 
+#        if count % 1000 == 0:
+#            print "%d stanzas processed" % count
     print "Parsing successful, %d stanzas" % count
 
 

@@ -141,6 +141,9 @@ class FindDomainArchitectureApp(CommandLineApp):
             for member in members:
                 seq = self.seqcat[member]
                 if domain_arch:
+                    # TODO: make a better representation, considering overlaps
+                    # in this way: IPR1(IPR2) means that IPR2 is inserted into
+                    # IPR1
                     arch_str_pos = ";".join(assignment.short_repr() \
                             for assignment in seq.assignments)
                     arch_desc = ";".join( \
@@ -176,7 +179,8 @@ class FindDomainArchitectureApp(CommandLineApp):
 
             archs_without_novel = set(exclude_novel_domains(arch)
                     for arch in all_archs)
-            archs_without_novel.remove(())
+            if () in archs_without_novel:
+                archs_without_novel.remove(())
             num_archs_without_novel = len(archs_without_novel)
 
             num_seqs_with_nonempty_domain_arch = \

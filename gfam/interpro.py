@@ -72,6 +72,9 @@ class AssignmentReader(object):
         if parts[11] == 'NULL' or not parts[11]:
             parts[11] = None
 
+        import sys
+        sys.stderr.write("YEEEEEE <" +  parts[6] +  ">\n")
+
         assignment = Assignment( \
                 id = parts[0],
                 length = int(parts[2]),

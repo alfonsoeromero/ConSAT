@@ -61,13 +61,35 @@ def hypergeom_sf(k, M, n, N):
         result += a
     return result
 
+def binomial_sf(k, M, n, N):
+    """Tail distribution of a binomial distribution, used to compute
+    p-value in the overrepresentation analysis test.
+
+        ``k``: frequency of the GO term on the sample 
+        ``M``: number of objects in the BD
+        ``n``: number of objects mapped to that GO term in the BD
+        ``N``: sample size
+
+    Translated to the "binomial" language, the number of successes
+    is ``k`` (of ``N`` trials). The prior probability of getting a
+    hit is n/M. We compute the probability of getting at least k
+    hits in a sample of size N
+    """
+    result = 0.
+    p = float(n/M)
+    logp = log(p)
+    log1_min_p = log(1.0-p)
+    for x in xrange(k, N+1):
+        result += exp(logchoose(N, x) + float(x)*logp + float(N-x)*log1_min_p)
+    return result
+
 class OverrepresentationAnalyser(object):
     """Performs overrepresentation analysis of Gene Ontology
     terms on sets of entities that are annotated by some
     GO terms."""
 
     def __init__(self, tree, mapping, confidence=0.05, min_count=5, \
-            correction="fdr"):
+            correction="fdr", test="hypergeometric"):
         """Initializes the overrepresentation analysis algorithm by associating
         it to a given Gene Ontology tree and a given mapping from entities to
         their respective GO terms.
@@ -98,12 +120,22 @@ class OverrepresentationAnalyser(object):
           error rate
 
         - ``"sidak"``: Sidak correction of the family-wise error rate
+
+        `test` specifies whether the test performed is an hypergeometric one
+        (without replacement) or a binomial (with replacement)
         """
         self.tree = tree
         self.mapping = self._propagate_go_term_ancestors(mapping)
         self.confidence = float(confidence)
         self.min_count = max(1, int(min_count))
         self.correction = correction
+        if test == "hypergeometric":
+            self.test_func = hypergeom_sf
+        elif test == "binomial":
+            self.test_func = binomial_sf
+        else:
+            print "Test must be either 'hypergeometric' or 'binomial'"
+            sys.exit(-1)
 
     def _propagate_go_term_ancestors(self, mapping):
         """Given a mapping object which maps entities to GO terms, this
@@ -123,7 +155,7 @@ class OverrepresentationAnalyser(object):
         """
         term = self.tree.ensure_term(term_or_id)
         objs = self.mapping.right[term]
-        return hypergeom_sf(count, self.mapping.len_left(), \
+        return self.test_func(count, self.mapping.len_left(), \
                             len(objs), group_size)
 
     def test_counts(self, counts, group_size):
@@ -154,7 +186,7 @@ class OverrepresentationAnalyser(object):
         # Do the testing
         result = []
         for term, count in counts.iteritems():
-            if len(self.mapping.right[term]) < min_count:
+           if len(self.mapping.right[term]) < min_count:
                 continue
             p = self.enrichment_p(term, count, group_size)
             result.append((term, p))
@@ -168,7 +200,7 @@ class OverrepresentationAnalyser(object):
                     result = result[0:k]
                     break
         else:
-            result = [item for item in result if r[1] <= confidence]
+            result = [item for item in result if item[1] <= confidence]
             result.sort(key = itemgetter(1))
             if correction == "bonferroni":
                 result = [(c, p * num_tests) for c, p in result]

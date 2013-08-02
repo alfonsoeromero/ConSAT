@@ -4,16 +4,16 @@ import re
 import sys
 
 from collections import defaultdict
-from gfam.assignment import Assignment, AssignmentOverlapChecker, \
-                            EValueFilter, SequenceWithAssignments
+from gfam.assignment import Assignment, AssignmentOverlapChecker, EValueFilter, SequenceWithAssignments
 from gfam.interpro import AssignmentReader, InterPro
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class AssignmentSourceFilterApp(CommandLineApp):
     """\
@@ -48,34 +48,38 @@ class AssignmentSourceFilterApp(CommandLineApp):
         """Creates the command line parser used by this script"""
         parser = super(AssignmentSourceFilterApp, self).create_parser()
         parser.add_option("-x", "--exclude", dest="ignored",
-                metavar="SOURCE",
-                help="add SOURCE to the list of ignored sources",
-                config_key="analysis:iprscan_filter/untrusted_sources",
-                action="append", default=[])
+                          metavar="SOURCE",
+                          help="add SOURCE to the list of ignored sources",
+                          config_key="analysis:iprscan_filter/untrusted_sources",
+                          action="append", default=[])
         parser.add_option("-e", "--e-value", dest="max_e",
-                metavar="THRESHOLD",
-                help="E-value THRESHOLD to filter assignments",
-                config_key="analysis:iprscan_filter/e_value_thresholds",
-                default="inf")
+                          metavar="THRESHOLD",
+                          help="E-value THRESHOLD to filter assignments",
+                          config_key="analysis:iprscan_filter/e_value_thresholds",
+                          default="inf")
         parser.add_option("-i", "--interpro-file", dest="interpro_file",
-                metavar="FILE",
-                help="use the InterPro parent-child FILE to remap IDs",
-                config_key="analysis:iprscan_filter/interpro_parent_child_mapping",
-                default=None)
+                          metavar="FILE",
+                          help="use the InterPro parent-child "
+                               " FILE to remap IDs",
+                          config_key="analysis:iprscan_filter/interpro_parent_child_mapping",
+                          default=None)
         parser.add_option("-g", "--gene-ids", dest="gene_id_file",
-                metavar="FILE", help="only consider those IDs which "+
-                   "are present in the list in the given FILE",
-                config_key="generated/file.valid_gene_ids",
-                default=None)
+                          metavar="FILE", help="only consider those IDs which "
+                          "are present in the list in the given FILE",
+                          config_key="generated/file.valid_gene_ids",
+                          default=None)
         parser.add_option("--log-exclusions", dest="exclusions_log_file",
-                metavar="FILE", help="log excluded sequences to the given FILE "
-                   "for debugging purposes", default=None,
-                config_key="DEFAULT/file.log.iprscan_exclusions")
+                          metavar="FILE",
+                          help="log excluded sequences to the given FILE "
+                               "for debugging purposes",
+                          default=None,
+                          config_key="DEFAULT/file.log.iprscan_exclusions")
         parser.add_option("--max-overlap", metavar="SIZE",
-                help="sets the maximum overlap size allowed between "
-                     "assignments of the same data source. Default: %default",
-                config_key="max_overlap",
-                dest="max_overlap", type=int, default=20)
+                          help="sets the maximum overlap size allowed between "
+                               "assignments of the same data source. "
+                               "Default: %default",
+                          config_key="max_overlap",
+                          dest="max_overlap", type=int, default=20)
         return parser
 
     def run_real(self):
@@ -83,14 +87,14 @@ class AssignmentSourceFilterApp(CommandLineApp):
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
 
         if self.options.interpro_file:
-            self.log.info("Loading known InterPro IDs from %s..." % \
-                    self.options.interpro_file)
+            self.log.info("Loading known InterPro IDs from %s..." %
+                          self.options.interpro_file)
             self.interpro = InterPro.FromFile(self.options.interpro_file)
         else:
             self.interpro = InterPro()
 
         if self.options.gene_id_file:
-            self.log.info("Loading sequence IDs from %s..." % \
+            self.log.info("Loading sequence IDs from %s..." %
                           self.options.gene_id_file)
             self.valid_sequence_ids = set()
             for line in open_anything(self.options.gene_id_file):
@@ -100,7 +104,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
 
         if self.options.exclusions_log_file:
             self.log.info("Logging excluded sequences to %s." %
-                    self.options.exclusions_log_file)
+                          self.options.exclusions_log_file)
             self.exclusion_log = open(self.options.exclusions_log_file, "a+")
         else:
             self.exclusion_log = None
@@ -127,7 +131,8 @@ class AssignmentSourceFilterApp(CommandLineApp):
         reader = AssignmentReader(fname)
         for assignment, line in reader.assignments_and_lines():
             if assignment.id != current_id:
-                self.filter_and_print_assignments(current_id, assignments_by_source)
+                self.filter_and_print_assignments(current_id,
+                                                  assignments_by_source)
                 current_id = assignment.id
                 assignments_by_source = defaultdict(list)
 
@@ -148,8 +153,8 @@ class AssignmentSourceFilterApp(CommandLineApp):
         """
 
         if not assignments_by_source:
-            self.log_exclusion(name, "no assignments in the input data file "
-                    "passed the filters")
+            self.log_exclusion(name, "no assignments in the input data file " +
+                                     "passed the filters")
             return []
 
         # Determine the length of the sequence (and check that the length is
@@ -240,8 +245,8 @@ class AssignmentSourceFilterApp(CommandLineApp):
             result.append("%s\t%s" % (row, idx_to_stage[idx]))
 
         if not result:
-            self.log_exclusion(name, "no assignments were selected after executing "
-                    "all the stages")
+            self.log_exclusion(name, "no assignments were selected after "
+                                     "executing all the stages")
 
         return result
 
@@ -264,7 +269,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
         contain the corresponding keys, it will simply use a default
         stage setup which ignores HMMPanther and Gene3D in the first
         and second steps, but uses all sources in the third step.
-        
+
         The method will be looking for configuration keys named like
         ``stages.1``, ``stages.2`` and so on in the ``analysis:iprscan_filter``
         section of the config file. The value of each such config key must
@@ -273,7 +278,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
         and exclusion. The special source name ``ALL`` means all possible
         data sources, enabling us to write expressions like ``ALL-HMMPanther``
         (meaning all the sources except HMMPanther). Some examples:
-            
+
         - ``HMMPanther`` means HMMPanther only.
         - ``ALL`` means all possible data sources.
         - ``HMMPanther+HMMPfam`` means HMMPanther or HMMPfam.

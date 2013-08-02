@@ -10,6 +10,6 @@ work_*/*
 domain_architectures.zip
 doc/source/generated/*.inc
 doc/build
-gfam_*.cfg
+*.cfg
 etc/logo/png/*
 etc/logo/pdf/*

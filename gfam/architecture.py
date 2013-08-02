@@ -2,6 +2,7 @@
 
 import re
 import sys
+from collections import defaultdict
 from gfam.utils import open_anything
 
 try:
@@ -9,13 +10,34 @@ try:
 except ImportError:
     from gfam.compat import Mapping
 
-__author__  = "Alfonso E. Romero"
-__email__   = "aeromero@cs.rhul.ac.uk"
+__author__ = "Alfonso E. Romero"
+__email__ = "aeromero@cs.rhul.ac.uk"
 
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
-__all__ = ["ArchitectureFileReader"]
+__all__ = ["ArchitectureFileReader, ArchitectureFileReaderPerArch"]
+
+
+#class ArchitectureTableFileReaderPerArch(object):
+#    def __init__
+
+
+class ArchitectureFileReaderPerArch(object):
+    """Iterates over architectures in a GFam architecture file, returning
+    for each architecture a tuple (architecture, [protein_ids]). Note
+    that the whole architecture file is loaded into memory before
+    iterating
+    """
+    def __init__(self, filename, min_coverage):
+        self.archs = defaultdict(list)
+        for protein, arch, cov in ArchitectureFileReader(filename):
+            if cov >= min_coverage:
+                self.archs[arch].append(protein)
+
+    def __iter__(self):
+        for arch in sorted(self.archs):
+            yield (arch, self.archs[arch])
 
 
 class ArchitectureFileReader(object):
@@ -85,7 +107,7 @@ class ArchitectureParser(object):
                 self.empty = False
 
     def data_as_tuple(self):
-        """ Returns the parsed data as a tuple (protein, architecture, coverage)
+        """ Returns parsed data as a tuple (protein, architecture, coverage)
         """
         return self.protein, self.arch, self.coverage
 
@@ -97,9 +119,9 @@ if __name__ == "__main__":
 
     cnt = 0
 
-    with open (sys.argv[2], 'w') as out:
+    with open(sys.argv[2], 'w') as out:
         for protein, arch, cov in ArchitectureFileReader(sys.argv[1]):
-            out.write("protein: %s, arch: %s, cov: %f\n" %(protein, arch, cov))
+            out.write("prot: %s, arch: %s, cov: %f\n" % (protein, arch, cov))
             cnt += 1
         out.write("-------------------------------------------------\n")
 

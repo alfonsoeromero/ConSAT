@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """Application that retrieves a set of weighted terms for the sequences
 in order to have clues of what is their function. The sources where the
-text is downloaded from are PubMed abstracts and the text appearing in 
+text is downloaded from are PubMed abstracts and the text appearing in
 the description of the protein itself.
 
 After being retrieved, the text is written to an intermediate file which
-is then parsed and preprocessed (case folding, punctuation symbols removed, 
+is then parsed and preprocessed (case folding, punctuation symbols removed,
 stopwords removal, etc). A simple tf-idf is then performed for each set
 of terms.
 
@@ -13,7 +13,9 @@ The terms associated to a certain sequence can be easily retrieved with the
 files produced.
 """
 import urllib
-import tempfile, shutil, os
+import tempfile
+import shutil
+import os
 import sys
 import math
 import re
@@ -22,20 +24,22 @@ from os import listdir
 from collections import Counter, defaultdict
 from gfam.scripts import CommandLineApp
 
-__author__  = "Alfonso E. Romero"
-__email__   = "aeromero@cs.rhul.ac.uk"
+__author__ = "Alfonso E. Romero"
+__email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
+
 
 class GetText(CommandLineApp):
     """\
     Usage: %prog [options]
 
     Application that retrieves the terms associated to a set of sequences
-    from PubMed and the description itself of the proteins. It makes a weighting
-    operation in order to assign an importance to each one of the terms. Given that
-    weight, it would be possible to perform a ranking of the terms if needed, or
-    simply to get a vector of textual features for each sequence.
+    from PubMed and the description itself of the proteins. It makes a
+    weighting operation in order to assign an importance to each one of
+    the terms. Given that weight, it would be possible to perform a ranking
+    of the terms if needed, or simply to get a vector of textual features for
+    each sequence.
     """
 
     short_name = "get_text"
@@ -47,26 +51,30 @@ class GetText(CommandLineApp):
         """Creates the command line parser for this application"""
         parser = super(GetText, self).create_parser()
         parser.add_option("-s", "--stopwords", dest="stopwords_file",
-                metavar="FILE",help="Stopwords file. If none is provided,"+
-                                    "a standard one will be used")
+                          metavar="FILE",
+                          help="Stopwords file. If none is provided," +
+                               "a standard one will be used")
         parser.add_option("-S", "--sequences",
-                dest="sequences_file", metavar="FILE",
-                help="FASTA file containing all the sequences to analyze")
+                          dest="sequences_file", metavar="FILE",
+                          help="FASTA file containing all the "
+                               "sequences to analyze")
         parser.add_option("-m", "--mapping", dest="mapping", metavar="FILE",
-                help="'idmapping_selected.tab' file, which can be downloaded " +
-                "from ftp://ftp.uniprot.org/pub/databases/uniprot/" +
-                "current_release/knowledgebase/idmapping/")
+                          help="'idmapping_selected.tab' file, which can " +
+                               "be downloaded from " +
+                               "ftp://ftp.uniprot.org/pub/databases/uniprot" +
+                               "/current_release/knowledgebase/idmapping/")
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
-                help="remap sequence IDs using REGEXP (only used in the "+
-                     "FASTA file)")
+                          help="remap sequence IDs using REGEXP (only " +
+                               "used in the FASTA file)")
         parser.add_option("-f", "--rdf-file", dest="rdf_file", metavar="FILE",
-                help="RDF file containing publication abstract which can be "+
-                "downloaded from http://www.uniprot.org/citations/"+
-                "?query=citedin%3a(*)&format=*&compress=yes")
+                          help="RDF file containing publication abstract " +
+                               "which can be downloaded from http://www." +
+                               "uniprot.org/citations/?query=citedin%3a(*) " +
+                               "&format=*&compress=yes")
         parser.add_option("-o", "--output-dir", dest="output", metavar="DIR",
-                help="directory where the output files are to be written")
+                          help="directory where the output files are to be " +
+                               "written")
         return parser
-
 
     def read_stopwords(self, fileName):
         """Reads the stopwords file to a set and returns it.
@@ -74,25 +82,25 @@ class GetText(CommandLineApp):
         list is donwnloaded"""
         if fileName is None or not os.path.exists(fileName):
             # we download the SMART list
-            url = "http://jmlr.csail.mit.edu/papers/volume5/lewis04a/a11-smart-stop-list/english.stop"
+            url = "http://jmlr.csail.mit.edu/papers/volume5/lewis04a/\
+            a11-smart-stop-list/english.stop"
             fd, fileName = tempfile.mkstemp()
             urllib.urlretrieve(url, fileName)
 
         self.stopwords = set([line.strip() for line in open(fileName)])
 
-
     def check_not_exists(self, fileName):
         """Checks that a file does not exists. If it does, exists and
         shows an error message"""
         if os.path.exists(fileName):
-            self.error("The file " + fileName + " already exists. Cannot overwrite")
-
+            self.error("The file " + fileName +
+                       " already exists. Cannot overwrite")
 
     def run_real(self):
         """Runs the applications"""
-        
+
         # 1.- we check the compulsory arguments
-        if not self.options.sequences_file :
+        if not self.options.sequences_file:
             self.error("the Fasta file should be provided")
 
         if not self.options.rdf_file:
@@ -111,7 +119,7 @@ class GetText(CommandLineApp):
         if not os.path.exists(self.options.output):
             os.makedirs(self.options.output)
         elif not os.path.isdir(self.options.output):
-            self.error("The route " + self.options.output + 
+            self.error("The route " + self.options.output +
                        " exists, but it is not a directory")
 
         # we setup the output file names
@@ -172,20 +180,20 @@ class GetText(CommandLineApp):
                     id_prot = line.split()[0].replace(">", "")
                     if id_prot.find("|") != -1:
                         id_prot = id_prot.split("|")[1]
-                    text_prot = line.split(" ",1)[1].split("OS=")[0].strip()
+                    text_prot = line.split(" ", 1)[1].split("OS=")[0].strip()
 
                     text_pubmed = []
                     if id_prot in seq2pmid:
                         for pmid in seq2pmid[id_prot]:
-                            pmid_file = os.path.join(self.cachepubmed, str(pmid))
+                            pmid_fi = os.path.join(self.cachepubmed, str(pmid))
                             try:
-                                text_pmid = open(pmid_file, 'r').read()
+                                text_pmid = open(pmid_fi, 'r').read()
                                 text_pubmed.append(text_pmid)
                             except IOError:
                                 pass
                     out.write("%s %s " % (id_prot, text_prot))
                     out.write("%s\n" % " ".join(text_pubmed))
-        
+
     def process_rdf_file(self):
         """Process the rdf file, extracting the relevant fields into
         individual text files.
@@ -217,7 +225,8 @@ class GetText(CommandLineApp):
                     opentitle, openabstract = False, False
                 elif line.find("<rdfs:comment>") != -1:
                     if line.find("</rdfs:comment>") != -1:
-                        abstract.append(line.split("<rdfs:comment>")[1].split("</rdfs:comment>")[0])
+                        abstract.append(line.split("<rdfs:comment>")[1].
+                                        split("</rdfs:comment>")[0])
                     else:
                         abstract.append(line.split("<rdfs:comment>")[1])
                         openabstract = True
@@ -238,18 +247,19 @@ class GetText(CommandLineApp):
             for line in f:
                 if line.startswith(">"):
                     id_prot = line.split()[0].replace(">", "")
-                    text_protein = line.split(" ",1)[1].split("OS=")[0].strip()
+                    txt_protein = line.split(" ", 1)[1].split("OS=")[0].strip()
                     filename = os.path.join(self.cacheuniprot, id_prot)
                     with open(filename, "w") as out:
-                        out.write("%s" % text_protein)
+                        out.write("%s" % txt_protein)
 
-    def tokenize(self, string):
+    def tokenize(self, s):
         """Tokenizes and preprocesses a certain string into
         a list of strings. Yes, it can (should be) improved"""
-        return [x for x in string.translate(None, (",./;'?&()")).lower().split() 
-                   if x not in self.stopwords and not self.is_number(x) and len(x) > 2]
+        return [x for x in s.translate(None, (",./;'?&()")).lower().split()
+                if x not in self.stopwords and not self.is_number(x)
+                and len(x) > 2]
 
-    def is_number(self,s):
+    def is_number(self, s):
         """Checks if a string is a number"""
         try:
             float(s)
@@ -274,13 +284,14 @@ class GetText(CommandLineApp):
                         word_id[token] = len(word_id)
                     num_tokens.append(word_id[token])
 
-                sorted_x = sorted(Counter(num_tokens).iteritems(), key=operator.itemgetter(1))
+                sorted_x = sorted(Counter(num_tokens).iteritems(),
+                                  key=operator.itemgetter(1))
                 output.write("%s " % seq_id)
                 for id_word, count in sorted_x:
                     freq[id_word] += 1
                     # write freq file
                     output.write("%i:%i " % (id_word, count))
-                output.write('\n')                        
+                output.write('\n')
 
         self.N = len(seq_ids)
 
@@ -288,7 +299,7 @@ class GetText(CommandLineApp):
         with open(self.lexicon_file, 'w') as lexicon:
             for word, id_word in word_id.items():
                 lexicon.write("%s %i %i\n" % (word, id_word, freq[id_word]))
-                
+
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
             for protein in seq_ids:
@@ -298,19 +309,21 @@ class GetText(CommandLineApp):
         """Reads the frequency file and produces the frequency file"""
         # we read the lexicon file
         freq = dict()
-        for line in open(self.lexicon_file,'r'):
+        for line in open(self.lexicon_file, 'r'):
             [_, numid, doc_freq] = line.split()
             freq[int(numid)] = int(doc_freq)
 
         # we read the frequency file and write it
         with open(self.weight_file, 'w') as output_file:
-            for line in open(self.freq_file,'r'):
+            for line in open(self.freq_file, 'r'):
                 fields = line.split()
                 seq_id = fields.pop(0)
                 features = [i.split(":") for i in fields]
                 output_features = [seq_id]
                 for feat in features:
-                    l = [str(feat[0]), str( math.log( float(self.N)/freq[int(feat[0])] ) * float(feat[1]) )]
+                    l = [str(feat[0]),
+                         str(math.log(float(self.N)/freq[int(feat[0])]) *
+                         float(feat[1]))]
                     output_features.append(":".join(l))
                 output_file.write(" ".join(output_features))
                 output_file.write('\n')
@@ -324,4 +337,3 @@ class GetText(CommandLineApp):
 
 if __name__ == "__main__":
     sys.exit(GetText().run())
-    

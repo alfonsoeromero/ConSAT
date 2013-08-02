@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Application that transfers the function of a set of proteins A (from 
+"""Application that transfers the function of a set of proteins A (from
 a GOA file) whose architecture has been computed, from a set of proteins
 B, whose architecture is provided.
 
@@ -8,42 +8,51 @@ readable format
 """
 
 from collections import defaultdict
-
+from gfam.go import Tree as GOTree
+from gfam.go.overrepresentation import OverrepresentationAnalyser
+from gfam.scripts import CommandLineApp
+from gfam.utils import open_anything
+from gfam.utils import bidict
+from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
 import operator
 import optparse
 import sys
 
-from gfam.architecture import ArchitectureFileReader 
+from gfam.architecture import ArchitectureFileReader
 
-__author__  = "Alfonso E. Romero"
-__email__   = "aeromero@cs.rhul.ac.uk"
+__author__ = "Alfonso E. Romero"
+__email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
+
 class TransferFunctionFromDomainArch(CommandLineApp):
     """\
-    Usage: %prog [options] architecture_file_A goa_B architecture_file_B output
+    Usage: %prog [options] gene_ontology_file architecture_file_A goa_B
+                            architecture_file_B
 
-    Application that transfers the function of a set of proteins A (from 
+    Application that transfers the function of a set of proteins A (from
     a GOA file) whose architecture has been computed, from a set of proteins
-    B, whose architecture is provided. Results are printed to an `output` file
+    B, whose architecture is provided. The transference is performed
+    architecture-wise and overrepresentation analysis is carried out on
+    the set of assigned labels.
+    The final results are printed to the standard output 
     """
 
     short_name = "function_arch"
 
     def __init__(self, *args, **kwds):
         super(TransferFunctionFromDomainArch, self).__init__(*args, **kwds)
-        self.evidence = dict(EXP=["EXP", "IDA", "IPI", "IMP", "IGI", "IEP", 
-                                  "TAS", "IC"], 
-                             ALL_BUT_IEA=["EXP", "IDA", "IPI", "IMP", "IGI",
-                                          "IEP", "TAS", "IC", "ISS", "ISO", 
-                                          "ISA", "ISM", "IGC", "IBA", "IBD",
-                                          "IKR", "IRD", "RCA"],
-                             ALL=["EXP", "IDA", "IPI", "IMP", "IGI", "IEP",
-                                  "TAS", "IC", "ISS", "ISO", "ISA", "ISM", 
-                                  "IGC", "IBA", "IBD", "IKR", "IRD", "RCA",
-                                  "IEA"]
-                             )
+        self.evidence = {"EXP": ["EXP", "IDA", "IPI", "IMP", "IGI", "IEP",
+                                 "TAS", "IC"],
+                         "ALL_BUT_IEA": ["EXP", "IDA", "IPI", "IMP", "IGI",
+                                         "IEP", "TAS", "IC", "ISS", "ISO",
+                                         "ISA", "ISM", "IGC", "IBA", "IBD",
+                                         "IKR", "IRD", "RCA"],
+                         "ALL": ["EXP", "IDA", "IPI", "IMP", "IGI", "IEP",
+                                 "TAS", "IC", "ISS", "ISO", "ISA", "ISM",
+                                 "IGC", "IBA", "IBD", "IKR", "IRD", "RCA",
+                                 "IEA"]}
 
     def create_parser(self):
         """Creates the command line parser for this application"""
@@ -53,12 +62,17 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                           config_key="analysis:function_arch/minimum_coverage",
                           help="Minimum % of coverage allowed for an " +
                                "architecture to transfer/receive function")
-
-        parser.add_option("-e", "--ev_codes", dest="ev_codes", type=str,
+        parser.add_option("-p", "--p-value", dest="max_pvalue",
+                          type=float, default=0.05, metavar="FLOAT",
+                          config_key="analysis:function_arch/max_pvalue",
+                          help="Maximum allowed p-value for " +
+                          "overrepresented GO terms")
+        parser.add_option("-e", "--ev_codes", dest="ev_codes", 
                           default="EXP", metavar="EXP/ALL_BUT_IEA/ALL",
                           config_key="analysis:function_arch/ev_codes",
+                          choices=("EXP", "ALL_BUT_IEA", "ALL"),
                           help="Evidence codes to use: EXP (experimental), " +
-                               "ALL_BUT_IEA (all except electronic, IEA," + 
+                               "ALL_BUT_IEA (all except electronic, IEA," +
                                "NAS and ND), ALL (all evidence codes)")
 
         return parser
@@ -68,87 +82,95 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         for each protein id it has a set of strings with the
         associated GO terms
         """
-        d = defaultdict(set)
-
-        with open(goa_file, "r") as goa:
-            for line in goa:
-                if not line.startswith("#"):
-                    # split line, obtain protein_id, go_term, and ev_code
-                    fields = line.split("\t")
-                    protein_id, go_term, ev_code = fields[1], fields[4], fields[6]
-                    if ev_code in ev_codes:
-                        d[protein_id].add(go_term)
+        d = bidict()
+        for line in open_anything(goa_file):
+            if not line.startswith("!") or line.startswith("#"):
+                # split line, obtain protein_id, go_term, and ev_code
+                fields = line.split("\t")
+                try:
+                    prot_id, goterm, evcode = fields[1], fields[4], fields[6]
+                except:
+                    print line
+                    sys.exit(-1)
+                if evcode in ev_codes:
+                    d.add_left(prot_id, self.go_tree.lookup(goterm))
         return d
 
-    def transfer_from_same_file(self, goa, arch_file):
-        """ Transfer function from architecture file
+    def _transfer_from_same_file(self, goa, arch_file):
+        """ Transfer function from same architecture file
         """
-        proteins_per_arch = defaultdict(set)
-        arch_per_protein = dict()
-        for protein, arch, cov in ArchitectureFileReader(arch_file):
-            if cov >= self.options.minimum_coverage:
-                proteins_per_arch[arch].add(protein)
-                arch_per_protein[protein] = arch
+        ora = OverrepresentationAnalyser(self.go_tree, goa,
+                                         confidence=self.options.max_pvalue,
+                                         min_count=1, correction='None')
+        cov = self.options.minimum_coverage / 100.0
+        for arch, prots in ArchReader(arch_file, cov):
 
-        function = defaultdict(list)
+            annotated_prots = [prot for prot in prots if goa.get_left(prot)]
 
-        for protein in goa:
-            if protein in arch_per_protein:
-                arch = arch_per_protein[protein]
-                if arch in proteins_per_arch:
-                    gos = goa[protein]
-                    for target in proteins_per_arch[arch]:
-                        if target != protein:
-                            for go in gos:
-                                function[target].append((go, protein))
-        return function
+            if not annotated_prots or arch == "NO_ASSIGNMENT":
+                # if there is no annotation for proteins in the arch...
+                for prot in prots:
+                    print prot
+                    print
+                continue
 
-    def transfer_from_other_file(goa, arch_target, arch_source):
-        proteins_per_arch = defaultdict(set)
+            targets = set(prots)
+            targets_result = ora.test_group(targets)
+            for prot in prots:
+                print prot
+                if prot in annotated_prots:
+                    res = ora.test_group(targets - set([prot]))
+                else:
+                    res = targets_result
+                for term, p_value in res:
+                    print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                print
 
-        for protein, arch, cov in ArchitectureFileReader(arch_source):
-            if (cov >= self.options.minimum_coverage 
-               and protein in goa):
-                proteins_per_arch[arch].add(protein)
+    def _transfer_from_other_file(self, goa, arch_target, arch_source):
+        ora = OverrepresentationAnalyser(self.go_tree, goa,
+                                         confidence=self.options.confidence,
+                                         min_count=1, correction='None')
+        cov = self.options.minimum_coverage
+        goterms = dict()
+        for arch, prots in ArchReader(arch_source, cov):
+            if arch != "NO_ASSIGNMENT":
+                goterms[arch] = ora.test_group(prots)
 
-        function = defaultdict(list)
-
-        for protein, arch, cov in ArchitectureFileReader(arch_target):
-            if (cov >= self.options.minimum_coverage and 
-               arch in proteins_per_arch):
-                for source in proteins_per_arch[arch]:
-                    for go in goa[source]:
-                        function[protein].append((go, source))
-
-        return function
+        for arch, prots in ArchReader(arch_target, cov):
+            if arch in goterms:
+                for prot in prots:
+                    print prot
+                    for term, p_value in goterms[arch]:
+                        print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                    print
+            else:
+                for prot in prots:
+                    print prot
+                    print
 
     def run_real(self):
         """Runs the applications"""
         if len(self.args) != 4:
-            self.error("exactly four input files are expected")
+            self.error("exactly four input files are expected" + str(len(self.args)))
 
         if self.options.ev_codes not in self.evidence:
             self.error("The three valid types of evidence codes are: " +
                        "EXP, ALL_BUT_IEA, and ALL")
 
+        if self.options.max_pvalue < 0.0 or self.options.max_pvalue > 1.0:
+            self.error("The maximum p-value should be between 0.0 and 1.0")
+
         codes = set(self.evidence[self.options.ev_codes])
 
-        archA, goaB, archB, output = self.args
-
+        go_file, archA, goaB, archB = self.args
+        self.log.info("Loading GO tree from %s..." % go_file)
+        self.go_tree = GOTree.from_obo(go_file)
         goa = self.read_goa_file(goaB, codes)
 
         if archA == archB:
-            function = self.transfer_from_same_file(goa, archA)
+            self._transfer_from_same_file(goa, archA)
         else:
-            function = self.transfer_from_other_file(goa, archA, archB)
-
-        with open(output, "w") as out:
-            for protein in function:
-                out.write("%s\t" % protein)
-                for go, source in function[protein]:
-                    out.write("%s:%s " %(go, source))
-
-                out.write("\n")
+            self._transfer_from_other_file(goa, archA, archB)
 
 
 if __name__ == "__main__":
