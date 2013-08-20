@@ -8,7 +8,7 @@ __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 __all__ = ["Assignment", "AssignmentOverlapChecker", "OverlapType",
-           "SequenceWithAssignments", "EValueFilter"]
+           "SequenceWithAssignments", "EValueFilter", "TreeRepresentation"]
 
 try:
     from collections import namedtuple
@@ -17,7 +17,8 @@ except ImportError:
     from gfam.compat import namedtuple
 
 from gfam.enum import Enum
-
+from collections import defaultdict
+from itertools import combinations
 import operator
 
 # pylint: disable-msg=C0103,E1101
@@ -85,6 +86,99 @@ class OverlapType(Enum):
     DIFFERENT = "DIFFERENT"
     OVERLAP = "OVERLAP"
 
+class TreeRepresentation(object):
+    """A class for printing a nice tree-representation of the domains
+    composing the architecture of a protein. "tree" is a list where
+    each member is a tuple (a, b). The first component, a, is an assignment,
+    and the second one, b, is a list (possibly empty) containing the
+    "descendants" of that tree node
+    """
+    def __init__(self, assignments):
+        self.assignments = assignments
+        self.__find_parents(self.assignments)
+        self.tree = self.__get_tree_representation()
+
+    def __find_parents(self, assignments):
+        """Finds the parents of the assignment. The `parents` dictionary
+        will store all the possible parents of a domain, if any. Note that
+        a domain within a nested insertion will have two parents, which would
+        be effectively a branch A -> B -> C.
+        """
+        self.parents = defaultdict(list)
+        for ass1, ass2 in combinations(assignments, 2):
+            overlap = AssignmentOverlapChecker.check_single(ass1, ass2)
+            if overlap == OverlapType.INSERTION:
+                if ass1.get_assigned_length() >= ass2.get_assigned_length():
+                    self.parents[ass2].append(ass1)
+                else:
+                    self.parents[ass1].append(ass2)
+
+    def __get_tree_representation(self):
+        l = []
+        s = sorted(self.assignments, key=operator.attrgetter("start"))
+        for ass in sorted(s, key=operator.attrgetter("length"), reverse=True):
+            print "ORDER ", ass.short_repr()
+            if ass not in self.parents:
+                print "Not in parents"
+                l.append((ass,[]))
+#            elif len(self.parents[ass]) == 1:
+#                print "Len = 1"
+#                print len(l)
+#                ind = [domain for domain, _ in l].index(self.parents[ass][0])
+                # the insertion is a level-1 one
+#                _, children = l[ind]
+#                children.append((ass, []))
+            else:
+                # a recursively insertion, one level per parent
+                print "Len = n"
+                current = l
+                explored = set()
+                level = 0
+                pars = self.parents[ass]
+
+                while level < len(pars):
+                    for parent in pars:
+                        cur = [domain for domain, _ in current]
+                        if not parent in explored and parent in cur:
+                            _, current = current[cur.index(parent)]
+                            explored.add(parent)
+                            break
+                    level += 1
+
+                current.append((ass, []))
+        print "YATTA ==================================================="
+        return l
+
+    def get_string_positions(self, l=None):
+        """Gets the tree representation as one string listing the positions
+        and the models
+        """
+        if l==None:
+            l = self.tree
+        if len(l) == 1:
+            assignment, children = l[0]
+            rep = assignment.short_repr()
+            if len(children) != 0:
+                rep += "{" + self.get_string_positions(children) + "}"
+            return rep
+        else:
+            return ";".join([self.get_string_positions([ass]) for ass in l])
+
+    def get_string(self, l=None):
+        """Gets the tree representation as one string where only the models
+        are listed
+        """
+        if l == None:
+            l = self.tree
+        if len(l) == 1:
+            assignment, children = l[0]
+            rep = assignment.domain
+            if len(children) != 0:
+                rep += "{" + self.get_string(children) + "}"
+            return rep
+        else:
+            return ";".join([self.get_string([ass]) for ass in l])
+
 
 class AssignmentOverlapChecker(object):
     """Static class that contains the central logic of determining
@@ -98,6 +192,10 @@ class AssignmentOverlapChecker(object):
     #: The maximum allowed overlap size.
     max_overlap = 20
 
+    priority = [OverlapType.OVERLAP, OverlapType.DUPLICATE, 
+                OverlapType.DIFFERENT, OverlapType.INSERTION_DIFFERENT,
+                OverlapType.INSERTION, OverlapType.NO_OVERLAP]
+
     @classmethod
     def check(cls, sequence, assignment):
         """Checks whether an `assignment` can be added to a partially
@@ -105,14 +203,14 @@ class AssignmentOverlapChecker(object):
         `SequenceWithAssignments`, `assignment` must be an instance
         of `Assignment`.
 
-        The output is equivalent to the output of the first `check_single`
-        that returns anything different from `OverlapType.NO_OVERLAP`,
-        or `OverlapType.NO_OVERLAP` otherwise.
+        The most strict type of overlap (following the order defined
+        in "priority" is returned)
         """
-        for other_assignment in sequence.assignments:
-            result = cls.check_single(assignment, other_assignment)
-            if result != OverlapType.NO_OVERLAP:
-                return result
+        overlaps_found = {cls.check_single(assignment, other_assignment)\
+                    for other_assignment in sequence.assignments}
+        for overlap_type in cls.priority:
+            if overlap_type in overlaps_found:
+                return overlap_type
         return OverlapType.NO_OVERLAP
 
     @classmethod
@@ -266,6 +364,8 @@ class SequenceWithAssignments(object):
 
         if overlap_check:
             overlap_state = self.overlap_checker.check(self, assignment)
+            if "PTHR" in assignment.domain:
+                print "Not accepted ", overlap_state
             if overlap_state not in self.acceptable_overlaps:
                 return False
 

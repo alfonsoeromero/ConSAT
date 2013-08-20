@@ -195,10 +195,12 @@ class AssignmentSourceFilterApp(CommandLineApp):
             if source not in first_stage:
                 continue
 
-            # Calculate the coverage
+            # Calculate the coverage: we add all the residues covered by 
+            # each sequence, not taking overlaps into consideration (by the
+            # moment)
             seq = SequenceWithAssignments(name, seq_length)
             for a, _ in assignments:
-                seq.assign(a)
+                seq.assign(a, False)
             coverage[source] = seq.coverage()
 
         # Find the source giving the best coverage, add its domains into

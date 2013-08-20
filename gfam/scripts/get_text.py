@@ -23,6 +23,7 @@ import operator
 from os import listdir
 from collections import Counter, defaultdict
 from gfam.scripts import CommandLineApp
+from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -51,29 +52,37 @@ class GetText(CommandLineApp):
         """Creates the command line parser for this application"""
         parser = super(GetText, self).create_parser()
         parser.add_option("-s", "--stopwords", dest="stopwords_file",
-                          metavar="FILE",
+                          metavar="FILE", config_key="file.stopwords",
                           help="Stopwords file. If none is provided," +
                                "a standard one will be used")
         parser.add_option("-S", "--sequences",
                           dest="sequences_file", metavar="FILE",
+                          config_key="analysis:find_unassigned/sequences_file",
                           help="FASTA file containing all the "
                                "sequences to analyze")
         parser.add_option("-m", "--mapping", dest="mapping", metavar="FILE",
+                          config_key="file.idmapping",
                           help="'idmapping_selected.tab' file, which can " +
                                "be downloaded from " +
                                "ftp://ftp.uniprot.org/pub/databases/uniprot" +
                                "/current_release/knowledgebase/idmapping/")
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
+                          config_key="sequence_id_regexp",
                           help="remap sequence IDs using REGEXP (only " +
                                "used in the FASTA file)")
+        parser.add_option("-a", "--arch-file", metavar="FILE", dest="arch_file",
+                          help="table with architectures produced by GFam" +
+                               " to give final results per architecture")                          
         parser.add_option("-f", "--rdf-file", dest="rdf_file", metavar="FILE",
+                          config_key="file.rdffile",
                           help="RDF file containing publication abstract " +
                                "which can be downloaded from http://www." +
                                "uniprot.org/citations/?query=citedin%3a(*) " +
                                "&format=*&compress=yes")
         parser.add_option("-o", "--output-dir", dest="output", metavar="DIR",
+                          config_key="folder.output",
                           help="directory where the output files are to be " +
-                               "written")
+                               "written.")
         return parser
 
     def read_stopwords(self, fileName):
@@ -98,7 +107,6 @@ class GetText(CommandLineApp):
 
     def run_real(self):
         """Runs the applications"""
-
         # 1.- we check the compulsory arguments
         if not self.options.sequences_file:
             self.error("the Fasta file should be provided")
@@ -126,14 +134,16 @@ class GetText(CommandLineApp):
         output_dir = os.path.normpath(self.options.output)
         self.lexicon_file = os.path.join(output_dir, "lexicon")
         self.check_not_exists(self.lexicon_file)
-        self.freq_file = os.path.join(output_dir, "freq_file")
+        self.freq_file = os.path.join(output_dir, "freq_file_per_sequence")
         self.check_not_exists(self.freq_file)
-        self.weight_file = os.path.join(output_dir, "weight_file")
+        self.weight_file = os.path.join(output_dir, "weight_file_per_sequence")
         self.check_not_exists(self.weight_file)
         self.ids_file = os.path.join(output_dir, "seq_ids_file")
         self.check_not_exists(self.ids_file)
-        self.text_file = os.path.join(output_dir, "text_file")
+        self.text_file = os.path.join(output_dir, "text_file_per_sequence")
         self.check_not_exists(self.text_file)
+        self.weight_file_arch = os.path.join(output_dir, "weight_file_per_arch")
+        self.check_not_exists(self.weight_file_arch)
 
         # 4.- we process the rdf file to a cache directory
         self.cachepubmed = os.path.join(output_dir, "cache_pubmed")
@@ -160,6 +170,10 @@ class GetText(CommandLineApp):
         self.index_text_file()
         self.log.info("Creating weight file")
         self.weight_freq_file()
+
+        if self.options.arch_file:
+            self.weight_arch_file()
+
         # END of the module
 
     def create_text_file(self):
@@ -304,6 +318,30 @@ class GetText(CommandLineApp):
         with open(self.ids_file, 'w') as proteins_file:
             for protein in seq_ids:
                 proteins_file.write("%s\n" % protein)
+
+    def weight_arch_file(self):
+        # 1.- read architectures to a dictionary of sets (key=architecture,
+        # value set of sequences
+        seqs_per_arch = {arch : set(prots) for arch, prots in ArchReader(self.options.arch_file)}
+
+        # 2.- main loop
+        with open(self.weight_file_arch, 'w') as output_file:
+            for architecture, sequences in seqs_per_arch:
+                found = 0
+                vec = defaultdict(float) # for each term a weight
+                for line in open(self.weight_file, 'r'):
+                    fields = line.split()
+                    if not fields[0] in sequences:
+                        continue
+                    for field in fields[1:]:
+                        term, weight = field.split(':')
+                        vec[int(term)] += float(weight)
+                    found += 1
+                    if found == len(sequences):
+                        break
+            output_file.write(architecture + " ")
+            output_file.write(" ".join([str(t) + ":" + str(w) for t,w in vec.items()]))
+            output_file.write("\n")
 
     def weight_freq_file(self):
         """Reads the frequency file and produces the frequency file"""

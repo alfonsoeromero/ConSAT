@@ -29,7 +29,7 @@ class ArchitectureFileReaderPerArch(object):
     that the whole architecture file is loaded into memory before
     iterating
     """
-    def __init__(self, filename, min_coverage):
+    def __init__(self, filename, min_coverage=0.0):
         self.archs = defaultdict(list)
         for protein, arch, cov in ArchitectureFileReader(filename):
             if cov >= min_coverage:

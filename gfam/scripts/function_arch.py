@@ -31,7 +31,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
     Usage: %prog [options] gene_ontology_file architecture_file_A goa_B
                             architecture_file_B
 
-    Application that transfers the function of a set of proteins A (from
+    Application that transfers functions to a set of proteins A (from
     a GOA file) whose architecture has been computed, from a set of proteins
     B, whose architecture is provided. The transference is performed
     architecture-wise and overrepresentation analysis is carried out on
@@ -74,7 +74,10 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                           help="Evidence codes to use: EXP (experimental), " +
                                "ALL_BUT_IEA (all except electronic, IEA," +
                                "NAS and ND), ALL (all evidence codes)")
-
+        parser.add_option("-s", "--source_arch", dest="source_arch",
+                          metavar="FILE", config_key="file.function.domain_arch_table",
+                          help="Architecture file to transfer from. If ommited the"
+                          "same architecture file will be used on itself")
         return parser
 
     def read_goa_file(self, goa_file, ev_codes):
@@ -150,8 +153,8 @@ class TransferFunctionFromDomainArch(CommandLineApp):
 
     def run_real(self):
         """Runs the applications"""
-        if len(self.args) != 4:
-            self.error("exactly four input files are expected" + str(len(self.args)))
+        if len(self.args) != 3:
+            self.error("exactly three input files are expected" + str(len(self.args)))
 
         if self.options.ev_codes not in self.evidence:
             self.error("The three valid types of evidence codes are: " +
@@ -162,15 +165,15 @@ class TransferFunctionFromDomainArch(CommandLineApp):
 
         codes = set(self.evidence[self.options.ev_codes])
 
-        go_file, archA, goaB, archB = self.args
+        go_file, archA, goaB = self.args
         self.log.info("Loading GO tree from %s..." % go_file)
         self.go_tree = GOTree.from_obo(go_file)
         goa = self.read_goa_file(goaB, codes)
 
-        if archA == archB:
+        if not self.options.source_arch:
             self._transfer_from_same_file(goa, archA)
         else:
-            self._transfer_from_other_file(goa, archA, archB)
+            self._transfer_from_other_file(goa, archA, source_arch)
 
 
 if __name__ == "__main__":

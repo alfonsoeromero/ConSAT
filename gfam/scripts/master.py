@@ -226,6 +226,13 @@ class GFamMasterScript(CommandLineApp):
         depends=cca
         infile=seqslicer,file.new_domains_table
 
+        [function_arch]
+        depends=find_domain_arch
+        infile=file.mapping.gene_ontology,find_domain_arch,file.function.goa_file
+
+        [get_text]
+        depends=file.input.sequences
+        switch.0=-a find_domain_arch
         """)
 
         modula_config = ConfigParser()
@@ -354,6 +361,7 @@ class GFamMasterScript(CommandLineApp):
         shutil.copy(self.modula.storage_engine.get_filename("find_domain_arch"),
                 outfile)
         self.log.info("Exported domain architectures to %s." % outfile)
+        
 
         # Run and export the label assignment
         outfile = os.path.join(outfolder, "assigned_labels.txt") 
@@ -368,8 +376,28 @@ class GFamMasterScript(CommandLineApp):
         shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
         self.log.info("Exported overrepresentation analysis to %s." % outfile)
 
-        # Run the HMMs
+        # Run the HMMs on the discovered new domains
         self.modula.run("hmm", force=self.options.force)
+
+        # Run the functional prediction, if we have to
+        if self.config.read("DEFAULT", "file.function.goa_file") is not None:
+            self.modula.run("function_arch", force=self.options.force)        
+            outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
+            shutil.copy(self.modula.storage_engine.get_filename("function_arch", outfile))
+            self.log.info("Exported predicted function by transfer to %s." % outfile)
+        else:
+            self.log.info("No GOA source file was found and therefore")
+            self.log.info("no funtion transfer will be performed")
+
+        # Run the words prediction, if we have to
+        if self.config.read("DEFAULT", "file.idmapping") is not None and\
+           self.config.read("DEFAULT", "file.rdffile") is not None:
+           self.modula.run("get_text", force=self.options.force)
+           self.log.info("Text weighting done!")
+        else:
+           self.log.info("Either not idmapping or rdf file were specified")
+           self.log.info("no text weighting will be performed")
+
 	
 	###########################################################################
 
@@ -411,6 +439,32 @@ file.mapping.interpro2name=data/names.dat.gz
 
 # File containing the parent-child relationships of InterPro terms
 file.mapping.interpro_parent_child=data/ParentChildTreeFile.txt
+
+# File with the domain archictecture table which will be used to
+# transfer function. If left blank functions will be transferred from
+# the same set of proteins
+file.function.domain_arch_table=
+
+# GOA file assigning functions to some proteins of the previous
+# domain arch table. If no GOA file is specified, the step "function_arch"
+# will not be performed
+file.function.goa_file=
+
+# Stopwords file which will be used when associating words to each
+# architecture. If no file is provided, a standard one will be used
+file.stopwords=
+
+# Mapping file 'idmapping_selected.tab' between proteins and PubMed 
+# identifiers. Can be downloaded from 
+# ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/idmapping/
+# DO NOT USE IF YOU ARE NOT DEALING WITH UNIPROT PROTEINS
+file.idmapping=
+
+# RDF file with the proper content of the PubMed articles linked from
+# UniProt entries. You can download it from the following URL:
+# http://www.uniprot.org/citations/?query=citedin%3a(*)&format=*&compress=yes
+# DO NOT USE IF YOU ARE NOT DEALING WITH UNIPROT PROTEINS
+file.rdffile=
 
 ###########################################################################
 ## Folders                                                               ##
@@ -573,6 +627,11 @@ only_linked=1
 # really of size 3 ("seq1", "seq2", "seq3")
 min_novel_domain_size=4
 
+# Optional. A previously computed domain table. If we find domains (clusters)
+# with roughly the same content as those in this table, we will keep the same
+# name
+previous_domain_table=
+
 [analysis:label_assignment]
 
 # Empty section, this script has no individual parameters to tune, but
@@ -598,6 +657,22 @@ min_term_size=1
 
 [analysis:coverage]
 
+# Empty section, this script has no individual parameters to tune, but
+# this might change in the future
+
+[analysis:function_arch]
+# The minimum % of coverage allowed for a protein covered by an architecture
+# to transfer/receive function
+minimum_coverage=80.0
+
+# Maximum allowed p-value for overrepresented GO terms
+max_pvalue=0.05
+
+# Evidence codes to use: EXP (experimental), ALL_BUT_IEA (all except 
+# electronic, IEA, NAS and ND), ALL (all evidence codes)
+ev_codes=EXP
+
+[analysis:get_text]
 # Empty section, this script has no individual parameters to tune, but
 # this might change in the future
 
@@ -629,5 +704,8 @@ file.domain_architecture_stats=%(folder.output)s/domain_architecture_stats.txt
 
 # Directory where the cluster sequences, alignments and hmms are stored
 file.dir_hmms=%(folder.output)s/hmms
+
+# Output file containing the function prediction transfered via the architecture
+file.function_pred_arch=%(folder.output)s/function_prediction_by_transfer.txt
 """
 
