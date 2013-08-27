@@ -45,6 +45,42 @@ class GetText(CommandLineApp):
 
     short_name = "get_text"
 
+    my_stopwords = """abundant additional ago analyses analysis analyzed 
+                  approximately assigned based
+                  carry causing chromosome chromosomes closely common commonly
+                  comparative compared comparison complete comprehensive
+                  comprehensively confirmed correlated data dataset decay derive
+                  derived details detected describe determined differences 
+                  divergence divergences diverse diversity draft early encoding 
+                  estimated evidence evolution evolutionary existence explain 
+                  families family find found fragment full gene genes 
+                  genetic genome genomes genomic group groups high highly 
+                  identification 
+                  identified identifying important infer initial improved
+                  includes 
+                  including independent independently indicating 
+                  interestingly involved isolated isolates laboratory 
+                  large largely larger leading level levels lineage 
+                  lineages located long loss lost low made
+                  maintain major member method methods model molecular modern 
+                  number observed obtain occur occurred orfs perspective 
+                  perspectives phylogenetic predicted present 
+                  previously protein proteins proteome provide putative 
+                  recent reflect related remains remaining remarkable 
+                  remarkably report represents results revealed reveals sequence 
+                  sequenced sequences sequencing set shown similar 
+                  single species specific spite strain strains strongly 
+                  study studies taxa type uncharacterized unique validated 
+                  wide widely widespread years yields
+                    """.split()
+
+
+    my_stopwords = ["protein", "abundant", "closely", "data", "fragment",
+            "including", "results", "obtain", "confirmed", "gene", "genetic",
+            "detected", "set", "evidence", "independent", "independently",
+            "maintain", "sequence", "sequences", "type", "revealed", "sequencing",
+            "significant", "single", "versus"]
+
     def __init__(self, *args, **kwds):
         super(GetText, self).__init__(*args, **kwds)
 
@@ -97,6 +133,7 @@ class GetText(CommandLineApp):
             urllib.urlretrieve(url, fileName)
 
         self.stopwords = set([line.strip() for line in open(fileName)])
+        self.stopwords = self.stopwords | set(my_stopwords)
 
     def check_not_exists(self, fileName):
         """Checks that a file does not exists. If it does, exists and

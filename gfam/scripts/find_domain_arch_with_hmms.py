@@ -62,11 +62,6 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                 help="print genome-level statistics about the domain architectures into FILE",
                 config_key="generated/file.domain_architecture_stats",
                 default=None)
-        parser.add_option("--new_domains_table",
-                dest="new_domains_table", metavar="FILE",
-                help="prints a table with the new domains, one per line, into FILE",
-                config_key="generated/file.new_domains_table",
-                default=None)
         parser.add_option("-n", "--names",
                 dest="interpro_names_file",
                 metavar="FILE",
@@ -83,16 +78,6 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                 config_key="max_overlap",
                 dest="max_overlap", type=int, default=20)
         return parser
-
-#    def print_new_domains_table(self, table):
-#        """Prins the new domain table"""
-#        self.log.info("Printing the new domains table")
-#        
-#        table_file = open(self.options.new_domains_table, "w")
-#        with redirected(stdout=table_file):
-#            for cluster_name in sorted(table.keys()):
-#                print cluster_name + "\t" + "\t".join(table[cluster_name])
-#        table_file.close()
 
     def run_real(self):
         """Runs the applications"""
@@ -119,9 +104,6 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         self.process_interpro_file(interpro_file)
         self.process_hmmer_file(hmmer_file)
         self.sort_by_domain_architecture()
-
-#        if self.options.new_domains_table:
-#           self.print_new_domains_table(self.options.new_domains_table)
 
         for seqs in self.domain_archs.itervalues():
             seqs.sort()
@@ -186,7 +168,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                         if exclude_novel_domains(key) in archs_without_novel)
             num_seqs_with_nonempty_nonnovel_domain_arch = \
                     sum(len(value) for key, value in self.domain_archs
-                            if key and not any(a.startswith("NOVEL") for a in key))
+                            if key and not any(a in self.hmm_domains for a in key))
 
             with redirected(stdout=stats_file):
                 print "Domain architectures"
@@ -281,7 +263,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                 for assignment in assignments:
                     attrs = assignment._asdict()
                     if assignment.comment is None and \
-                       assignment.domain.startswith("NOVEL"):
+                       assignment.domain in self.hmm_domains:
                         attrs["comment"] = "novel"
                     row = "    %(start)4d-%(end)4d: %(domain)s "\
                           "(%(source)s, stage: %(comment)s)" % attrs

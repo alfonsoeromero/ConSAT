@@ -452,6 +452,7 @@ file.function.goa_file=
 
 # Stopwords file which will be used when associating words to each
 # architecture. If no file is provided, a standard one will be used
+# DO NOT USE IF YOU ARE NOT DEALING WITH UNIPROT PROTEINS
 file.stopwords=
 
 # Mapping file 'idmapping_selected.tab' between proteins and PubMed 
@@ -631,6 +632,14 @@ min_novel_domain_size=4
 # with roughly the same content as those in this table, we will keep the same
 # name
 previous_domain_table=
+
+# Optional. Preffix to name the newly discovered domains. If no preffix is
+# specified, "NOVEL" will be used. The domains will be named with the preffix
+# and a number of five digits (NOVEL00001, NOVEL00002, etc.).
+# Please, note that it is your responsability not to make conflict using a
+# preffix already in use by other domain database (e.g.: Pfam, G3D, etc).
+# If you are unsure, leave blank.
+preffix=
 
 [analysis:label_assignment]
 

@@ -10,7 +10,7 @@ import optparse
 import sys
 import re
 
-from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
+from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments, TreeRepresentation
 from gfam.interpro import InterPro, InterProNames
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, redirected
@@ -88,6 +88,10 @@ class FindDomainArchitectureApp(CommandLineApp):
                 "keep the same cluster names as much as possible",
                 config_key="analysis:find_domain_arch/previous_domain_table",
                 default=None)
+        parser.add_option("-p", metavar="STRING", dest="preffix",
+                help="preffix for the new discovered domains ('NOVEL' by default)",
+                config_key="analysis:find_domain_arch/preffix",
+                default='NOVEL')
         return parser
 
     def print_new_domains_table(self, table):
@@ -144,7 +148,7 @@ class FindDomainArchitectureApp(CommandLineApp):
 
         for domain_arch, members in self.domain_archs:
             if domain_arch:
-                arch_str = ";".join(domain_arch)
+                arch_str = domain_arch
             else:
                 arch_str = "NO_ASSIGNMENT"
                 arch_str_pos = "NO_ASSIGNMENT"
@@ -153,12 +157,8 @@ class FindDomainArchitectureApp(CommandLineApp):
             family_length = len(members)
             for member in members:
                 seq = self.seqcat[member]
-                if domain_arch:
-                    # TODO: make a better representation, considering overlaps
-                    # in this way: IPR1(IPR2) means that IPR2 is inserted into
-                    # IPR1
-                    arch_str_pos = ";".join(assignment.short_repr() \
-                            for assignment in seq.assignments)
+                if domain_arch and domain_arch is not "NO_ASSIGNMENT":
+                    arch_str_pos = seq.architecture_pos
                     arch_desc = ";".join( \
                             self.interpro_names[assignment.domain]
                             for assignment in seq.assignments
@@ -185,10 +185,12 @@ class FindDomainArchitectureApp(CommandLineApp):
             if "" in self.domain_archs:
                 num_archs -= 1
 
+            preffix = self.options.preffix
+
             def exclude_novel_domains(domain_architecture):
                 """Excludes novel domains from a domain architecture and returns
                 the filtered domain architecture as a tuple."""
-                return tuple(a for a in domain_architecture if not a.startswith("NOVEL"))
+                return tuple(a for a in domain_architecture if not a.startswith(preffix))
 
             archs_without_novel = set(exclude_novel_domains(arch)
                     for arch in all_archs)
@@ -203,7 +205,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                         if exclude_novel_domains(key) in archs_without_novel)
             num_seqs_with_nonempty_nonnovel_domain_arch = \
                     sum(len(value) for key, value in self.domain_archs
-                            if key and not any(a.startswith("NOVEL") for a in key))
+                            if key and not any(a.startswith(preffix) for a in key))
 
             with redirected(stdout=stats_file):
                 print "Domain architectures"
@@ -319,21 +321,22 @@ class FindDomainArchitectureApp(CommandLineApp):
     def process_clustering_file(self, fname):
         table = defaultdict()
         f = open(fname)
+        preffix = self.options.preffix
         for line in f:
             fragments = line.strip().split()
             if len(set([x.split(":",1)[0] for x in fragments])) < self.options.min_size:
                 continue
             if not self.using_old_table:
-                domain_name = "NOVEL%05d" % self.current_cluster_id
+                domain_name = preffix + "%05d" % self.current_cluster_id
                 self.current_cluster_id +=1
             else:
                 # We find the name of the best matching cluster given this set of
                 # sequences
                 domain_id = self.find_domain_id(fragments)
                 if domain_id != -1:
-                    domain_name = "NOVEL%05d" % domain_id
+                    domain_name = preffix + "%05d" % domain_id
                 else:
-                    domain_name = "NOVEL%05d" % self.current_cluster_id
+                    domain_name = preffix + "%05d" % self.current_cluster_id
                     self.current_cluster_id += 1
             sequences = []
             for id in ids:
@@ -347,6 +350,7 @@ class FindDomainArchitectureApp(CommandLineApp):
 
     def sort_by_domain_architecture(self):
         self.domain_archs = defaultdict(list)
+        preffix = self.options.preffix
         for seq_id, seq in self.seqcat.iteritems():
             assignments = sorted(seq.assignments, key=operator.attrgetter("start"))
             domains = []
@@ -362,7 +366,11 @@ class FindDomainArchitectureApp(CommandLineApp):
                     primary_source.add(assignment.source)
                 domains.append(new_assignment.domain)
                 new_assignments.append(new_assignment)
-            self.domain_archs[tuple(domains)].append(seq_id)
+            tree_arch = TreeRepresentation(new_assignments)
+            seq.architecture = tree_arch.get_string()
+            seq.architeture_pos = tree_arch.get_string_positions()
+
+            self.domain_archs[seq.architecture].append(seq_id)
 
             if not primary_source:
                 primary_source = None
@@ -385,7 +393,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                 for assignment in assignments:
                     attrs = assignment._asdict()
                     if assignment.comment is None and \
-                       assignment.domain.startswith("NOVEL"):
+                       assignment.domain.startswith(preffix):
                         attrs["comment"] = "novel"
                     row = "    %(start)4d-%(end)4d: %(domain)s "\
                           "(%(source)s, stage: %(comment)s)" % attrs

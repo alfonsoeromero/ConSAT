@@ -208,7 +208,9 @@ class AssignmentSourceFilterApp(CommandLineApp):
         seq = SequenceWithAssignments(name, seq_length)
         if coverage:
             best_source = max(coverage.keys(), key = coverage.__getitem__)
-            for a, line in assignments_by_source[best_source]:
+            sorted_assignments = sorted(assignments_by_source[best_source], key=lambda
+                    x: x[1].get_assignment_length(), reverse=True)
+            for a, line in sorted_assignments:
                 line = line.strip()
                 seq.assign(a)
                 tab_count = list(line).count("\t")
