@@ -74,13 +74,6 @@ class GetText(CommandLineApp):
                   wide widely widespread years yields
                     """.split()
 
-
-    my_stopwords = ["protein", "abundant", "closely", "data", "fragment",
-            "including", "results", "obtain", "confirmed", "gene", "genetic",
-            "detected", "set", "evidence", "independent", "independently",
-            "maintain", "sequence", "sequences", "type", "revealed", "sequencing",
-            "significant", "single", "versus"]
-
     def __init__(self, *args, **kwds):
         super(GetText, self).__init__(*args, **kwds)
 
@@ -119,6 +112,13 @@ class GetText(CommandLineApp):
                           config_key="folder.output",
                           help="directory where the output files are to be " +
                                "written.")
+        parser.add_option("-l", "--lexicon", dest="lexicon_file", metavar="FILE",
+                          config_key="file.lexicon", help="file with a previously " +
+                          "generated lexicon used to maintain compatibility")
+        parser.add_option("-p", "--pubmed-cache", dest="pubmed_cache", metavar="DIR",
+                         config_key="folder.pubmed_cache",
+                         help="A directory where a cache of PubMed downloaded abstacts " +
+                         "will be stored")
         return parser
 
     def read_stopwords(self, fileName):
@@ -133,7 +133,7 @@ class GetText(CommandLineApp):
             urllib.urlretrieve(url, fileName)
 
         self.stopwords = set([line.strip() for line in open(fileName)])
-        self.stopwords = self.stopwords | set(my_stopwords)
+        self.stopwords = self.stopwords | set(GetText.my_stopwords)
 
     def check_not_exists(self, fileName):
         """Checks that a file does not exists. If it does, exists and
@@ -141,6 +141,13 @@ class GetText(CommandLineApp):
         if os.path.exists(fileName):
             self.error("The file " + fileName +
                        " already exists. Cannot overwrite")
+
+    def read_lexicon_file(self, file_name):
+        if not os.path.exists(file_name):
+            self.error("The given lexicon file " + file_name + " does not exist")
+        for line in open(file_name, "r"):
+            word, word_id, _ = line.split()
+            self.old_lexicon[word] = int(word_id)
 
     def run_real(self):
         """Runs the applications"""
@@ -153,6 +160,10 @@ class GetText(CommandLineApp):
 
         if not self.options.mapping:
             self.error("the Mapping file should be provided")
+
+        self.old_lexicon = dict()
+        if self.options.lexicon_file:
+            self.read_lexicon_file(self.options.lexicon_file)
 
         # 2.- we read the stopwords data
         self.read_stopwords(self.options.stopwords_file)
@@ -179,11 +190,14 @@ class GetText(CommandLineApp):
         self.check_not_exists(self.ids_file)
         self.text_file = os.path.join(output_dir, "text_file_per_sequence")
         self.check_not_exists(self.text_file)
-        self.weight_file_arch = os.path.join(output_dir, "weight_file_per_arch")
-        self.check_not_exists(self.weight_file_arch)
+        #self.weight_file_arch = os.path.join(output_dir, "weight_file_per_arch")
+        #self.check_not_exists(self.weight_file_arch)
 
         # 4.- we process the rdf file to a cache directory
-        self.cachepubmed = os.path.join(output_dir, "cache_pubmed")
+        if not self.options.pubmed_cache:
+            self.cachepubmed = os.path.join(output_dir, "cache_pubmed")
+        else:
+            self.cachepubmed = self.options.pubmed_cache
         self.log.info("Preprocessing PubMed abstracts")
         if not os.path.exists(self.cachepubmed):
             os.makedirs(self.cachepubmed)
@@ -320,9 +334,11 @@ class GetText(CommandLineApp):
 
     def index_text_file(self):
         freq = defaultdict(int)
-        word_id = dict()
+        if len(self.old_lexicon) == 0:
+            word_id = dict()
+        else:
+            word_id = self.old_lexicon
         seq_ids = []
-
         # open freq file as output
         with open(self.freq_file, 'w') as output:
             for line in open(self.text_file, 'r'):
@@ -349,7 +365,8 @@ class GetText(CommandLineApp):
         # write lexicon
         with open(self.lexicon_file, 'w') as lexicon:
             for word, id_word in word_id.items():
-                lexicon.write("%s %i %i\n" % (word, id_word, freq[id_word]))
+                if id_word in freq:
+                    lexicon.write("%s %i %i\n" % (word, id_word, freq[id_word]))
 
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
@@ -360,25 +377,29 @@ class GetText(CommandLineApp):
         # 1.- read architectures to a dictionary of sets (key=architecture,
         # value set of sequences
         seqs_per_arch = {arch : set(prots) for arch, prots in ArchReader(self.options.arch_file)}
+        arch_per_seq = dict()
+        for arch, prots in seqs_per_arch.items():
+            for prot in prots:
+                arch_per_seq[prot] = arch
 
         # 2.- main loop
-        with open(self.weight_file_arch, 'w') as output_file:
-            for architecture, sequences in seqs_per_arch:
-                found = 0
-                vec = defaultdict(float) # for each term a weight
-                for line in open(self.weight_file, 'r'):
-                    fields = line.split()
-                    if not fields[0] in sequences:
-                        continue
-                    for field in fields[1:]:
-                        term, weight = field.split(':')
-                        vec[int(term)] += float(weight)
-                    found += 1
-                    if found == len(sequences):
-                        break
-            output_file.write(architecture + " ")
-            output_file.write(" ".join([str(t) + ":" + str(w) for t,w in vec.items()]))
-            output_file.write("\n")
+        #with open(self.weight_file_arch, 'w') as output_file:
+        vec_per_arch = defaultdict(dict)
+        for line in open(self.weight_file, 'r'):
+            fields = line.split()
+            if not fields[0] in arch_per_seq:
+                continue
+            arch = arch_per_seq[fields[0]]
+            vec = vec_per_arch[arch] 
+                
+            for field in fields[1:]:
+                term, weight = field.split(':')
+                if term in vec:
+                    vec[term] += weight
+                else:
+                    vec[term] = weight
+        for arch in seqs_per_arch: 
+            print arch, " ", " ".join([str(t) + ":" + str(w) for t,w in vec_per_arch[arch].items()])
 
     def weight_freq_file(self):
         """Reads the frequency file and produces the frequency file"""

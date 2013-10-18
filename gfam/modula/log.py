@@ -38,6 +38,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
     def __init__(self, *args, **kwds):
         """Initializes the handler and checks whether colored output is available"""
         logging.StreamHandler.__init__(self, *args, **kwds)
+        has_colors = False
         if ColoredConsoleHandler._has_colors is None:
             has_colors = True
             try:

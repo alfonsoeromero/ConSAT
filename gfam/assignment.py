@@ -83,6 +83,7 @@ class OverlapType(Enum):
     DUPLICATE = "DUPLICATE"
     INSERTION = "INSERTION"
     INSERTION_DIFFERENT = "INSERTION_DIFFERENT"
+    SYNONYM_INSERTION = "SYNONYM_INSERTION"
     DIFFERENT = "DIFFERENT"
     OVERLAP = "OVERLAP"
 
@@ -117,20 +118,10 @@ class TreeRepresentation(object):
         l = []
         s = sorted(self.assignments, key=operator.attrgetter("start"))
         for ass in sorted(s, key=operator.attrgetter("length"), reverse=True):
-            print "ORDER ", ass.short_repr()
             if ass not in self.parents:
-                print "Not in parents"
                 l.append((ass,[]))
-#            elif len(self.parents[ass]) == 1:
-#                print "Len = 1"
-#                print len(l)
-#                ind = [domain for domain, _ in l].index(self.parents[ass][0])
-                # the insertion is a level-1 one
-#                _, children = l[ind]
-#                children.append((ass, []))
             else:
                 # a recursively insertion, one level per parent
-                print "Len = n"
                 current = l
                 explored = set()
                 level = 0
@@ -146,13 +137,14 @@ class TreeRepresentation(object):
                     level += 1
 
                 current.append((ass, []))
-        print "YATTA ==================================================="
         return l
 
     def get_string_positions(self, l=None):
         """Gets the tree representation as one string listing the positions
         and the models
         """
+        if not self.assignments:
+            return "NO_ASSIGNMENT"
         if l==None:
             l = self.tree
         if len(l) == 1:
@@ -168,6 +160,8 @@ class TreeRepresentation(object):
         """Gets the tree representation as one string where only the models
         are listed
         """
+        if not self.assignments:
+            return "NO_ASSIGNMENT"
         if l == None:
             l = self.tree
         if len(l) == 1:
@@ -188,12 +182,28 @@ class AssignmentOverlapChecker(object):
     The class has a class variable named `max_overlap` which stores
     the maximum allowed overlap size. This is 20 by default.
     """
-
     #: The maximum allowed overlap size.
     max_overlap = 20
 
+    #: This is the minimum number of residues that a domain with the same
+    #: InterPro id can leave uncovered in the parent. Otherwise it is discarded
+    #: and considered as the same domain
+    min_parent_inserted_size = 20
+
+    #: Here we give a scale of priorities for the different overlap types.
+    #: When checking an assignment against all previously added assignments
+    #: we will first check if there is overlap of the first kind
+    #: (`OverlapType.OVERLAP`) with any of the already added members.
+    #: If so, this overlap type is returned. If not, we pass on to the next
+    #: `OverlapType`, until all the types have been tested. This is done to
+    #: avoid unwanted behaviour. For instance, an assignment C might be found
+    #: as an insertion in a large assignment A, which also contains an 
+    #: assignment B already inserted, overlapping with C. If we checked only
+    #: if there were an insertion, A would be accepted, as no further checks
+    #: are done.
     priority = [OverlapType.OVERLAP, OverlapType.DUPLICATE, 
-                OverlapType.DIFFERENT, OverlapType.INSERTION_DIFFERENT,
+                OverlapType.DIFFERENT, OverlapType.SYNONYM_INSERTION,
+                OverlapType.INSERTION_DIFFERENT,
                 OverlapType.INSERTION, OverlapType.NO_OVERLAP]
 
     @classmethod
@@ -206,8 +216,8 @@ class AssignmentOverlapChecker(object):
         The most strict type of overlap (following the order defined
         in "priority" is returned)
         """
-        overlaps_found = {cls.check_single(assignment, other_assignment)\
-                    for other_assignment in sequence.assignments}
+        overlaps_found = set(cls.check_single(assignment, other_assignment)\
+                    for other_assignment in sequence.assignments)
         for overlap_type in cls.priority:
             if overlap_type in overlaps_found:
                 return overlap_type
@@ -223,6 +233,13 @@ class AssignmentOverlapChecker(object):
 
         - `OverlapType.DUPLICATE`: `assignment` is a duplicate of
           `other_assignment` (same starting and ending positions)
+
+        - `OverlapType.SYNONYM_INSERTION`: `assignment` is inserted into
+          `other_assignment` or vice versa, but they share the same InterPro
+           term, and very few amino acids in the parent (less than 
+           `min_parent_inserted_size`) are covered. Therefore we might think
+           it is not a real insertion, but two expressions of the same domain
+           (belonging for example to two different signature databases).
 
         - `OverlapType.INSERTION`: there is a complete domain insertion in
           either direction
@@ -245,6 +262,12 @@ class AssignmentOverlapChecker(object):
         if other_start == start and other_end == end:
             # This is a duplicate assignment, so we must skip it
             return OverlapType.DUPLICATE
+
+        if (((other_start <= start and other_end >= end) or (
+                other_start >= start and other_end)) and
+            (assignment.interpro_id == other_assignment.interpro_id) and
+            (abs(other_start-start) + abs(other_end - end) < cls.min_parent_inserted_size)):
+            return OverlapType.SYNONYM_INSERTION
 
         if other_start <= start and other_end >= end:
             if other_assignment.source == assignment.source:
@@ -316,9 +339,17 @@ class SequenceWithAssignments(object):
 
     - ``assignments``: a list of `Assignment` instances that describe
       the domain architecture of the sequence
+
+    - ``architecture``: architecture of the sequence, in a string form
+      computed from ``assignments`` using the method ``get_string`` of
+      ``TreeRepresentation``.
+
+    - ``architecture_pos``: same as the previous one, but containing
+      the positions in which each domain spans between parentheses.
     """
 
-    __slots__ = ("name", "length", "assignments")
+    __slots__ = ("name", "length", "assignments", "architecture",
+                 "architecture_pos")
 
     #: The overlap checker used by this instance. This points to
     #: `AssignmentOverlapChecker` by default.
@@ -364,21 +395,20 @@ class SequenceWithAssignments(object):
 
         if overlap_check:
             overlap_state = self.overlap_checker.check(self, assignment)
-            if "PTHR" in assignment.domain:
-                print "Not accepted ", overlap_state
             if overlap_state not in self.acceptable_overlaps:
                 return False
 
         self.assignments.append(assignment)
         return True
 
-    def coverage(self, sources=None):
-        """Returns the coverage of the sequence, i.e. the fraction of residues
-        covered by at least one assignment.
-        
+    def num_covered(self, sources=None):
+        """Returns the number of residues covered by the assignments in the
+        sequence.
+
         `sources` specifies the data sources to be included in the coverage
         calculation. If `None`, all the data sources will be considered; otherwise
-        it must be a set containing the accepted sources."""
+        it must be a set containing the accepted sources.
+        """
         ok = [0] * self.length
         if sources is None:
             for a in self.assignments:
@@ -389,7 +419,16 @@ class SequenceWithAssignments(object):
             for a in self.assignments:
                 if a.source in sources:
                     ok[a.start:(a.end+1)] = [1] * ((a.end+1)-a.start)
-        return sum(ok) / float(self.length)
+        return sum(ok)
+
+    def coverage(self, sources=None):
+        """Returns the coverage of the sequence, i.e. the fraction of residues
+        covered by at least one assignment.
+        
+        `sources` specifies the data sources to be included in the coverage
+        calculation. If `None`, all the data sources will be considered; otherwise
+        it must be a set containing the accepted sources."""
+        return self.num_covered(sources) / float(self.length)
 
     def data_sources(self):
         """Returns the list of data sources that were used in this assignment."""

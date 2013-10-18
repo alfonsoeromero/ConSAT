@@ -129,15 +129,29 @@ class HMM(CommandLineApp):
 
     def building_hmms(self, cluster_names):
         """Builds the HMMs, one for each alignment"""             
-        hmm_dir = self.hmms_dir + os.path.sep                         
-        align_dir = self.alignments_dir + os.path.sep                      
+        hmm_dir = self.hmms_dir                  
+        align_dir = self.alignments_dir
+        self.hmm_files = []
             
         for cluster in cluster_names:
-            hmm = hmm_dir + cluster + ".hmm"
-            align = align_dir + cluster + ".sto"
+            hmm = os.path.join(hmm_dir, cluster) + ".hmm"
+            align = os.path.join(align_dir, cluster) + ".sto"
 
-            call(["hmmbuild", hmm, align])               
-        # no errors are checked, in the future the call should be checked  
+            call(["hmmbuild", hmm, align], \
+                    stdout=open(os.devnull, 'wb')) 
+            self.hmm_files.append(hmm)
+        # TODO: no errors are checked, in the future the call should be checked
+
+    def join_hmms(self):
+        """Joins alltogether the produces HMM files into a single one.
+        As the HMM files are text-based, the union is basically a
+        concatenation of the individual files
+        """
+        all_models_file = os.path.join(self.options.directory, "all.hmm")
+        with open(all_models_file, "w") as out:
+            for hmm_file in self.hmm_files:
+                for line in open(hmm_file, "r"):
+                    out.write(line)
 
     def run_real(self):
         """Runs the HMM application"""
@@ -146,7 +160,7 @@ class HMM(CommandLineApp):
 
         sequences_file, table_file = self.args
 
-        # require the presence of hmmbuild and clustalo
+        # TODO: require the presence of hmmbuild and clustalo
 
         self.log.info("Reading cluster table from %s..." % table_file)
         table = self.read_table(table_file)
@@ -162,6 +176,9 @@ class HMM(CommandLineApp):
 
         self.log.info("Building HMMs")
         self.building_hmms(table.keys())
+
+        self.log.info("Joining HMM files into single one")
+        self.join_hmms()
 
 if __name__ == "__main__":
     sys.exit(HMM().run())

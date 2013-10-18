@@ -12,7 +12,6 @@ import sys
 import tempfile
 from operator import itemgetter
 
-from gfam import fasta
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything, search_file, temporary_dir
 

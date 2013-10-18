@@ -8,6 +8,7 @@ from gfam import fasta
 from gfam.sequence import SeqRecord
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
+import array
 
 __authors__  = "Tamas Nepusz, Alfonso E. Romero"
 __email__   = "tamas@cs.rhul.ac.uk"
@@ -71,26 +72,28 @@ class SeqSlicerApp(CommandLineApp):
     def load_slice_file(self, slice_file):
         """Loads the slice file into a dictionary of lists"""
         self.log.info("Loading slices from %s..." % slice_file)
-
         self.parts = defaultdict(list)
 
         for line in open_anything(slice_file):
             parts = line.strip().split()
             if not parts:
                 continue
-            seq_id = parts[0]
-            (left, right) = (1, None)
+            left, right = 1, -1 
 
             if len(parts) == 3:
                 # Three cases: (a) both limits (left,right) are specified
-                (left, right) = (int(parts[1]), int(parts[2]))
+                left, right = int(parts[1]), int(parts[2])
             elif len(parts) == 2:
                 # (b) only the left limit is specified
                 left = int(parts[1])
                 # (c) neither left nor right limits are specified 
                 # (this is why we se left=1 before)
 
-            self.parts[seq_id].append((left, right))
+            if left == 0 or right == 0:
+                self.log.warning("Ignoring fragment ID: %s, "
+                    "requested start position is zero" % parts[0])
+            else:
+                self.parts[parts[0]].append(array.array('i', [left, right]))
 
     def process_sequences_file(self, seq_file):
         """Processes the sequences one by one, extracting all the pieces into
@@ -103,10 +106,10 @@ class SeqSlicerApp(CommandLineApp):
 
         ids_to_process = set(self.parts.keys())
 
-        writer = fasta.Writer(sys.stdout)
+        writer = fasta.FastWriter(sys.stdout)
         if self.output_file is not None:
-            self.output_fd = open(output_file,"r")
-            writer_file = fasta.Writer(output_fd)
+            output_fd = open(self.output_file,"w")
+            writer_file = fasta.FastWriter(output_fd)
 
         for seq in parser:
             seq_id = seq.id
@@ -122,26 +125,15 @@ class SeqSlicerApp(CommandLineApp):
             length_seq = len(sequence)
             ids_to_process.remove(seq_id)
 
-            for (left, right) in self.parts[seq_id]:
+            for left, right in self.parts[seq_id]:
 
-                if left == 0:
-                    self.log.warning("Ignoring fragment ID: %s, "
-                        "requested start position is zero" % seq_id)
-                    continue
-                elif left < 0:
+                if left < 0:
                     left = length_seq + left + 1
-
-                if right is None:
-                    right = length_seq
-                elif right < 0:
+                if right < 0:
                     right = length_seq + right + 1
-                elif right > length_seq:
-                    #just in case...
-                    right = length_seq
-                elif right == 0:
-                    self.log.warning("Ignoring fragment ID: %s, "
-                        "requested end position is zero" %seq_id)
-                    continue
+
+                right = min(right, length_seq)
+                #just in case...
 
                 if left > right:
                     #again, just in case
@@ -149,16 +141,19 @@ class SeqSlicerApp(CommandLineApp):
                         "the right part is smaller than the left" % seq_id)
                     continue
 
-                if not self.options.keep_ids:
-                    new_id = "%s:%d-%d" % (seq_id, left, right)
+                new_record = None
+
+                if left == 1 and right == length_seq:
+                    new_record = seq.fragment(not self.options.keep_ids)
                 else:
-                    new_id = seq_id
-
-                new_record = SeqRecord(sequence[(left-1):right],
-                        id=new_id, name=seq.name, description="")
+                    if not self.options.keep_ids:
+                        new_id = "%s:%d-%d" % (seq_id, left, right)
+                    else:
+                        new_id = seq_id
+                    new_record = SeqRecord(sequence[(left-1):right],
+                            id=new_id, name=seq.name, description="")
                 writer.write(new_record)
-
-	        if self.output_file is not None:
+                if self.output_file is not None:
                     writer_file.write(new_record)
 
         if self.output_file is not None:

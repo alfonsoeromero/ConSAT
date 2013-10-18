@@ -34,8 +34,29 @@ except ImportError:
             y += 1.0
             se += c[j] / y
         return -tm + log(2.5066282746310005 * se / x)
-        
+
+def memoize(function):
+    cache = {}
+    def decorated_function(*args):
+        if args in cache:
+            return cache[args]
+        else:
+            val = function(*args)
+            cache[args] = val
+            return val
+    return decorated_function
+
 def logchoose(n, k):
+    """ Computes the logarithm of the binomial
+    coefficient, using the row-symmetry property
+    """
+    if n-k < k:
+        return _logchoose(n, n-k)
+    else:
+        return _logchoose(n, k)
+
+@memoize
+def _logchoose(n, k):
     """Calculates the logarithm of n-choose-k"""
     lgn1 = gammaln(n+1)
     lgk1 = gammaln(k+1)
@@ -186,7 +207,7 @@ class OverrepresentationAnalyser(object):
         # Do the testing
         result = []
         for term, count in counts.iteritems():
-           if len(self.mapping.right[term]) < min_count:
+            if len(self.mapping.right[term]) < min_count:
                 continue
             p = self.enrichment_p(term, count, group_size)
             result.append((term, p))

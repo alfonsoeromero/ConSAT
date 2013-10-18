@@ -61,6 +61,11 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                 config_key="analysis:overrep/min_term_size",
                 help="don't test for overrepresentation of GO terms "
                      "with less than SIZE annotations. Default: %default")
+        parser.add_option("-a", dest="arch_file",
+                metavar="FILE", config_key="file.overrep.arch_file",
+                help="Produces an overrepresentation analysis file for "
+                     "each architecture (optional)"
+                )
         return parser
 
     def run_real(self):
@@ -88,6 +93,9 @@ class OverrepresentationAnalysisApp(CommandLineApp):
         self.log.info("p-value = %.4f, correction method = %s" % \
                       (self.options.confidence, self.options.correction))
 
+        if self.options.arch_file:
+            arch_file = open(self.options.arch_file, "w")
+
         overrep = OverrepresentationAnalyser(self.go_tree, self.go_mapping,
                 confidence = self.options.confidence,
                 min_count = self.options.min_size,
@@ -101,7 +109,7 @@ class OverrepresentationAnalysisApp(CommandLineApp):
         for line in open_anything(input_file):
             parts = line.strip().split("\t")
             gene_id = parts[0]
-            arch = tuple([x for x in parts[2].replace("{", ";").replace("}", ";").split(";") if x])
+            arch = tuple([x for x in parts[3].replace("{", ";").replace("}", ";").split(";") if x])
             total_seqs += 1
 
             if arch == ("NO_ASSIGNMENT", ):
@@ -111,6 +119,12 @@ class OverrepresentationAnalysisApp(CommandLineApp):
 
             if arch not in cache:
                 cache[arch] = overrep.test_group(arch)
+                if self.options.arch_file:
+                    arch_file.write(parts[3] + "\n") # architecture
+                    for term, p_value in cache[arch]:
+                        line = "  %.4f: %s (%s)\n" % (p_value, term.id, term.name)
+                        arch_file.write(line)
+                    arch_file.write("\n") 
 
             print gene_id
             for term, p_value in cache[arch]:
@@ -126,6 +140,9 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                     % num_no_annotations)
         if num_no_domains:
             self.log.info("%d sequences have no domains at all :(" % num_no_domains)
+
+        if self.options.arch_file:
+            arch_file.close()
 
 
 if __name__ == "__main__":

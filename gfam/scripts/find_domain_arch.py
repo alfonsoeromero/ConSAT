@@ -88,14 +88,14 @@ class FindDomainArchitectureApp(CommandLineApp):
                 "keep the same cluster names as much as possible",
                 config_key="analysis:find_domain_arch/previous_domain_table",
                 default=None)
-        parser.add_option("-p", metavar="STRING", dest="preffix",
-                help="preffix for the new discovered domains ('NOVEL' by default)",
-                config_key="analysis:find_domain_arch/preffix",
+        parser.add_option("-p", metavar="STRING", dest="prefix",
+                help="prefix for the new discovered domains ('NOVEL' by default)",
+                config_key="analysis:find_domain_arch/prefix",
                 default='NOVEL')
         return parser
 
     def print_new_domains_table(self, table):
-        """Prins the new domain table"""
+        """Prints the new domain table"""
         self.log.info("Printing the new domains table")
         
         table_file = open(self.options.new_domains_table, "w")
@@ -157,15 +157,15 @@ class FindDomainArchitectureApp(CommandLineApp):
             family_length = len(members)
             for member in members:
                 seq = self.seqcat[member]
-                if domain_arch and domain_arch is not "NO_ASSIGNMENT":
+                if domain_arch:
                     arch_str_pos = seq.architecture_pos
                     arch_desc = ";".join( \
                             self.interpro_names[assignment.domain]
                             for assignment in seq.assignments
                     )
-                print "%s\t%d\t%s\t%d\t%s\t%s" % (member, seq.length, arch_str, \
-                                              family_length, arch_str_pos, \
-                                              arch_desc)
+                print "%s\t%d\t%d\t%s\t%d\t%s\t%s" % (member, seq.length,
+                        seq.num_covered(), arch_str, family_length,
+                        arch_str_pos, arch_desc)
 
         self.details_file.close()
 
@@ -185,12 +185,18 @@ class FindDomainArchitectureApp(CommandLineApp):
             if "" in self.domain_archs:
                 num_archs -= 1
 
-            preffix = self.options.preffix
+            if self.options.prefix:
+                prefix = self.options.prefix
+            else:
+                prefix = "NOVEL"
+
+            def split_arch(arch):
+                return [x for x in arch.replace("{", ";").replace("}", ";").split(";") if x]
 
             def exclude_novel_domains(domain_architecture):
                 """Excludes novel domains from a domain architecture and returns
                 the filtered domain architecture as a tuple."""
-                return tuple(a for a in domain_architecture if not a.startswith(preffix))
+                return tuple(a for a in split_arch(domain_architecture) if not a.startswith(prefix))
 
             archs_without_novel = set(exclude_novel_domains(arch)
                     for arch in all_archs)
@@ -199,13 +205,16 @@ class FindDomainArchitectureApp(CommandLineApp):
             num_archs_without_novel = len(archs_without_novel)
 
             num_seqs_with_nonempty_domain_arch = \
-                    sum(len(value) for key, value in self.domain_archs if key)
+                    sum(len(value) for key, value in self.domain_archs if key \
+                    and key != "NO_ASSIGNMENT")
             num_seqs_with_nonempty_domain_arch_ignore_novel = \
                     sum(len(value) for key, value in self.domain_archs
-                        if exclude_novel_domains(key) in archs_without_novel)
+                        if exclude_novel_domains(key) in archs_without_novel\
+                                and key != "NO_ASSIGNMENT")
             num_seqs_with_nonempty_nonnovel_domain_arch = \
                     sum(len(value) for key, value in self.domain_archs
-                            if key and not any(a.startswith(preffix) for a in key))
+                            if key and not any(a.startswith(prefix) for a in split_arch(key)) \
+                            and key != "NO_ASSIGNMENT")
 
             with redirected(stdout=stats_file):
                 print "Domain architectures"
@@ -321,25 +330,28 @@ class FindDomainArchitectureApp(CommandLineApp):
     def process_clustering_file(self, fname):
         table = defaultdict()
         f = open(fname)
-        preffix = self.options.preffix
+        if self.options.prefix:
+            prefix = self.options.prefix
+        else:
+            prefix = "NOVEL"
         for line in f:
             fragments = line.strip().split()
             if len(set([x.split(":",1)[0] for x in fragments])) < self.options.min_size:
                 continue
             if not self.using_old_table:
-                domain_name = preffix + "%05d" % self.current_cluster_id
+                domain_name = prefix + "%05d" % self.current_cluster_id
                 self.current_cluster_id +=1
             else:
                 # We find the name of the best matching cluster given this set of
                 # sequences
                 domain_id = self.find_domain_id(fragments)
                 if domain_id != -1:
-                    domain_name = preffix + "%05d" % domain_id
+                    domain_name = prefix + "%05d" % domain_id
                 else:
-                    domain_name = preffix + "%05d" % self.current_cluster_id
+                    domain_name = prefix + "%05d" % self.current_cluster_id
                     self.current_cluster_id += 1
             sequences = []
-            for id in ids:
+            for id in fragments: # something wrong here...
                 sequences.append(id)
                 seq_id, _, limits = id.rpartition(":")
                 start, end = map(int, limits.split("-"))
@@ -350,7 +362,11 @@ class FindDomainArchitectureApp(CommandLineApp):
 
     def sort_by_domain_architecture(self):
         self.domain_archs = defaultdict(list)
-        preffix = self.options.preffix
+        if self.options.prefix:
+            prefix = self.options.prefix
+        else:
+            prefix = "NOVEL"
+        
         for seq_id, seq in self.seqcat.iteritems():
             assignments = sorted(seq.assignments, key=operator.attrgetter("start"))
             domains = []
@@ -368,7 +384,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                 new_assignments.append(new_assignment)
             tree_arch = TreeRepresentation(new_assignments)
             seq.architecture = tree_arch.get_string()
-            seq.architeture_pos = tree_arch.get_string_positions()
+            seq.architecture_pos = tree_arch.get_string_positions()
 
             self.domain_archs[seq.architecture].append(seq_id)
 
@@ -393,7 +409,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                 for assignment in assignments:
                     attrs = assignment._asdict()
                     if assignment.comment is None and \
-                       assignment.domain.startswith(preffix):
+                       assignment.domain.startswith(prefix):
                         attrs["comment"] = "novel"
                     row = "    %(start)4d-%(end)4d: %(domain)s "\
                           "(%(source)s, stage: %(comment)s)" % attrs

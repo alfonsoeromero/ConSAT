@@ -17,7 +17,7 @@ import re
 from gfam.sequence import SeqRecord, Sequence
 from itertools import izip
 from textwrap import TextWrapper
-
+from itertools import tee, izip
 
 class Parser(object):
     """Parser for FASTA files.
@@ -155,6 +155,28 @@ class Writer(object):
             print >> self.handle, ">%s" % (seq_record.id, )
         print >> self.handle, "\n".join(self.wrapper.wrap(seq_record.seq))
 
+class FastWriter(object):
+    """Writes `SeqRecord` objects in FASTA format to a given file handle.
+    This is a version of `Writer` which does not use `TextWrapper` for 
+    efficiency reasons`"""
+
+    def __init__(self, handle):
+        self.handle = handle
+
+    def _pairwise(self, iterable):
+        a, b = tee(iterable)
+        next(b, None)
+        return izip(a, b)
+
+    def write(self, seq_record):
+        """Writes the given sequence record to the file handle passed
+        at construction time
+        """
+        print >> self.handle, ">%s" % seq_record.id
+        n = len(seq_record.seq)
+        l = range(0, n, 70) + [n]
+        for v, w in self._pairwise(l):
+            print >> self.handle, seq_record.seq[v:w]
 
 def test():
     """Short self-test routines"""

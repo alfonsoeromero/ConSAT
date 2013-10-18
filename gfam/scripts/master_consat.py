@@ -164,6 +164,8 @@ class ConSATMasterScript(CommandLineApp):
         parser.add_option("-f", "--force", dest="force", action="store_true",
                 help="force recalculation of results even when consat thinks "\
                      "everything is up-to-date")
+        parser.add_option("-s", "--silent", dest="silent", action="store_true",
+                help="does not print any output to the terminal")
         return parser
 
     def get_modula_config(self, config):
@@ -314,36 +316,38 @@ class ConSATMasterScript(CommandLineApp):
         with open(cfgfile, "w") as fp:
             fp.write(CONFIGURATION_FILE_TEMPLATE)
 
-        print "Configuration file generated successfully."
-        print
-        print "Please open the configuration file in the text editor and provide"
-        print "the correct values for the following configuration keys:"
-        print
+        if not self.options.silent:
+            print "Configuration file generated successfully."
+            print
+            print "Please open the configuration file in the text editor and provide"
+            print "the correct values for the following configuration keys:"
+            print
 
-        # Check which config keys are empty in the config file, these have
-        # to be filled
-        config = ConfigParser()
-        config.read([cfgfile])
-        seen_keys = set()
-        for section in ["DEFAULT"] + config.sections():
-            for name, value in config.items(section, raw=True):
-                if not value and name not in seen_keys:
-                    print "  - %s (in section %r)" % (name, section)
-                    if section == "DEFAULT":
-                        seen_keys.add(name)
+            # Check which config keys are empty in the config file, these have
+            # to be filled
+            config = ConfigParser()
+            config.read([cfgfile])
+            seen_keys = set()
+            for section in ["DEFAULT"] + config.sections():
+                for name, value in config.items(section, raw=True):
+                    if not value and name not in seen_keys:
+                        print "  - %s (in section %r)" % (name, section)
+                        if section == "DEFAULT":
+                            seen_keys.add(name)
 
     @needs_config
     def do_run(self):
         """Runs the whole ConSAT pipeline"""
         # Get the output folder name
-        outfolder = self.config.get("DEFAULT", "folder.work")
+        outfolder = self.config.get("DEFAULT", "folder.output")
 
         # Run and export the inferred domain architectures
         outfile = os.path.join(outfolder, "domain_architectures.tab")
         self.modula.run("find_domain_arch_with_hmms", force=self.options.force)
-        shutil.copy(self.modula.storage_engine.get_filename("find_domain_arch_with_hmms"),
-                outfile)
-        self.log.info("Exported domain architectures to %s." % outfile)
+        if not os.path.exists(outfile):
+            shutil.copy(self.modula.storage_engine.get_filename("find_domain_arch_with_hmms"),
+                    outfile)
+            self.log.info("Exported domain architectures to %s." % outfile)
 
         # Run and export the label assignment
         outfile = os.path.join(outfolder, "assigned_labels.txt") 
@@ -359,20 +363,25 @@ class ConSATMasterScript(CommandLineApp):
         self.log.info("Exported overrepresentation analysis to %s." % outfile)
 
         # Run the functional prediction, if we have to
-        if self.config.read("DEFAULT", "file.function.goa_file") is not None:
+        if self.config.get("DEFAULT", "file.function.goa_file"):
             self.modula.run("function_arch", force=self.options.force)    
             outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
-            shutil.copy(self.modula.storage_engine.get_filename("function_arch", outfile))
-            self.log.info("Exported predicted function by transfer to %s." % outfile)
+            if not os.path.exists(outfile):
+                shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
+                self.log.info("Exported predicted function by transfer to %s." % outfile)
         else:
             self.log.info("No GOA source file was found and therefore")
             self.log.info("no funtion transfer will be performed")
 
         # Run the words prediction, if we have to
-        if self.config.read("DEFAULT", "file.idmapping") is not None and\
-           self.config.read("DEFAULT", "file.rdffile") is not None:
+        if self.config.get("DEFAULT", "file.idmapping") and\
+           self.config.get("DEFAULT", "file.rdffile"):
            self.modula.run("get_text", force=self.options.force)
            self.log.info("Text weighting done!")
+           outfile = os.path.join(outfolder, "weight_file_per_arch")
+           if not os.path.exists(outfile):
+               shutil.copy(self.modula.storage_engine.get_filename("get_text"), outfile)
+               self.log.info("Exported weight vectors per architecture to %s." % outfile)
         else:
            self.log.info("Either not idmapping or rdf file were specified")
            self.log.info("no text weighting will be performed")
@@ -448,6 +457,11 @@ file.idmapping=
 # DO NOT USE IF YOU ARE NOT DEALING WITH UNIPROT PROTEINS
 file.rdffile=
 
+# Lexicon file of a previous execution of Gfam with UniProtKB. By using it,
+# a compatibility with these term identifiers is guaranteed
+# DO NOT USE IF YOU ARE NOT DEALING WITH UNIPROT PROTEINS
+file.lexicon=
+
 ###########################################################################
 ## Folders                                                               ##
 ###########################################################################
@@ -456,7 +470,12 @@ file.rdffile=
 folder.work=work
 
 # The output folder in which to put the final results
-folder.output=work
+folder.output=output
+
+# A folder with a cache of PubMed abstracts. You should
+# use the same among different executions if you want to 
+# save a huge amount of time
+folder.pubmed_cache=work/pubmed_cache
 
 ###########################################################################
 ## External utilities used by ConSAT                                     ##
@@ -626,7 +645,13 @@ file.domain_architecture_details=%(folder.output)s/domain_architecture_details.t
 # File containing genome-level domain architecture statistics
 file.domain_architecture_stats=%(folder.output)s/domain_architecture_stats.txt
 
-# Output file containing the function prediction transfered via the architecture
-file.function_pred_arch=%(folder.output)s/function_prediction_by_transfer.txt
+# File with an overrepresentation analysis of InterPro terms by architecture
+file.overrep.arch_file=%(folder.output)s/overrep_by_arch.txt
+
+# File with an overrepresentation analysis of GOA transferred terms architecture
+file.function_arch.general_arch_file=%(folder.output)s/transfer_by_arch.txt
+
+# Output file containing the function prediction transfered via the architecture, per protein
+file.function_arch.arch_file=%(folder.output)s/function_prediction_by_transfer.txt
 """
 

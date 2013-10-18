@@ -72,7 +72,7 @@ class LabelAssignmentApp(CommandLineApp):
         for line in open_anything(input_file):
             parts = line.strip().split("\t")
             gene_id = parts[0]
-            arch = tuple([x for x in parts[2].replace("{", ";").replace("}", ";").split(";") if x])
+            arch = tuple([x for x in parts[3].replace("{", ";").replace("}", ";").split(";") if x])
             total_seqs += 1
 
             if arch == ("NO_ASSIGNMENT", ):

@@ -209,7 +209,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
         if coverage:
             best_source = max(coverage.keys(), key = coverage.__getitem__)
             sorted_assignments = sorted(assignments_by_source[best_source], key=lambda
-                    x: x[1].get_assignment_length(), reverse=True)
+                    x: x[0].get_assigned_length(), reverse=True)
             for a, line in sorted_assignments:
                 line = line.strip()
                 seq.assign(a)

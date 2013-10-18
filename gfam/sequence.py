@@ -43,3 +43,9 @@ class SeqRecord(object):
         self.id = id
         self.name = name
         self.description = description
+
+    def fragment(self, use_interval_id=True):
+        self.description = ""
+        if use_interval_id:
+            self.id = "%s:%d-%d" % (self.id, 1, len(self.seq))
+        return self

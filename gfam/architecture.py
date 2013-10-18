@@ -12,16 +12,10 @@ except ImportError:
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
-
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
 __all__ = ["ArchitectureFileReader, ArchitectureFileReaderPerArch"]
-
-
-#class ArchitectureTableFileReaderPerArch(object):
-#    def __init__
-
 
 class ArchitectureFileReaderPerArch(object):
     """Iterates over architectures in a GFam architecture file, returning
@@ -30,17 +24,30 @@ class ArchitectureFileReaderPerArch(object):
     iterating
     """
     def __init__(self, filename, min_coverage=0.0):
-        self.archs = defaultdict(list)
-        for protein, arch, cov in ArchitectureFileReader(filename):
-            if cov >= min_coverage:
-                self.archs[arch].append(protein)
+        self.cov = min_coverage
+        self._f = open_anything(filename)
 
     def __iter__(self):
-        for arch in sorted(self.archs):
-            yield (arch, self.archs[arch])
+        """Because the file is sorted there is no need to 
+        sort it by architecture.
+        """
+        prots = []
+        previous_arch = ""
+        for line in self._f:
+            fields = line.split("\t")
+            prot, coverage, arch = fields[0], float(fields[2])/float(fields[1]), fields[3]
+            if previous_arch != "" and previous_arch != arch:
+                if prots:
+                    yield (previous_arch, prots)
+                prots = []
+            previous_arch = arch
+            if coverage >= self.cov:
+                prots.append(prot)
+        if prots and previous_arch != "":
+            yield (previous_arch, prots)           
 
 
-class ArchitectureFileReader(object):
+class ArchitectureFileReader_old(object):
     """Iterates over proteins in a GFam architecture file, returning all
     the details (protein, architecture as a string, coverage).
     """
@@ -50,7 +57,7 @@ class ArchitectureFileReader(object):
 
     def architectures(self):
         """A generator that yields tuples (protein, architecture, coverage)
-        from a GFam architecture file. Both the `protein` an the `architecture`
+        from a GFam architecture file table. Both the `protein` an the `architecture`
         will be strings, and the `coverage` a floating point number between 0.0
         and 100.0
         """
@@ -69,7 +76,7 @@ class ArchitectureFileReader(object):
         return self.architectures()
 
 
-class ArchitectureParser(object):
+class ArchitectureDetailsParser(object):
     """Parser of the details regarding a protein architecture from a GFam
     architecture output file
     """
@@ -111,18 +118,3 @@ class ArchitectureParser(object):
         """
         return self.protein, self.arch, self.coverage
 
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print "USE: ", sys.argv[0], " architecture_file output_file"
-        sys.exit(-1)
-
-    cnt = 0
-
-    with open(sys.argv[2], 'w') as out:
-        for protein, arch, cov in ArchitectureFileReader(sys.argv[1]):
-            out.write("prot: %s, arch: %s, cov: %f\n" % (protein, arch, cov))
-            cnt += 1
-        out.write("-------------------------------------------------\n")
-
-    print "File processed, ", cnt, " architectures found."

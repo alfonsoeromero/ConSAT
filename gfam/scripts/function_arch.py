@@ -17,8 +17,7 @@ from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
 import operator
 import optparse
 import sys
-
-from gfam.architecture import ArchitectureFileReader
+import os
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -78,6 +77,11 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                           metavar="FILE", config_key="file.function.domain_arch_table",
                           help="Architecture file to transfer from. If ommited the"
                           "same architecture file will be used on itself")
+        parser.add_option("-a", "--arch_file", dest="results_by_arch",
+                         metavar="RESULTS_BY_ARCH", 
+                         config_key="file.function_arch.general_arch_file"
+                         help="File where the results per architecture will"
+                         "be written (optional)")
         return parser
 
     def read_goa_file(self, goa_file, ev_codes):
@@ -87,16 +91,14 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         """
         d = bidict()
         for line in open_anything(goa_file):
-            if not line.startswith("!") or line.startswith("#"):
+            if not line.startswith(("!", "#")):
                 # split line, obtain protein_id, go_term, and ev_code
-                fields = line.split("\t")
-                try:
-                    prot_id, goterm, evcode = fields[1], fields[4], fields[6]
-                except:
-                    print line
-                    sys.exit(-1)
+                fields = line.split("\t", 7)
+                prot_id, goterm, evcode = fields[1], fields[4], fields[6]
+
                 if evcode in ev_codes:
                     d.add_left(prot_id, self.go_tree.lookup(goterm))
+        self.log.info("GOA file read. " + str(d.len_left()) + " proteins loaded")
         return d
 
     def _transfer_from_same_file(self, goa, arch_file):
@@ -106,38 +108,47 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                                          confidence=self.options.max_pvalue,
                                          min_count=1, correction='None')
         cov = self.options.minimum_coverage / 100.0
+        self.log.info("Transferring function from same file. Min coverage=" + str(cov))
+        all_annotated = frozenset(goa.left.keys())
         for arch, prots in ArchReader(arch_file, cov):
-
-            annotated_prots = [prot for prot in prots if goa.get_left(prot)]
-
+            targets = set(prots)
+            annotated_prots = targets & all_annotated
             if not annotated_prots or arch == "NO_ASSIGNMENT":
                 # if there is no annotation for proteins in the arch...
-                for prot in prots:
-                    print prot
-                    print
+                print (os.linesep * 2).join(prots), os.linesep
                 continue
 
-            targets = set(prots)
-            targets_result = ora.test_group(targets)
+            lines = os.linesep.join(["  %.4f: %s (%s)" % 
+                (p_value, term.id, term.name)
+                for term, p_value in ora.test_group(targets)])
             for prot in prots:
                 print prot
                 if prot in annotated_prots:
-                    res = ora.test_group(targets - set([prot]))
+                    for term, p_value in ora.test_group(targets - set([prot])):
+                        print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
                 else:
-                    res = targets_result
-                for term, p_value in res:
-                    print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                    print lines
                 print
 
     def _transfer_from_other_file(self, goa, arch_target, arch_source):
         ora = OverrepresentationAnalyser(self.go_tree, goa,
-                                         confidence=self.options.confidence,
+                                         confidence=self.options.max_pvalue
                                          min_count=1, correction='None')
-        cov = self.options.minimum_coverage
+        cov = self.options.minimum_coverage / 100.0
         goterms = dict()
         for arch, prots in ArchReader(arch_source, cov):
             if arch != "NO_ASSIGNMENT":
                 goterms[arch] = ora.test_group(prots)
+
+        if self.options.results_by_arch:
+            with open(self.options.result_by_arch, "w") as out:
+                for arch in sorted(goterms.keys()):
+                    out.write(arch + "\n")
+                    for term, p_value in goterms[arch]:
+                        line = "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                        out.write(line)
+                        out.write("\n")
+                    out.write("\n")
 
         for arch, prots in ArchReader(arch_target, cov):
             if arch in goterms:
@@ -173,7 +184,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         if not self.options.source_arch:
             self._transfer_from_same_file(goa, archA)
         else:
-            self._transfer_from_other_file(goa, archA, source_arch)
+            self._transfer_from_other_file(goa, archA, self.options.source_arch)
 
 
 if __name__ == "__main__":

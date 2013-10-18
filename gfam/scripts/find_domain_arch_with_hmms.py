@@ -9,7 +9,7 @@ import operator
 import optparse
 import sys
 
-from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
+from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments, TreeRepresentation
 from gfam.interpro import InterPro, InterProNames
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, redirected
@@ -113,7 +113,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
         for domain_arch, members in self.domain_archs:
             if domain_arch:
-                arch_str = ";".join(domain_arch)
+                arch_str = domain_arch #";".join(domain_arch)
             else:
                 arch_str = "NO_ASSIGNMENT"
                 arch_str_pos = "NO_ASSIGNMENT"
@@ -123,15 +123,14 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             for member in members:
                 seq = self.seqcat[member]
                 if domain_arch:
-                    arch_str_pos = ";".join(assignment.short_repr() \
-                            for assignment in seq.assignments)
+                    arch_str_pos = seq.architecture_pos 
                     arch_desc = ";".join( \
                             self.interpro_names[assignment.domain]
                             for assignment in seq.assignments
                     )
-                print "%s\t%d\t%s\t%d\t%s\t%s" % (member, seq.length, arch_str, \
-                                              family_length, arch_str_pos, \
-                                              arch_desc)
+                print "%s\t%d\t%d\t%s\t%d\t%s\t%s" % (member, seq.length,
+                        seq.num_covered(), arch_str, family_length,
+                        arch_str_pos, arch_desc)
 
         self.details_file.close()
 
@@ -151,10 +150,13 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             if "" in self.domain_archs:
                 num_archs -= 1
 
+            def split_arch(arch):
+                return [x for x in arch.replace("{", ";").replace("}", ";").split(";") if x]
+
             def exclude_novel_domains(domain_architecture):
                 """Excludes novel domains from a domain architecture and returns
                 the filtered domain architecture as a tuple."""
-                return tuple(a for a in domain_architecture if a not in self.hmm_domains)		
+                return tuple(a for a in split_arch(domain_architecture) if a not in self.hmm_domains)		
 
             archs_without_novel = set(exclude_novel_domains(arch)
                     for arch in all_archs)
@@ -162,13 +164,16 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             num_archs_without_novel = len(archs_without_novel)
 
             num_seqs_with_nonempty_domain_arch = \
-                    sum(len(value) for key, value in self.domain_archs if key)
+                    sum(len(value) for key, value in self.domain_archs if key
+                            and key != "NO_ASSIGNMENT")
             num_seqs_with_nonempty_domain_arch_ignore_novel = \
                     sum(len(value) for key, value in self.domain_archs
-                        if exclude_novel_domains(key) in archs_without_novel)
+                        if exclude_novel_domains(key) in archs_without_novel
+                        and key != "NO_ASSIGNMENT")
             num_seqs_with_nonempty_nonnovel_domain_arch = \
                     sum(len(value) for key, value in self.domain_archs
-                            if key and not any(a in self.hmm_domains for a in key))
+                            if key and not any(a in self.hmm_domains for a in key)
+                            and key != "NO_ASSIGNMENT")
 
             with redirected(stdout=stats_file):
                 print "Domain architectures"
@@ -215,7 +220,6 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         f = open(fname)
 	self.hmm_domains = set()
         for line in f:
-            self.log.info("Processing line: " + line)
             id_prot, model, evalue = line.strip().split() # evalue is not used, by the moment
             seq_id, _, limits = id_prot.rpartition(":")
             start, end = map(int, limits.split("-"))
@@ -240,7 +244,11 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                     primary_source.add(assignment.source)
                 domains.append(new_assignment.domain)
                 new_assignments.append(new_assignment)
-            self.domain_archs[tuple(domains)].append(seq_id)
+            tree_arch = TreeRepresentation(new_assignments)
+            seq.architecture = tree_arch.get_string()
+            seq.architecture_pos = tree_arch.get_string_positions()
+
+            self.domain_archs[seq.architecture].append(seq_id)
 
             if not primary_source:
                 primary_source = None
