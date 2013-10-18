@@ -701,6 +701,11 @@ max_pvalue=0.05
 # electronic, IEA, NAS and ND), ALL (all evidence codes)
 ev_codes=EXP
 
+# If set to True, transfer from both GO annotated proteins in the
+# same file with the same architecture, and GO annotated proteins in the
+# exteneral given architecture to our target protein
+transfer_from_both=
+
 [analysis:get_text]
 # Empty section, this script has no individual parameters to tune, but
 # this might change in the future

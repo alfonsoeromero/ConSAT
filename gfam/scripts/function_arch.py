@@ -28,7 +28,6 @@ __license__ = "GPL"
 class TransferFunctionFromDomainArch(CommandLineApp):
     """\
     Usage: %prog [options] gene_ontology_file architecture_file_A goa_B
-                            architecture_file_B
 
     Application that transfers functions to a set of proteins A (from
     a GOA file) whose architecture has been computed, from a set of proteins
@@ -75,11 +74,16 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                                "NAS and ND), ALL (all evidence codes)")
         parser.add_option("-s", "--source_arch", dest="source_arch",
                           metavar="FILE", config_key="file.function.domain_arch_table",
-                          help="Architecture file to transfer from. If ommited the"
+                          help="Architecture file to transfer from. If ommited the " +
                           "same architecture file will be used on itself")
+        parser.add_option("-b", "--both", dest="both",
+                         config_key="analysis:function_arch/transfer_from_both",
+                         help="transfer both from the given architectures "
+                         " and the computed ones (GOA file is assummed to have "
+                         " both protein sets")
         parser.add_option("-a", "--arch_file", dest="results_by_arch",
                          metavar="RESULTS_BY_ARCH", 
-                         config_key="file.function_arch.general_arch_file"
+                         config_key="file.function_arch.general_arch_file",
                          help="File where the results per architecture will"
                          "be written (optional)")
         return parser
@@ -110,17 +114,25 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         cov = self.options.minimum_coverage / 100.0
         self.log.info("Transferring function from same file. Min coverage=" + str(cov))
         all_annotated = frozenset(goa.left.keys())
+        if self.options.results_by_arch:
+            out = open(self.options.result_by_arch, "w")
         for arch, prots in ArchReader(arch_file, cov):
             targets = set(prots)
             annotated_prots = targets & all_annotated
             if not annotated_prots or arch == "NO_ASSIGNMENT":
                 # if there is no annotation for proteins in the arch...
                 print (os.linesep * 2).join(prots), os.linesep
+                if self.options.results_by_arch:
+                    out.write(arch + "\n\n")
                 continue
 
             lines = os.linesep.join(["  %.4f: %s (%s)" % 
                 (p_value, term.id, term.name)
                 for term, p_value in ora.test_group(targets)])
+            if self.options.results_by_arch:
+                out.write(arch + "\n")
+                out.write(lines)
+                out.write("\n")
             for prot in prots:
                 print prot
                 if prot in annotated_prots:
@@ -129,10 +141,58 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 else:
                     print lines
                 print
+        if self.options.results_by_arch:
+            out.close()
+
+    def _transfer_from_both(self, goa, arch_target, arch_source):
+        """ Transfer from both an external file and the same file using a single GOA 
+        file
+        """
+        ora = OverrepresentationAnalyser(self.go_tree, goa,
+                                         confidence=self.options.max_pvalue,
+                                         min_count=1, correction='None')
+        cov = self.options.minimum_coverage / 100.0
+        self.log.info("Transferring function from both files. Min coverage=" + str(cov))
+        all_annotated = frozenset(goa.left.keys()) # all annotated proteins
+        prots_per_arch = dict()
+        if self.options.results_by_arch:
+            out = open(self.options.result_by_arch, "w")
+
+        for arch, prots in ArchReader(arch_source, cov):
+            prots_per_arch[arch] = prots
+        for arch, prots in ArchReader(arch_target, cov):
+            other_prots = set()
+            if arch in prots_per_arch:
+                other_prots = prots_per_arch[arch]
+            annotated_prots = (other_prots | prots) & all_annotated
+            if not annotated_prots or arch == "NO_ASSIGNMENT":
+                # if there is no annotation for proteins in the arch...
+                print (os.linesep * 2).join(prots), os.linesep
+                if self.options.results_by_arch:
+                    out.write(arch + "\n\n")
+                continue
+            lines = os.linesep.join(["  %.4f: %s (%s)" % 
+                (p_value, term.id, term.name)
+                for term, p_value in ora.test_group(targets)])
+            if self.options.results_by_arch:
+                out.write(arch + "\n")
+                out.write(lines)
+                out.write("\n")
+            for prot in prots:
+                print prot
+                if prot in annotated_prots:
+                    for term, p_value in ora.test_group(targets - set([prot])):
+                        print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                else:
+                    print lines
+                print
+        if self.options.results_by_arch:
+            out.close()
+
 
     def _transfer_from_other_file(self, goa, arch_target, arch_source):
         ora = OverrepresentationAnalyser(self.go_tree, goa,
-                                         confidence=self.options.max_pvalue
+                                         confidence=self.options.max_pvalue,
                                          min_count=1, correction='None')
         cov = self.options.minimum_coverage / 100.0
         goterms = dict()
@@ -181,10 +241,15 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         self.go_tree = GOTree.from_obo(go_file)
         goa = self.read_goa_file(goaB, codes)
 
+        if not self.options.source_arch and self.options.both:
+            self.error("A source architecture file should be specified in 'both' mode")
+
         if not self.options.source_arch:
             self._transfer_from_same_file(goa, archA)
-        else:
+        elif not self.options.both:
             self._transfer_from_other_file(goa, archA, self.options.source_arch)
+        else:
+            self._transfer_from_both(goa, archA, self.options.source_arch)
 
 
 if __name__ == "__main__":
