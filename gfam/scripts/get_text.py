@@ -70,7 +70,7 @@ class GetText(CommandLineApp):
                   remarkably report represents results revealed reveals sequence 
                   sequenced sequences sequencing set shown similar 
                   single species specific spite strain strains strongly 
-                  study studies taxa type uncharacterized unique validated 
+                  study studies taxa the type uncharacterized unique validated 
                   wide widely widespread years yields
                     """.split()
 
@@ -125,15 +125,16 @@ class GetText(CommandLineApp):
         """Reads the stopwords file to a set and returns it.
         If no file is provided, the standard SMART stopword
         list is donwnloaded"""
-        if fileName is None or not os.path.exists(fileName):
+        if not fileName or not os.path.exists(fileName):
             # we download the SMART list
-            url = "http://jmlr.csail.mit.edu/papers/volume5/lewis04a/\
-            a11-smart-stop-list/english.stop"
+            url = "http://jmlr.csail.mit.edu/papers/volume5/lewis04a/a11-smart-stop-list/english.stop"
             fd, fileName = tempfile.mkstemp()
             urllib.urlretrieve(url, fileName)
 
         self.stopwords = set([line.strip() for line in open(fileName)])
+        self.log.info("Read stopwords file. {} words read".format(self.stopwords))
         self.stopwords = self.stopwords | set(GetText.my_stopwords)
+        self.log.info("Added some words. Final size: {} stopwords".format(self.stopwords))
 
     def check_not_exists(self, fileName):
         """Checks that a file does not exists. If it does, exists and
@@ -143,6 +144,9 @@ class GetText(CommandLineApp):
                        " already exists. Cannot overwrite")
 
     def read_lexicon_file(self, file_name):
+        """ Reads a previously generated lexicon file and maintains compatibility
+            with its identifiers. The document frequency, however, is discarded
+        """
         if not os.path.exists(file_name):
             self.error("The given lexicon file " + file_name + " does not exist")
         for line in open(file_name, "r"):
@@ -320,7 +324,7 @@ class GetText(CommandLineApp):
     def tokenize(self, s):
         """Tokenizes and preprocesses a certain string into
         a list of strings. Yes, it can (should be) improved"""
-        return [x for x in s.translate(None, (",./;'?&()")).lower().split()
+        return [x for x in s.translate(None, (",./;'?&()\"")).lower().split()
                 if x not in self.stopwords and not self.is_number(x)
                 and len(x) > 2]
 

@@ -186,8 +186,11 @@ class AssignmentOverlapChecker(object):
     max_overlap = 20
 
     #: This is the minimum number of residues that a domain with the same
-    #: InterPro id can leave uncovered in the parent. Otherwise it is discarded
-    #: and considered as the same domain
+    #: InterPro id can leave uncovered in the parent until it starts. 
+    #: Otherwise it is discarded and considered as the same domain. Therefore,
+    #: if two domains with the same InterPro are inserted and the beginning of
+    #: both has a difference between 0 and 20 residues, the insertion is 
+    #: labeled as a synonym insertion
     min_parent_inserted_size = 20
 
     #: Here we give a scale of priorities for the different overlap types.
@@ -237,9 +240,10 @@ class AssignmentOverlapChecker(object):
         - `OverlapType.SYNONYM_INSERTION`: `assignment` is inserted into
           `other_assignment` or vice versa, but they share the same InterPro
            term, and very few amino acids in the parent (less than 
-           `min_parent_inserted_size`) are covered. Therefore we might think
-           it is not a real insertion, but two expressions of the same domain
-           (belonging for example to two different signature databases).
+           `min_parent_inserted_size`) are covered in the starting fragment. 
+           Therefore we might think it is not a real insertion, but two 
+           expressions of the same domain (belonging for example to two 
+           different signature databases).
 
         - `OverlapType.INSERTION`: there is a complete domain insertion in
           either direction
@@ -266,7 +270,7 @@ class AssignmentOverlapChecker(object):
         if (((other_start <= start and other_end >= end) or (
                 other_start >= start and other_end)) and
             (assignment.interpro_id == other_assignment.interpro_id) and
-            (abs(other_start-start) + abs(other_end - end) < cls.min_parent_inserted_size)):
+            (abs(other_start-start) < cls.min_parent_inserted_size)):
             return OverlapType.SYNONYM_INSERTION
 
         if other_start <= start and other_end >= end:

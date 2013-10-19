@@ -653,13 +653,13 @@ min_novel_domain_size=4
 # name
 previous_domain_table=
 
-# Optional. Preffix to name the newly discovered domains. If no preffix is
-# specified, "NOVEL" will be used. The domains will be named with the preffix
+# Optional. Preffix to name the newly discovered domains. If no prefix is
+# specified, "NOVEL" will be used. The domains will be named with the prefix
 # and a number of five digits (NOVEL00001, NOVEL00002, etc.).
 # Please, note that it is your responsability not to make conflict using a
-# preffix already in use by other domain database (e.g.: Pfam, G3D, etc).
+# prefix already in use by other domain database (e.g.: Pfam, G3D, etc).
 # If you are unsure, leave blank.
-preffix=
+prefix=
 
 [analysis:label_assignment]
 
