@@ -269,7 +269,8 @@ class AssignmentOverlapChecker(object):
 
         if (((other_start <= start and other_end >= end) or (
                 other_start >= start and other_end)) and
-            (assignment.interpro_id == other_assignment.interpro_id) and
+            (assignment.interpro_id == other_assignment.interpro_id
+             or assignment.domain == other_assignment.domain) and
             (abs(other_start-start) < cls.min_parent_inserted_size)):
             return OverlapType.SYNONYM_INSERTION
 
@@ -383,7 +384,7 @@ class SequenceWithAssignments(object):
                 evalue=None, length=self.length, comment=None)
         return self.assign(assignment, *args, **kwds)
 
-    def assign(self, assignment, overlap_check=True):
+    def assign(self, assignment, overlap_check=True, tree=None):
         """Assigns a fragment of this sequence using the given assignment.
         If `overlap_check` is ``False``, we will not check for overlaps or
         conflicts with existing assignments.
@@ -401,7 +402,6 @@ class SequenceWithAssignments(object):
             overlap_state = self.overlap_checker.check(self, assignment)
             if overlap_state not in self.acceptable_overlaps:
                 return False
-
         self.assignments.append(assignment)
         return True
 

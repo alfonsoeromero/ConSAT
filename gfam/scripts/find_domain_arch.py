@@ -273,7 +273,7 @@ class FindDomainArchitectureApp(CommandLineApp):
         unassigned_app = FindUnassignedApp()
         unassigned_app.set_sequence_id_regexp(self.options.sequence_id_regexp)
         unassigned_app.process_sequences_file(self.options.sequences_file)
-        unassigned_app.process_infile(interpro_file)
+        unassigned_app.process_infile(interpro_file, self.interpro)
         self.seqcat = unassigned_app.seqcat
         for seq_id in set(unassigned_app.seq_ids_to_length.keys()) - set(self.seqcat.keys()):
             self.seqcat[seq_id] = SequenceWithAssignments(seq_id, \

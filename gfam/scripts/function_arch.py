@@ -82,8 +82,8 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                          " and the computed ones (GOA file is assummed to have "
                          " both protein sets")
         parser.add_option("-a", "--arch_file", dest="results_by_arch",
-                         metavar="RESULTS_BY_ARCH", 
-                         config_key="file.function_arch.general_arch_file",
+                         metavar="results_by_arch", 
+                         config_key="generated/file.function_arch.general_arch_file",
                          help="File where the results per architecture will"
                          "be written (optional)")
         return parser
@@ -115,7 +115,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         self.log.info("Transferring function from same file. Min coverage=" + str(cov))
         all_annotated = frozenset(goa.left.keys())
         if self.options.results_by_arch:
-            out = open(self.options.result_by_arch, "w")
+            out = open(self.options.results_by_arch, "w")
         for arch, prots in ArchReader(arch_file, cov):
             targets = set(prots)
             annotated_prots = targets & all_annotated
@@ -131,7 +131,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 for term, p_value in ora.test_group(targets)])
             if self.options.results_by_arch:
                 out.write(arch + "\n")
-                out.write(lines)
+                out.write(lines + "\n")
                 out.write("\n")
             for prot in prots:
                 print prot
@@ -156,7 +156,10 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         all_annotated = frozenset(goa.left.keys()) # all annotated proteins
         prots_per_arch = dict()
         if self.options.results_by_arch:
-            out = open(self.options.result_by_arch, "w")
+            out = open(self.options.results_by_arch, "w")
+
+        self.log.info("\t Source architecture: " + arch_source)
+        self.log.info("\t Target (and source, as well) architecture: " + arch_target)
 
         for arch, prots in ArchReader(arch_source, cov):
             prots_per_arch[arch] = prots
@@ -201,7 +204,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 goterms[arch] = ora.test_group(prots)
 
         if self.options.results_by_arch:
-            with open(self.options.result_by_arch, "w") as out:
+            with open(self.options.results_by_arch, "w") as out:
                 for arch in sorted(goterms.keys()):
                     out.write(arch + "\n")
                     for term, p_value in goterms[arch]:

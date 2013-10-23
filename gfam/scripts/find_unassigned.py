@@ -108,9 +108,9 @@ class FindUnassignedApp(CommandLineApp):
         for seq in parser:
             self.seq_ids_to_length[seq.id] = len(seq.seq)
 
-    def process_infile(self, fname):
+    def process_infile(self, fname, interpro=None):
         self.log.info("Processing input file: %s" % fname)
-
+        import sys
         for assignment in AssignmentReader(fname):
             try:
                 seq = self.seqcat[assignment.id]
@@ -119,6 +119,8 @@ class FindUnassignedApp(CommandLineApp):
                 self.seqcat[assignment.id] = seq
             if seq.length != assignment.length:
                 raise ValueError, "different lengths encountered for %s: %d and %d" % (seq.name, seq.length, assignment.length)
+            if interpro is not None:
+                assignment = assignment.resolve_interpro_ids(interpro)
             seq.assign(assignment)
 
     def get_unassigned(self):

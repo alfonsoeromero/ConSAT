@@ -62,7 +62,7 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                 help="don't test for overrepresentation of GO terms "
                      "with less than SIZE annotations. Default: %default")
         parser.add_option("-a", dest="arch_file",
-                metavar="FILE", config_key="file.overrep.arch_file",
+                metavar="FILE", config_key="generated/file.overrep.arch_file",
                 help="Produces an overrepresentation analysis file for "
                      "each architecture (optional)"
                 )

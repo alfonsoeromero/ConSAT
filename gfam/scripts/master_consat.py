@@ -212,8 +212,8 @@ class ConSATMasterScript(CommandLineApp):
         infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
 
         [function_arch]
-        depends=find_domain_arch
-        infile=file.mapping.gene_ontology,find_domain_arch,file.function.goa_file
+        depends=find_domain_arch_with_hmms
+        infile=file.mapping.gene_ontology,find_domain_arch_with_hmms,file.function.goa_file
         
         [get_text]
         depends=file.input.sequences

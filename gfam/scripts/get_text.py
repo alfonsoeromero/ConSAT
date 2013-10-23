@@ -132,9 +132,7 @@ class GetText(CommandLineApp):
             urllib.urlretrieve(url, fileName)
 
         self.stopwords = set([line.strip() for line in open(fileName)])
-        self.log.info("Read stopwords file. {} words read".format(self.stopwords))
         self.stopwords = self.stopwords | set(GetText.my_stopwords)
-        self.log.info("Added some words. Final size: {} stopwords".format(self.stopwords))
 
     def check_not_exists(self, fileName):
         """Checks that a file does not exists. If it does, exists and
@@ -185,15 +183,15 @@ class GetText(CommandLineApp):
         # we setup the output file names
         output_dir = os.path.normpath(self.options.output)
         self.lexicon_file = os.path.join(output_dir, "lexicon")
-        self.check_not_exists(self.lexicon_file)
+        #self.check_not_exists(self.lexicon_file)
         self.freq_file = os.path.join(output_dir, "freq_file_per_sequence")
-        self.check_not_exists(self.freq_file)
+        #self.check_not_exists(self.freq_file)
         self.weight_file = os.path.join(output_dir, "weight_file_per_sequence")
-        self.check_not_exists(self.weight_file)
+        #self.check_not_exists(self.weight_file)
         self.ids_file = os.path.join(output_dir, "seq_ids_file")
-        self.check_not_exists(self.ids_file)
+        #self.check_not_exists(self.ids_file)
         self.text_file = os.path.join(output_dir, "text_file_per_sequence")
-        self.check_not_exists(self.text_file)
+        #self.check_not_exists(self.text_file)
         #self.weight_file_arch = os.path.join(output_dir, "weight_file_per_arch")
         #self.check_not_exists(self.weight_file_arch)
 
@@ -260,8 +258,8 @@ class GetText(CommandLineApp):
                                 text_pubmed.append(text_pmid)
                             except IOError:
                                 pass
-                    out.write("%s %s " % (id_prot, text_prot))
-                    out.write("%s\n" % " ".join(text_pubmed))
+                    out.write("{0} {1} ".format(id_prot, text_prot))
+                    out.write("{}\n".format(" ".join(text_pubmed)))
 
     def process_rdf_file(self):
         """Process the rdf file, extracting the relevant fields into
@@ -288,8 +286,8 @@ class GetText(CommandLineApp):
                     # we process here the record
                     filename = os.path.join(self.cachepubmed, pubmedid)
                     with open(filename, "w") as out:
-                        out.write("%s " % title)
-                        out.write("%s" % " ".join(abstract))
+                        out.write("{} ".format(title))
+                        out.write("{}".format(" ".join(abstract)))
                     pubmedid, title, abstract = "", "", []
                     opentitle, openabstract = False, False
                 elif line.find("<rdfs:comment>") != -1:
@@ -319,7 +317,7 @@ class GetText(CommandLineApp):
                     txt_protein = line.split(" ", 1)[1].split("OS=")[0].strip()
                     filename = os.path.join(self.cacheuniprot, id_prot)
                     with open(filename, "w") as out:
-                        out.write("%s" % txt_protein)
+                        out.write("{}".format(txt_protein))
 
     def tokenize(self, s):
         """Tokenizes and preprocesses a certain string into
@@ -357,11 +355,11 @@ class GetText(CommandLineApp):
 
                 sorted_x = sorted(Counter(num_tokens).iteritems(),
                                   key=operator.itemgetter(1))
-                output.write("%s " % seq_id)
+                output.write("{} ".format(seq_id))
                 for id_word, count in sorted_x:
                     freq[id_word] += 1
                     # write freq file
-                    output.write("%i:%i " % (id_word, count))
+                    output.write("{0}:{1} ".format(id_word, count))
                 output.write('\n')
 
         self.N = len(seq_ids)
@@ -370,12 +368,12 @@ class GetText(CommandLineApp):
         with open(self.lexicon_file, 'w') as lexicon:
             for word, id_word in word_id.items():
                 if id_word in freq:
-                    lexicon.write("%s %i %i\n" % (word, id_word, freq[id_word]))
+                    lexicon.write("{0} {1} {2}\n".format(ord, id_word, freq[id_word]))
 
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
             for protein in seq_ids:
-                proteins_file.write("%s\n" % protein)
+                proteins_file.write("{}\n".format(protein))
 
     def weight_arch_file(self):
         # 1.- read architectures to a dictionary of sets (key=architecture,
@@ -403,7 +401,7 @@ class GetText(CommandLineApp):
                 else:
                     vec[term] = weight
         for arch in seqs_per_arch: 
-            print arch, " ", " ".join([str(t) + ":" + str(w) for t,w in vec_per_arch[arch].items()])
+            print arch, " ", " ".join(["{0}:{1}".format(t,w) for t,w in vec_per_arch[arch].items()])
 
     def weight_freq_file(self):
         """Reads the frequency file and produces the frequency file"""
