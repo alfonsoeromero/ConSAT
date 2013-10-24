@@ -167,7 +167,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             other_prots = set()
             if arch in prots_per_arch:
                 other_prots = prots_per_arch[arch]
-            annotated_prots = (other_prots | prots) & all_annotated
+            annotated_prots = (set(other_prots) | set(prots)) & all_annotated
             if not annotated_prots or arch == "NO_ASSIGNMENT":
                 # if there is no annotation for proteins in the arch...
                 print (os.linesep * 2).join(prots), os.linesep

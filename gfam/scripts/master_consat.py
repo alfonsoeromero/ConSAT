@@ -217,7 +217,7 @@ class ConSATMasterScript(CommandLineApp):
         
         [get_text]
         depends=file.input.sequences
-        switch.0=-a find_domain_arch
+        switch.0=-a find_domain_arch_with_hmms
         """)
 
         modula_config = ConfigParser()

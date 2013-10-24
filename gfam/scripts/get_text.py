@@ -368,7 +368,7 @@ class GetText(CommandLineApp):
         with open(self.lexicon_file, 'w') as lexicon:
             for word, id_word in word_id.items():
                 if id_word in freq:
-                    lexicon.write("{0} {1} {2}\n".format(ord, id_word, freq[id_word]))
+                    lexicon.write("{0} {1} {2}\n".format(word, id_word, freq[id_word]))
 
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
@@ -378,7 +378,7 @@ class GetText(CommandLineApp):
     def weight_arch_file(self):
         # 1.- read architectures to a dictionary of sets (key=architecture,
         # value set of sequences
-        seqs_per_arch = {arch : set(prots) for arch, prots in ArchReader(self.options.arch_file)}
+        seqs_per_arch = dict((arch, set(prots)) for (arch, prots) in ArchReader(self.options.arch_file))
         arch_per_seq = dict()
         for arch, prots in seqs_per_arch.items():
             for prot in prots:
@@ -397,9 +397,9 @@ class GetText(CommandLineApp):
             for field in fields[1:]:
                 term, weight = field.split(':')
                 if term in vec:
-                    vec[term] += weight
+                    vec[int(term)] += float(weight)
                 else:
-                    vec[term] = weight
+                    vec[int(term)] = float(weight)
         for arch in seqs_per_arch: 
             print arch, " ", " ".join(["{0}:{1}".format(t,w) for t,w in vec_per_arch[arch].items()])
 
