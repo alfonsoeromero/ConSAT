@@ -376,7 +376,8 @@ class GFamMasterScript(CommandLineApp):
             self.log.info("Exported label assignment to %s." % outfile)
 
         # Run and export the overrepresentation analysis
-        outfile = os.path.join(outfolder, "overrepresentation_analysis.txt") 
+        there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")
+        outfile = os.path.join(outfolder, "overrepresentation_analysis.txt")
         self.modula.run("overrep", force=self.options.force)
         if not os.path.exists(outfile):
             shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
