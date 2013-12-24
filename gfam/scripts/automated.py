@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-"""Automated script for running Gfam (or ConSat) in a set of sequences without
+"""Automated script for running Gfam (or ConSAT) in a set of sequences without
 having anything else than the sequences (and perhaps the InterPro output).
 
-There are three use cases in this program:
+There are four use cases in this program:
 
-    1.- Run GFam in UniProt: all the related UniProtKB files will be downloaded,
+    1.- Run GFam/ConSAT in UniProt: all the related UniProtKB files will be downloaded,
     including the InterPro data. The user will only have to provide a directory
     where the downloaded and the output files will be written.
 
-    GFam will be run in the SwissProt proteins, and ConSat will be run in the
+    GFam will be run in the SwissProt proteins, and ConSAT will be run in the
     rest (TremBL). The models learnt by GFam in SwissProt will be used by ConSAT
     although the user can include a previously found set of models of putative
     new domains to extend this and maintain the names with respect to the old
@@ -16,26 +16,34 @@ There are three use cases in this program:
     It is assumed that the provided models are also following this naming
     convention.
 
-    2.- Run GFam in a set of user-sequences plus InterPro output data. It is 
+    2.- Runs only ConSAT on UniProt. All the resultad UniProtKB files will
+    be downloaded including the InterPro data. The user will only have to
+    provide a directory where the downloaded and the output files will be 
+    written.
+
+    ConSAT will be run in all proteins, and therefore the user will have to
+    provide, as well a file with the HMMs.
+
+    3.- Run GFam in a set of user-sequences plus InterPro output data. It is 
     assumed that the InterPro output corresponds to those sequences the user is
     inputing. A set of putative new domain models will be predicted for this set
     of sequences (NOVEL00001, NOVEL00002, etc.). This is equivalent to the
     ``classic`` GFam approach (with some minor tweaks) except of the fact that
     a set of HMM models for the new domains is provided.
 
-    3.- Run ConSat in a set of user-sequences plus InterPro output data. It is
+    4.- Run ConSAT in a set of user-sequences plus InterPro output data. It is
     assumed, again, that the InterPro output corresponds to those sequences the
     user is inputing. Besides, the user __should__ provide a set of HMMs found
     in previous GFam executions to allow ConSAT tagging the unassigned pieces
     with these models.
 
-All three cases will take a single positional argument, a route to a directory 
+All four cases will take a single positional argument, a route to a directory 
 which will be created if it does not exists, and where three sub-directories
 will be setup:
     data/ : here will be downloaded all the supporting files used to 
     compute our output. Also, the given files will be copied inside.
 
-    work/ : work folder for ConSat/GFam
+    work/ : work folder for ConSAT/GFam
 
     output/ : output folder for ConSAT/GFam
 
@@ -48,7 +56,7 @@ in this case:
     data/ : all the input / given files
 
     work/gfam : work folder for GFam
-    work/consat : work folder for ConSat
+    work/consat : work folder for ConSAT
 
     output/gfam : output folder for GFam
     output/consat : output folder for Consat
@@ -81,20 +89,21 @@ class AutomatedGFam(CommandLineApp):
     """\
         Usage: %prog [options] mode directory
 
-            Performs an automated run of GFam/Consat in one of three `modes`:
+            Performs an automated run of GFam/Consat in one of four `modes`:
 
                 - uniprot
+                - uniprot_consat
                 - gfam
                 - consat
 
             Each of the models will download all the required data in the
             specified `directory`
 
-    1.- Run GFam in UniProt: all the related UniProtKB files will be downloaded,
+    1.- Run GFam/ConSAT on UniProt: all the related UniProtKB files will be downloaded,
     including the InterPro data. The user will only have to provide a directory
     where the downloaded and the output files will be written.
 
-    GFam will be run in the SwissProt proteins, and ConSat will be run in the
+    GFam will be run in the SwissProt proteins, and ConSAT will be run in the
     rest (TremBL). The models learnt by GFam in SwissProt will be used by ConSAT
     although the user can include a previously found set of models of putative
     new domains to extend this and maintain the names with respect to the old
@@ -102,27 +111,35 @@ class AutomatedGFam(CommandLineApp):
     It is assumed that the provided models are also following this naming
     convention.
 
-    2.- Run GFam in a set of user-sequences plus InterPro output data. It is 
+    2.- Runs only ConSAT on UniProt. All the resultad UniProtKB files will
+    be downloaded including the InterPro data. The user will only have to
+    provide a directory where the downloaded and the output files will be 
+    written.
+
+    ConSAT will be run in all proteins, and therefore the user will have to
+    provide, as well a file with the HMMs.
+
+    3.- Run GFam in a set of user-sequences plus InterPro output data. It is 
     assumed that the InterPro output corresponds to those sequences the user is
     inputing. A set of putative new domain models will be predicted for this set
     of sequences (NOVEL00001, NOVEL00002, etc.). This is equivalent to the
     ``classic`` GFam approach (with some minor tweaks) except of the fact that
     a set of HMM models for the new domains is provided.
 
-    3.- Run ConSat in a set of user-sequences plus InterPro output data. It is
+    4.- Run ConSAT in a set of user-sequences plus InterPro output data. It is
     assumed, again, that the InterPro output corresponds to those sequences the
     user is inputing. Besides, the user __should__ provide a set of HMMs found
     in previous GFam executions to allow ConSAT tagging the unassigned pieces
     with these models.
 
-    All three cases will take a single positional argument, a route to a directory 
+    All four cases will take a single positional argument, a route to a directory 
     which will be created if it does not exists, and where three sub-directories
     will be setup:
 
     data/ : here will be downloaded all the supporting files used to 
     compute our output. Also, the given files will be copied inside.
 
-    work/ : work folder for ConSat/GFam
+    work/ : work folder for ConSAT/GFam
 
     output/ : output folder for ConSAT/GFam
 
@@ -136,14 +153,11 @@ class AutomatedGFam(CommandLineApp):
     data/ : all the input / given files
 
     work/gfam : work folder for GFam
-    work/consat : work folder for ConSat
+    work/consat : work folder for ConSAT
 
     output/gfam : output folder for GFam
     output/consat : output folder for Consat
 
-    Plus, a folder per_organism will be created, with a set of subfolders, one
-    per organism, where the output files (extracted from both outputs)
-    will be located.
     """
 
     urls = {"file.mapping.gene_ontology": "http://purl.obolibrary.org/obo/go/go-basic.obo",
@@ -183,6 +197,12 @@ class AutomatedGFam(CommandLineApp):
                          "the function from")
         parser.add_option("-b", "--blast-route", dest="blast_route", help="route to"\
                         "blast executables if not in the path")
+        parser.add_option("-p", "--pubmed-cache", dest="pubmed_cache", help="route to"\
+                        " the cache of PubMed downloaded files")
+        parser.add_option("-o", "--gene-ontology", dest="gene_ontology", help="route to"\
+                        " the desired Gene Ontology file (instead of using the most recent one")
+        parser.add_option("-x", "--lexicon", dest="lexicon", help="route to lexicon "\
+                        "file to maintain ids compatibility")
         return parser
 
     def process_arguments(self):
@@ -191,18 +211,18 @@ class AutomatedGFam(CommandLineApp):
 
         self.mode, self.directory = self.args
 
-        if not self.mode in ["uniprot", "gfam", "consat"]:
-            self.error("Wrong mode, must be 'uniprot', 'gfam' or 'consat'")
+        if not self.mode in ["uniprot", "uniprot_consat", "gfam", "consat"]:
+            self.error("Wrong mode, must be 'uniprot', 'uniprot_consat', 'gfam' or 'consat'")
 
         if self.options.models:
             self.models = self.options.models
-        elif self.mode == "consat":
-            self.error("ConSat mode should have a 'models' file (option -m)")
+        elif self.mode == "consat" or self.mode == "uniprot_consat":
+            self.error(self.mode + " mode should have a 'models' file (option -m)")
 
-        if self.mode != "uniprot" and not self.options.sequences:
+        if not self.mode.startswith("uniprot") and not self.options.sequences:
             self.error("No sequence file specified (-s option)")
 
-        if self.mode != "uniprot" and not self.options.interpro:
+        if not self.mode.startswith("uniprot") and not self.options.interpro:
             self.error("InterPro sequences were not specified (-i option)")
 
     def _download_file(self, url, filename):
@@ -241,7 +261,10 @@ class AutomatedGFam(CommandLineApp):
         if self.options.blast_route:
             self.params["folder.blast"] = self.options.blast_route
 
-        self.params["folder.pubmed_cache"]=os.path.join(self.program_dir["data"], "pubmed_cache")
+        if self.options.pubmed_cache:
+            self.params["folder.pubmed_cache"] = self.options.pubmed_cache
+        else:
+            self.params["folder.pubmed_cache"]=os.path.join(self.program_dir["data"], "pubmed_cache")
 
         if self.mode == "uniprot":
             self.gfam_dir = dict()
@@ -253,10 +276,6 @@ class AutomatedGFam(CommandLineApp):
                 self.consat_dir[subdir] = os.path.join(route, "consat")
                 if not os.path.exists(self.consat_dir[subdir]):
                     os.makedirs(self.consat_dir[subdir])
-            self.program_dir["per_organism"] = os.path.join(self.directory,
-                                                            "per_organism")
-            if not os.path.exists(self.program_dir["per_organism"]):
-                os.makedirs(self.program_dir["per_organism"])
 
     def _gunzip(self, file_name):
         file_name2 = file_name.replace('.gz', '')
@@ -283,6 +302,9 @@ class AutomatedGFam(CommandLineApp):
             filename = os.path.join(data, url.split("/")[-1])
             self._download_file(url, filename)
             self.params[name] = filename
+
+        if self.options.gene_ontology:
+            self.params["file.mapping.gene_ontology"] = self.options.gene_ontology
 
         # 2.- execute the "download_names" script
         names = os.path.join(data, "names.dat.gz")
@@ -417,7 +439,7 @@ class AutomatedGFam(CommandLineApp):
             # we set the prefix to "GFAM"
             self.params["prefix"] = "GFAM"
 
-        else: 
+        elif mode == "consat" or mode == "gfam": 
             # gfam or consat modes, we first copy two input files
             # into the data folder
             shutil.copy(self.options.sequences, data)
@@ -442,6 +464,107 @@ class AutomatedGFam(CommandLineApp):
                     self.params["previous_domain_table"] = file_models
                 else:
                     self.params["file.input.hmms"] = file_models 
+            self.params["folder.work"] = self.program_dir["work"]
+            self.params["folder.output"] = self.program_dir["output"]
+        else: # mode == "uniprot_consat"
+            # 1.- download the fasta files and join them
+            self.log.info("Downloading sequences...")
+            url_swissprot = "ftp://ftp.ebi.ac.uk/pub/databases/uniprot/knowledgebase/uniprot_sprot.fasta.gz"
+            file_swissprot = os.path.join(self.program_dir["data"], "uniprot_sprot.fasta.gz")
+            self._download_file(url_swissprot, file_swissprot)
+            self._gunzip(file_swissprot)
+            file_swissprot = file_swissprot.replace(".gz", "")
+
+            url_trembl = "ftp://ftp.ebi.ac.uk/pub/databases/uniprot/knowledgebase/uniprot_trembl.fasta.gz"
+            file_trembl = os.path.join(self.program_dir["data"], "uniprot_trembl.fasta.gz")
+            self._download_file(url_trembl, file_trembl)
+            self._gunzip(file_trembl)
+            file_trembl = file_trembl.replace(".gz", "")
+
+            sequences = os.path.join(data, "uniprot.fasta")
+            with open(sequences, 'w') as outfile:
+                for fname in (file_swissprot, file_trembl):
+                    with open(fname) as infile:
+                        for line in infile:
+                            outfile.write(line)
+            self.params["file.input.sequences"] = sequences
+
+            # 2.- download an prepare the InterPro files
+            self.log.info("Downloading interpro...")
+
+            # we download the InterPro data and prepare it
+            url_interpro = "ftp://ftp.ebi.ac.uk/pub/databases/interpro/match_complete.xml.gz"
+            file_interpro = os.path.join(self.program_dir["data"], "match_complete.xml.gz")
+            self._download_file(url_interpro, file_interpro)
+            self._gunzip(file_interpro)
+            file_interpro = file_interpro.replace(".gz", "")
+
+            # we write in a file the set of swissprot ids
+            file_sprot_ids = os.path.join(self.program_dir["data"], "swissprot_ids")
+            with open(file_sprot_ids, "w") as out:
+                for line in open(file_swissprot, "r"):
+                    if line.startswith(">"):
+                        id_sprot = line.split("|")[1]
+                        out.write(id_sprot + "\n")
+
+            interpro1 = os.path.join(self.program_dir["data"], "interpro1")
+            interpro2 = os.path.join(self.program_dir["data"], "interpro2")
+            interpro_out = os.path.join(self.program_dir["data"], "uniprot.interpro")
+
+            # Conversion of the intepro file (XML) into text
+            if not os.path.isfile(interpro1) and not os.path.isfile(interpro2):
+                conversor = XMLIprscanToTxt(file_interpro, self.params["file.mapping.interpro2go"],
+                        file_sprot_ids, interpro1, interpro2)
+                conversor.run()
+            with open(sequences, 'w') as outfile:
+                for fname in (interpro1, interpro2):
+                    with open(fname) as infile:
+                        for line in infile:
+                            outfile.write(line)
+            self.params["file.input.iprscan"] = interpro_out
+
+            out = self._create_mask_fasta_file(self.params["file.input.sequences"])
+            self.params["low_complexity_regions_file"] = out
+            self.params["sequence_id_regexp"] = "(\w+\|)(?P<id>\w+)(\|\w+)+"
+            self.params["num_cpu_cores"] = "12"
+    
+            # GOA
+            url_goa = "ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/UNIPROT/gene_association.goa_uniprot.gz"
+            file_goa = os.path.join(self.program_dir["data"], "gene_association.goa_uniprot.gz")
+            self._download_file(url_goa, file_goa)
+            self._gunzip(file_goa)
+            file_goa = file_goa.replace(".gz", "")
+            self.params["file.function.goa_file"] = file_goa
+
+            if self.options.models:
+                # should always be true...
+                shutil.copy(self.options.models, data)
+                name_models = os.path.basename(self.options.models)
+                file_models = os.path.join(data, name_models)
+                self.params["file.input.hmms"] = file_models
+                
+            if self.options.lexicon:
+                # lexicon, to maintain ids compatibility
+                shutil.copy(self.options.lexicon, data)
+                self.params["file.lexicon"] = os.path.join(data, os.path.basename(self.options.lexicon))
+
+            # we download the RDF data
+            url_rdf = "http://www.uniprot.org/citations/?query=citedin%3a(*)&compress=yes&format=rdf"
+            rdf_file = os.path.join(self.program_dir["data"], "citations.rdf.gz")
+            self._download_file(url_rdf, rdf_file)
+            self._gunzip(rdf_file)
+            rdf_file = rdf_file.replace(".gz", "")
+            self.params["file.rdffile"] = rdf_file
+
+            # we download the Idmapping data
+            url_id_mapping = "ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/idmapping/idmapping_selected.tab.gz"
+            id_mapping_file = os.path.join(self.program_dir["data"], "idmapping_selected.tag.gz")
+            self._download_file(url_id_mapping, id_mapping_file)
+            self._gunzip(id_mapping_file)
+            id_mapping_file = id_mapping_file.replace(".gz", "")
+            self.params["file.idmapping"] = id_mapping_file
+
+            # general folders
             self.params["folder.work"] = self.program_dir["work"]
             self.params["folder.output"] = self.program_dir["output"]
 
@@ -469,7 +592,7 @@ class AutomatedGFam(CommandLineApp):
                 self._fill_config_file(conf_file, self.params_gfam)
             else:
                 self._fill_config_file(conf_file)
-        if self.mode == "consat" or self.mode == "uniprot":
+        if self.mode == "consat" or self.mode == "uniprot" or self.mode == "uniprot_consat":
             from gfam.scripts.master_consat import ConSATMasterScript
             script = ConSATMasterScript()
             conf_file = os.path.join(self.directory, "consat.conf")
@@ -511,6 +634,11 @@ class AutomatedGFam(CommandLineApp):
             script.run(args=["run", "-c", self.conf_file[0]])
         elif self.mode == "consat":
             self.log.info("Running ConSAT on users' sequences")
+            from gfam.scripts.master_consat import ConSATMasterScript
+            script = ConSATMasterScript()
+            script.run(args=["run", "-c", self.conf_file[0]])
+        elif self.mode == "uniprot_consat":
+            self.log.info("Running ConSAT on UniProt")
             from gfam.scripts.master_consat import ConSATMasterScript
             script = ConSATMasterScript()
             script.run(args=["run", "-c", self.conf_file[0]])
