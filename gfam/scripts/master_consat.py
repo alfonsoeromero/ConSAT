@@ -31,6 +31,7 @@ from gfam.modula.module import CalculationModule
 from gfam.modula.storage import DiskStorageEngine, NotFoundError
 from gfam.scripts import CommandLineApp
 from gfam.utils import redirected
+from gfam.result_file import ResultFileFilter, ResultFileCombiner
 
 __author__  = "Tamas Nepusz, Alfonso E. Romero"
 __email__   = "aeromero@cs.rhul.ac.uk"
@@ -357,21 +358,59 @@ class ConSATMasterScript(CommandLineApp):
         self.log.info("Exported label assignment to %s." % outfile)
 
         # Run and export the overrepresentation analysis
+        there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")
         outfile = os.path.join(outfolder, "overrepresentation_analysis.txt") 
-        self.modula.run("overrep", force=self.options.force)
-        shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
-        self.log.info("Exported overrepresentation analysis to %s." % outfile)
+        if not there_is_combination:
+        	self.modula.run("overrep", force=self.options.force)
+            if not os.path.exists(outfile):
+		        shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
+    		    self.log.info("Exported overrepresentation analysis to %s." % outfile)
+        else:
+            self.modula.run("overrep", force=self.options.force, ignore=True)
+            if not os.path.exists(outfile):
+                filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
+                conf = float(self.config.get("analysis:overrep", "confidence"))
+                filterer.filter(outfile, confidence=conf)
+                self.log.info("Exported overrepresentation analysis to %s." % outfile)
+
+
+        # Run the HMMs on the discovered new domains
+        self.modula.run("hmm", force=self.options.force)
 
         # Run the functional prediction, if we have to
         if self.config.get("DEFAULT", "file.function.goa_file"):
-            self.modula.run("function_arch", force=self.options.force)    
-            outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
-            if not os.path.exists(outfile):
-                shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
-                self.log.info("Exported predicted function by transfer to %s." % outfile)
+            if not there_is_combination:
+            	self.modula.run("function_arch", force=self.options.force)    
+            	outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
+            	if not os.path.exists(outfile):
+                	shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
+                    self.log.info("Exported predicted function by transfer to %s." % outfile)
+            else:
+                self.modula.run("function_arch", force=self.options.force, ignore=True)
+                outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
+                if not os.path.exists(outfile):
+                    filterer = ResultFileFilter(self.modula.storage_engine.get_filename("function_arch"))
+                    conf = float(self.config.get("analysis:function_arch", "max_pvalue"))
+                    filterer.filter(outfile, confidence=conf)
+	                self.log.info("Exported predicted function by transfer to %s." % outfile)
         else:
             self.log.info("No GOA source file was found and therefore")
             self.log.info("no funtion transfer will be performed")
+
+        if there_is_combination:
+            # we combine the overrep and function_arch results
+            infile1 = self.modula.storage_engine.get_filename("overrep")
+            infile2 = self.modula.storage_engine.get_filename("function_arch")
+            outfile = os.path.join(outfolder, "combined_prediction.txt")
+            # confidence is 0.05 (default value)
+            # TODO: add this as a parameter in the configuration file
+            combiner = ResultFileCombiner(infile1, infile2)
+            combiner.combine(outfile)
+        else:
+            # the combination is a copy of the overrep file
+            infile = os.path.join(outfolder, "overrepresentation_analysis.txt")
+            outfile = os.path.join(outfolder, "combined_prediction.txt")
+            shutil.copy(infile, outfile)
 
         # Run the words prediction, if we have to
         if self.config.get("DEFAULT", "file.idmapping") and\
@@ -383,7 +422,7 @@ class ConSATMasterScript(CommandLineApp):
                shutil.copy(self.modula.storage_engine.get_filename("get_text"), outfile)
                self.log.info("Exported weight vectors per architecture to %s." % outfile)
         else:
-           self.log.info("Either not idmapping or rdf file were specified")
+           self.log.info("Either not idmapping or RDF file were specified")
            self.log.info("no text weighting will be performed")
 
 	###########################################################################

@@ -50,6 +50,9 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                      "Default: %default",
                 config_key="analysis:overrep/confidence",
                 default=0.05, type=float)
+        parser.add_option("-i", "--ignore-confidence", dest="ignore",
+                action="store_true", help="ignores the confidence value "\
+                "outputting all the predictions regardless of the p-value ")
         parser.add_option("--correction", dest="correction",
                 metavar="METHOD", default="fdr",
                 choices=("none", "bonferroni", "sidak", "fdr"),
@@ -95,6 +98,9 @@ class OverrepresentationAnalysisApp(CommandLineApp):
 
         if self.options.arch_file:
             arch_file = open(self.options.arch_file, "w")
+
+        if self.options.ignore:
+            self.options.confidence = float("inf")
 
         overrep = OverrepresentationAnalyser(self.go_tree, self.go_mapping,
                 confidence = self.options.confidence,

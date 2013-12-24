@@ -60,6 +60,9 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                           config_key="analysis:function_arch/minimum_coverage",
                           help="Minimum % of coverage allowed for an " +
                                "architecture to transfer/receive function")
+        parser.add_option("-i", "--ignore-confidence", dest="ignore",
+                action="store_true", help="ignores the confidence value "\
+                "outputting all the predictions regardless of the p-value ")
         parser.add_option("-p", "--p-value", dest="max_pvalue",
                           type=float, default=0.05, metavar="FLOAT",
                           config_key="analysis:function_arch/max_pvalue",
@@ -237,6 +240,9 @@ class TransferFunctionFromDomainArch(CommandLineApp):
 
         if self.options.max_pvalue < 0.0 or self.options.max_pvalue > 1.0:
             self.error("The maximum p-value should be between 0.0 and 1.0")
+
+        if self.options.ignore:
+            self.options.confidence = float("inf")
 
         codes = set(self.evidence[self.options.ev_codes])
 
