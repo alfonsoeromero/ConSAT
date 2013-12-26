@@ -361,10 +361,10 @@ class ConSATMasterScript(CommandLineApp):
         there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")
         outfile = os.path.join(outfolder, "overrepresentation_analysis.txt") 
         if not there_is_combination:
-        	self.modula.run("overrep", force=self.options.force)
+            self.modula.run("overrep", force=self.options.force)
             if not os.path.exists(outfile):
-		        shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
-    		    self.log.info("Exported overrepresentation analysis to %s." % outfile)
+                shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
+                self.log.info("Exported overrepresentation analysis to %s." % outfile)
         else:
             self.modula.run("overrep", force=self.options.force, ignore=True)
             if not os.path.exists(outfile):
@@ -380,10 +380,10 @@ class ConSATMasterScript(CommandLineApp):
         # Run the functional prediction, if we have to
         if self.config.get("DEFAULT", "file.function.goa_file"):
             if not there_is_combination:
-            	self.modula.run("function_arch", force=self.options.force)    
-            	outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
-            	if not os.path.exists(outfile):
-                	shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
+                self.modula.run("function_arch", force=self.options.force)    
+                outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
+                if not os.path.exists(outfile):
+                    shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
                     self.log.info("Exported predicted function by transfer to %s." % outfile)
             else:
                 self.modula.run("function_arch", force=self.options.force, ignore=True)
@@ -392,7 +392,7 @@ class ConSATMasterScript(CommandLineApp):
                     filterer = ResultFileFilter(self.modula.storage_engine.get_filename("function_arch"))
                     conf = float(self.config.get("analysis:function_arch", "max_pvalue"))
                     filterer.filter(outfile, confidence=conf)
-	                self.log.info("Exported predicted function by transfer to %s." % outfile)
+                    self.log.info("Exported predicted function by transfer to %s." % outfile)
         else:
             self.log.info("No GOA source file was found and therefore")
             self.log.info("no funtion transfer will be performed")

@@ -300,11 +300,14 @@ class AutomatedGFam(CommandLineApp):
         data = self.program_dir["data"]
         for name, url in self.urls.items():
             filename = os.path.join(data, url.split("/")[-1])
-            self._download_file(url, filename)
-            self.params[name] = filename
+            if name != "file.mapping.gene_ontology" or (name == "file.mapping.gene_ontology" and not self.options.gene_ontology):
+                self._download_file(url, filename)
+                self.params[name] = filename
 
         if self.options.gene_ontology:
             self.params["file.mapping.gene_ontology"] = self.options.gene_ontology
+
+        print "YEHEEEEEE ", self.params["file.mapping.interpro_parent_child"]
 
         # 2.- execute the "download_names" script
         names = os.path.join(data, "names.dat.gz")
@@ -439,7 +442,7 @@ class AutomatedGFam(CommandLineApp):
             # we set the prefix to "GFAM"
             self.params["prefix"] = "GFAM"
 
-        elif mode == "consat" or mode == "gfam": 
+        elif self.mode == "consat" or self.mode == "gfam": 
             # gfam or consat modes, we first copy two input files
             # into the data folder
             shutil.copy(self.options.sequences, data)
