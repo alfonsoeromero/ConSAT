@@ -219,7 +219,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
     def process_hmmer_file(self, fname):
         f = open(fname)
-	self.hmm_domains = set()
+        self.hmm_domains = set()
         for line in f:
             id_prot, model, evalue = line.strip().split() # evalue is not used, by the moment
             seq_id, _, limits = id_prot.rpartition(":")

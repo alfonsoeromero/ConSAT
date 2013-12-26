@@ -4,5 +4,7 @@ class ParseError(Exception):
     """Exception thrown when a parsing error occurred"""
 
     def __init__(self, msg, lineno = 1):
-        Exception.__init__("%s near line %d" % (msg, lineno))
-        self.lineno = lineno
+        self.parameter = "%s near line %d" % (msg, lineno)
+
+    def __str__(self):
+        return repr(self.parameter)

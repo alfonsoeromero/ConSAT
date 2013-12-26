@@ -104,7 +104,7 @@ class HMM(CommandLineApp):
         reader = fasta.Parser(open_anything(sequences_file))
         seqs = dict(((seq.id, seq) for seq in reader))
 
-	for cluster_name,cluster_seqs in table.iteritems():
+        for cluster_name,cluster_seqs in table.iteritems():
             output_file_name = self.sequences_dir + os.path.sep + cluster_name
             output_fd = open(output_file_name + ".faa", "w")
             writer = fasta.Writer(output_fd)
@@ -117,7 +117,7 @@ class HMM(CommandLineApp):
 
     def building_alignments(self, cluster_names):
         """Builds the alignments, one for each cluster name"""
-	seq_dir = self.sequences_dir + os.path.sep
+        seq_dir = self.sequences_dir + os.path.sep
         align_dir = self.alignments_dir + os.path.sep
 
         for cluster in cluster_names:
@@ -169,7 +169,7 @@ class HMM(CommandLineApp):
         self.create_directories()
 
         self.log.info("Separating FASTA in one file per cluster...")
-	self.separate_sequences(table, sequences_file)
+        self.separate_sequences(table, sequences_file)
 
         self.log.info("Building alignments...")
         self.building_alignments(table.keys())

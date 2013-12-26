@@ -62,15 +62,15 @@ class HMMScanApp(CommandLineApp):
 
     def create_temp_file(self):
         f = tempfile.NamedTemporaryFile(delete=True)
-	f.close()
-	return f.name
+        f.close()
+        return f.name
 
     def run_real(self):
         """Runs the application and returns the exit code"""
         if not self.args:
             self.args = ["-"]
         else:
-	    self.sequence_file, self.hmm_file = self.args
+            self.sequence_file, self.hmm_file = self.args
 
         # Finds hmmsearch in the current path if needed, ensure that
         # the paths are absolute.
@@ -103,14 +103,14 @@ class HMMScanApp(CommandLineApp):
 	"""
         # First, we check whether the binary files exist
         binary_filenames = [self.hmm_file + ".h3" + i for i in ["f", "i", "m", "p"]]
-	if not all([os.path.isfile(fi) for fi in binary_filenames]):
+        if not all([os.path.isfile(fi) for fi in binary_filenames]):
             # the binaries do not exist, we create them
             self.log.info("Pressing the HMM library")
             args = []
             args.extend(["-f"])
             args.extend([self.hmm_file])
 
-	    cmd = self.get_tool_cmdline("hmmpress", args)
+            cmd = self.get_tool_cmdline("hmmpress", args)
             if not cmd:
                 self.log.fatal("cannot find hmmpress in %s" % self.options.hmmpress_path)
                 return False
@@ -136,24 +136,24 @@ class HMMScanApp(CommandLineApp):
         should be passed to `subprocess.Popen` in order to execute the tool.
         `args` is a set of extra arguments that should be passed to the tool.
          """
-	if not args:
-	    args = []
+        if not args:
+            args = []
         tool_path = getattr(self.options, tool_name + "_path")
         if not tool_path:
             tool_path = os.getcwd()
 
-	if os.path.isfile(tool_path):
-        # The path exists and points to a real file, so we simply return
-	    return [tool_path] + args
-        if not os.path.exists(tool_path):
-        # The path does not exist. Assume that this is a file referring to
-        # the HMMer tools, but the user has the new one. Try to extract
-        # the folder and see if the folder exists.
-            base, tool_name = os.path.split(tool_path)
+        if os.path.isfile(tool_path):
+            # The path exists and points to a real file, so we simply return
+            return [tool_path] + args
+            if not os.path.exists(tool_path):
+                # The path does not exist. Assume that this is a file referring to
+                # the HMMer tools, but the user has the new one. Try to extract
+                # the folder and see if the folder exists.
+                base, tool_name = os.path.split(tool_path)
 
         if os.path.isdir(tool_path):
-	# The path exists and points to a folder
-	    base = os.path.normpath(tool_path)
+            # The path exists and points to a folder
+            base = os.path.normpath(tool_path)
 
         # Okay, first check for the actual tool in the folder
         full_path = os.path.join(tool_path, tool_name)
@@ -182,7 +182,7 @@ class HMMScanApp(CommandLineApp):
         with open(hmm_output) as f:
             for line in f:
                 if not line.startswith("#"):
-		    [seq, model, score, sfrom, sto] = self.process_hmm_line(line)
+                    [seq, model, score, sfrom, sto] = self.process_hmm_line(line)
                     #self.log.info("Seq: " + seq + ", model: " + model + ", score: " + score + ", sfrom: " + sfrom + ", sto: " + sto)
                     hit = [model, sfrom, sto, score]
                     if seq not in hits_per_sequence:
@@ -240,9 +240,9 @@ class HMMScanApp(CommandLineApp):
 
         args = []
         args.extend(["--cpu", str(self.options.num_threads)])
-	args.extend(["--domtblout", hmm_output_file])
+        args.extend(["--domtblout", hmm_output_file])
         args.extend(["--acc"])
-	args.extend(["--incE", str(self.options.evalue)])
+        args.extend(["--incE", str(self.options.evalue)])
         args.append(self.hmm_file) #hmm database
         args.append(self.sequence_file) #sequence file
 
