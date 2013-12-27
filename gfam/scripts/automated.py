@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Automated script for running Gfam (or ConSAT) in a set of sequences without
+"""Automated script for running ConSAT in a set of sequences without
 having anything else than the sequences (and perhaps the InterPro output).
 
 There are four use cases in this program:
@@ -83,9 +83,9 @@ __email__   = "aromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
-__all__ = ["AutomatedGFam"]
+__all__ = ["AutomatedConSAT"]
 
-class AutomatedGFam(CommandLineApp):
+class AutomatedConSAT(CommandLineApp):
     """\
         Usage: %prog [options] mode directory
 

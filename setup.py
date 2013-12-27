@@ -17,6 +17,6 @@ params["version"] = "1.0"
 params["description"] = "The Consensus Signature Architecture Tool"
 
 params["packages"] = find_packages(exclude='tests')
-params["scripts"] = ["bin/gfam", "bin/consat", "bin/automated_gfam"]
+params["scripts"] = ["bin/gfam", "bin/consat", "bin/automated_consat"]
 
 setup(**params)
