@@ -307,8 +307,6 @@ class AutomatedConSAT(CommandLineApp):
         if self.options.gene_ontology:
             self.params["file.mapping.gene_ontology"] = self.options.gene_ontology
 
-        print "YEHEEEEEE ", self.params["file.mapping.interpro_parent_child"]
-
         # 2.- execute the "download_names" script
         names = os.path.join(data, "names.dat.gz")
         self.params["file.mapping.interpro2name"] = names
@@ -519,7 +517,7 @@ class AutomatedConSAT(CommandLineApp):
                 conversor = XMLIprscanToTxt(file_interpro, self.params["file.mapping.interpro2go"],
                         file_sprot_ids, interpro1, interpro2)
                 conversor.run()
-            with open(sequences, 'w') as outfile:
+            with open(interpro_out, 'w') as outfile:
                 for fname in (interpro1, interpro2):
                     with open(fname) as infile:
                         for line in infile:
