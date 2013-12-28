@@ -170,13 +170,13 @@ class AutomatedConSAT(CommandLineApp):
     short_name = "automated"
 
     def __init__(self, *args, **kwds): 
-        super(AutomatedGFam, self).__init__(*args, **kwds)
+        super(AutomatedConSAT, self).__init__(*args, **kwds)
         #Use the logger from Modula
         self.log = logging.getLogger("automated") 
 
     def create_parser(self):
         """Creates the command line parser for the automated script"""
-        parser = super(AutomatedGFam, self).create_parser()
+        parser = super(AutomatedConSAT, self).create_parser()
         parser.add_option("-f", "--force", dest="force", action="store_true",
                 help="force recalculation of results even when gfam thinks "\
                      "everything is up-to-date")
