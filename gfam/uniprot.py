@@ -69,16 +69,16 @@ class XMLIprscanToTxt(object):
                     self.match_data[field] = ""
 
         def _print_file_line(self):
-            line = "\t".join([self.match_data[val] for val in self.fields]) 
+            line = ["\t".join([self.match_data[val] for val in self.fields])]
             if "ipr_id" in self.match_data:
-                line += "\t"
-                line += ", ".join(self.ipr2go[self.match_data["ipr_id"]])
-            line += "\n"
+                line.append("\t")
+                line.append(", ".join(self.ipr2go[self.match_data["ipr_id"]]))
+            line.append("\n")
             # print to a file
             if self.match_data["protein_id"].strip() in self.swissprot:
-                self.sp_file.write(line)
+                self.sp_file.write(''.join(line))
             else:
-                self.tr_file.write(line)
+                self.tr_file.write(''.join(line))
 
         def _process_xml_tag(self, tag):
             """Process an entire XML tag from the InterPro
