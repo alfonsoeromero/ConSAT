@@ -100,13 +100,20 @@ class FindUnassignedApp(CommandLineApp):
 
     def process_sequences_file(self, fname):
         self.log.info("Loading sequences from %s..." % fname)
-        self.seq_ids_to_length = {}
+        #self.seq_ids_to_length = {}
         parser = fasta.Parser(open_anything(fname))
         parser = fasta.regexp_remapper(parser,
                 self.sequence_id_regexp
         )
-        for seq in parser:
-            self.seq_ids_to_length[seq.id] = len(seq.seq)
+        seqs, lens = [], []
+        for i, seq in enumerate(parser):
+            seqs.append(seq.id)
+            lens.append(len(seq.seq))
+            if i%1000000 == 0:
+                self.log.info("Read {} seqs".format(i))
+        self.log.info("...loaded")
+        self.seq_ids_to_length = dict.fromkeys(seqs, lens)
+            #self.seq_ids_to_length[seq.id] = len(seq.seq)
 
     def process_infile(self, fname, interpro=None):
         self.log.info("Processing input file: %s" % fname)
