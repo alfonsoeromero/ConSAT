@@ -52,7 +52,8 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                 default=0.05, type=float)
         parser.add_option("-i", "--ignore-confidence", dest="ignore",
                 action="store_true", help="ignores the confidence value "\
-                "outputting all the predictions regardless of the p-value ")
+                "outputting all the predictions regardless of the p-value ",
+                config_key="analysis:overrep/ignore")
         parser.add_option("--correction", dest="correction",
                 metavar="METHOD", default="fdr",
                 choices=("none", "bonferroni", "sidak", "fdr"),

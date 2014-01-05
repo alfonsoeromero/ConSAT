@@ -366,7 +366,8 @@ class ConSATMasterScript(CommandLineApp):
                 shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
         else:
-            self.modula.run("overrep", force=self.options.force, ignore=True)
+            self.config.put("analysis:overrep/ignore", True)
+            self.modula.run("overrep", force=self.options.force)
             if not os.path.exists(outfile):
                 filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
                 conf = float(self.config.get("analysis:overrep", "confidence"))
