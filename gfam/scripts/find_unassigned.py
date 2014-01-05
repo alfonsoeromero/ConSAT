@@ -112,7 +112,7 @@ class FindUnassignedApp(CommandLineApp):
             if i%1000000 == 0:
                 self.log.info("Read {} seqs".format(i))
         self.log.info("...loaded")
-        self.seq_ids_to_length = dict.fromkeys(seqs, lens)
+        self.seq_ids_to_length = dict(zip(seqs, lens))
             #self.seq_ids_to_length[seq.id] = len(seq.seq)
 
     def process_infile(self, fname, interpro=None):
