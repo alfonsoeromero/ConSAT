@@ -45,7 +45,7 @@ class Configuration(object):
             section = "@global"
             option = name
         return section, option
-
+    def sections(self): return self.cfg.sections()
     def get(self, name): return self.cfg.get(*self._parse_name(name))
     def getInt(self, name): return self.cfg.getint(*self._parse_name(name))
     def getFloat(self, name): return self.cfg.getfloat(*self._parse_name(name))

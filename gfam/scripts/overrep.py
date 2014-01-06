@@ -10,6 +10,7 @@ from gfam.go.overrepresentation import OverrepresentationAnalyser
 from gfam.interpro import InterPro2GOMapping
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
+from gfam.result_file import ResultFileFilter
 
 __author__  = "Tamas Nepusz"
 __email__   = "tamas@cs.rhul.ac.uk"
@@ -98,10 +99,14 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                       (self.options.confidence, self.options.correction))
 
         if self.options.arch_file:
-            arch_file = open(self.options.arch_file, "w")
+            arch_file_name = self.options.arch_file
+	    if self.options.ignore:
+		arch_file_name += "_unfiltered"
+            arch_file = open(arch_file_name, "w")
 
         if self.options.ignore:
             self.options.confidence = float("inf")
+	    self.log.info("Ignored the significance value. We will filter results later.")
 
         overrep = OverrepresentationAnalyser(self.go_tree, self.go_mapping,
                 confidence = self.options.confidence,
@@ -150,6 +155,14 @@ class OverrepresentationAnalysisApp(CommandLineApp):
 
         if self.options.arch_file:
             arch_file.close()
+	    if self.options.ignore:
+		arch_file_name = self.options.arch_file
+		# we filter the file with the significance value
+		filterer = ResultFileFilter(arch_file_name)
+                conf = float(self.config.get("analysis:overrep", "confidence"))
+                filterer.filter(outfile, confidence=conf)
+
+		
 
 
 if __name__ == "__main__":

@@ -243,6 +243,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
 
         if self.options.ignore:
             self.options.confidence = float("inf")
+            self.log.info("Ignored the significance value. We will filter results later.")
 
         codes = set(self.evidence[self.options.ev_codes])
 

@@ -29,7 +29,7 @@ from functools import wraps
 from gfam.modula.hash import sha1
 from gfam.modula.module import CalculationModule
 from gfam.modula.storage import DiskStorageEngine, NotFoundError
-from gfam.scripts import CommandLineApp
+from gfam.scripts import CommandLineApp 
 from gfam.utils import redirected
 from gfam.result_file import ResultFileFilter, ResultFileCombiner
 
@@ -44,6 +44,12 @@ class GFamCalculation(CalculationModule):
     """Class representing a GFam calculation step. This is a subclass of
     `modula.CalcuationModule`_ and it assumes that the name of the module
     refers to a valid Python module in `gfam.scripts`_."""
+
+    def add_extra_args(self, args):
+        """ Adds the possibility of "hotplugging" extra arguments after
+            the configuration file has been read
+        """
+        self.extra_args = args
 
     def run(self):
         """Runs the calculation"""
@@ -64,6 +70,12 @@ class GFamCalculation(CalculationModule):
         # Create the application
         app = app[0](logger=self.logger)
         args = ["-c", self.config.get("@global.config_file")]
+        # add some extra args, if any
+        try:
+            self.extra_args
+        except:
+            self.extra_args = []
+        args.extend(self.extra_args)
 
         for param, value in self.parameters.iteritems():
             if not param.startswith("switch."):
@@ -359,24 +371,20 @@ class ConSATMasterScript(CommandLineApp):
 
         # Run and export the overrepresentation analysis
         there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")
-        outfile = os.path.join(outfolder, "overrepresentation_analysis.txt") 
+        outfile = os.path.join(outfolder, "overrepresentation_analysis.txt")
+
         if not there_is_combination:
             self.modula.run("overrep", force=self.options.force)
             if not os.path.exists(outfile):
                 shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
         else:
-            self.config.set("analysis:overrep/ignore", True)
-            self.modula.run("overrep", force=self.options.force)
+            self.modula.run("overrep", force=self.options.force, extra_args=["-i"])
             if not os.path.exists(outfile):
                 filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
                 conf = float(self.config.get("analysis:overrep", "confidence"))
                 filterer.filter(outfile, confidence=conf)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
-
-
-        # Run the HMMs on the discovered new domains
-        self.modula.run("hmm", force=self.options.force)
 
         # Run the functional prediction, if we have to
         if self.config.get("DEFAULT", "file.function.goa_file"):
@@ -387,7 +395,7 @@ class ConSATMasterScript(CommandLineApp):
                     shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
                     self.log.info("Exported predicted function by transfer to %s." % outfile)
             else:
-                self.modula.run("function_arch", force=self.options.force, ignore=True)
+                self.modula.run("function_arch", force=self.options.force, extra_args=["-i"])
                 outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
                 if not os.path.exists(outfile):
                     filterer = ResultFileFilter(self.modula.storage_engine.get_filename("function_arch"))

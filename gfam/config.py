@@ -103,7 +103,6 @@ class ConfigurableOptionParser(OptionParser):
         options) and ``args`` contains the list of positional arguments.
         """
         options, args = OptionParser.parse_args(self, *args, **kwds)
-
         if not options.config_file:
             return options, args
 
