@@ -45,7 +45,7 @@ class ResultFileFilter(object):
 
     def filter(self, out_file, confidence=0.05):
         reader = ResultFileReader(self.input_file)
-        data = reader.get_result_as_dict()
+        data = reader.get_result_as_dict(confidence)
         names = reader.get_go_names()
         writer = ResultFileWriter(out_file)
         writer.write_result_from_dict(data, significance=confidence, go_names=names)
@@ -201,8 +201,8 @@ class ResultFileReader(object):
                 file_content[prev_prot] = list_go_terms
         return file_content
 
-    def get_result_as_dict(self):
-        return self._read_result_file(self.file_name)
+    def get_result_as_dict(self, significance=None):
+        return self._read_result_file(self.file_name, significance)
 
     def get_go_names(self):
         return self.go_names
