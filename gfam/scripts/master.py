@@ -44,6 +44,12 @@ class GFamCalculation(CalculationModule):
     `modula.CalcuationModule`_ and it assumes that the name of the module
     refers to a valid Python module in `gfam.scripts`_."""
 
+    def add_extra_args(self, args):
+        """ Adds the possibility of "hotplugging" extra arguments after
+            the configuration file has been read
+        """
+        self.extra_args = args
+
     def run(self):
         """Runs the calculation"""
         self.logger.info("Starting module %s" % self.name)
@@ -63,6 +69,12 @@ class GFamCalculation(CalculationModule):
         # Create the application
         app = app[0](logger=self.logger)
         args = ["-c", self.config.get("@global.config_file")]
+        # add some extra args, if any
+        try:
+            self.extra_args
+        except:
+            self.extra_args = []
+        args.extend(self.extra_args)
 
         for param, value in self.parameters.iteritems():
             if not param.startswith("switch."):
@@ -385,13 +397,12 @@ class GFamMasterScript(CommandLineApp):
                 shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
         else:
-            self.modula.run("overrep", force=self.options.force, ignore=True)
+            self.modula.run("overrep", force=self.options.force, extra_args=["-i"])
             if not os.path.exists(outfile):
                 filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
                 conf = float(self.config.get("analysis:overrep", "confidence"))
                 filterer.filter(outfile, confidence=conf)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
-
 
         # Run the HMMs on the discovered new domains
         self.modula.run("hmm", force=self.options.force)
@@ -405,7 +416,7 @@ class GFamMasterScript(CommandLineApp):
                     shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
                     self.log.info("Exported predicted function by transfer to %s." % outfile)
             else:
-                self.modula.run("function_arch", force=self.options.force, ignore=True)
+                self.modula.run("function_arch", force=self.options.force, extra_args=["-i"])
                 outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
                 if not os.path.exists(outfile):
                     filterer = ResultFileFilter(self.modula.storage_engine.get_filename("function_arch"))
@@ -425,11 +436,22 @@ class GFamMasterScript(CommandLineApp):
             # TODO: add this as a parameter in the configuration file
             combiner = ResultFileCombiner(infile1, infile2)
             combiner.combine(outfile)
+            # if there are files by arch, we combine them
+            if self.config.get("generated", "file.overrep.arch_file") and self.config.get("generated", "file.function_arch.general_arch_file"):
+                infile_arch1 = self.config.get("generated", "file.overrep.arch_file") + "_unfiltered"
+                infile_arch2 = self.config.get("generated", "file.function_arch.general_arch_file") + "_unfiltered"
+                outfile_arch = os.path.join(outfolder, "combined_prediction_by_arch.txt")
+                combiner_arch = ResultFileCombiner(infile_arch1, infile_arch2)
+                combiner_arch.combine(outfile_arch)
         else:
             # the combination is a copy of the overrep file
             infile = os.path.join(outfolder, "overrepresentation_analysis.txt")
             outfile = os.path.join(outfolder, "combined_prediction.txt")
             shutil.copy(infile, outfile)
+            # same for the overrep by arch, if it exists
+            infile_arch = self.config.get("generated", "file.overrep.arch_file")
+            outfile_arch = os.path.join(outfolder, "combined_prediction_by_arch.txt")
+            shutil.copy(infile_arch, outfile_arch)
 
         # Run the words prediction, if we have to
         if self.config.get("DEFAULT", "file.idmapping") and\
