@@ -14,6 +14,7 @@ from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 from gfam.utils import bidict
 from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+from gfam.result_file import ResultFileFilter
 import operator
 import optparse
 import sys
@@ -91,6 +92,12 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                          "be written (optional)")
         return parser
 
+    def _filter_arch_file(self, unfiltered, filtered):
+        if self.options.ignore and self.options.results_by_arch:
+            # we filter the file with the significance value
+            filterer = ResultFileFilter(unfiltered)
+            filterer.filter(filtered, confidence=self.options.confidence)
+
     def read_goa_file(self, goa_file, ev_codes):
         """Reads the GOA file, return a defaultdict that,
         for each protein id it has a set of strings with the
@@ -111,14 +118,21 @@ class TransferFunctionFromDomainArch(CommandLineApp):
     def _transfer_from_same_file(self, goa, arch_file):
         """ Transfer function from same architecture file
         """
+        confidence = self.options.max_pvalue
+        if self.options.ignore:
+            confidence = float("inf")
+            self.log.info("Ignored the significance value. We will filter results later.")
         ora = OverrepresentationAnalyser(self.go_tree, goa,
-                                         confidence=self.options.max_pvalue,
+                                         confidence=confidence,
                                          min_count=1, correction='None')
         cov = self.options.minimum_coverage / 100.0
         self.log.info("Transferring function from same file. Min coverage=" + str(cov))
         all_annotated = frozenset(goa.left.keys())
         if self.options.results_by_arch:
-            out = open(self.options.results_by_arch, "w")
+            arch_file_name = self.options.results_by_arch
+            if self.options.ignore:
+                arch_file_name += "_unfiltered"
+            out = open(arch_file_name, "w")
         for arch, prots in ArchReader(arch_file, cov):
             targets = set(prots)
             annotated_prots = targets & all_annotated
@@ -146,20 +160,28 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 print
         if self.options.results_by_arch:
             out.close()
+            self._filter_arch_file(arch_file_name, self.options.results_by_arch)
 
     def _transfer_from_both(self, goa, arch_target, arch_source):
         """ Transfer from both an external file and the same file using a single GOA 
         file
         """
+        confidence = self.options.max_pvalue
+        if self.options.ignore:
+            confidence = float("inf")
+            self.log.info("Ignored the significance value. We will filter results later.")
         ora = OverrepresentationAnalyser(self.go_tree, goa,
-                                         confidence=self.options.max_pvalue,
+                                         confidence=confidence,
                                          min_count=1, correction='None')
         cov = self.options.minimum_coverage / 100.0
         self.log.info("Transferring function from both files. Min coverage=" + str(cov))
         all_annotated = frozenset(goa.left.keys()) # all annotated proteins
         prots_per_arch = dict()
         if self.options.results_by_arch:
-            out = open(self.options.results_by_arch, "w")
+            arch_file_name = self.options.results_by_arch
+            if self.options.ignore:
+                arch_file_name += "_unfiltered"
+            out = open(arch_file_name, "w")
 
         self.log.info("\t Source architecture: " + arch_source)
         self.log.info("\t Target (and source, as well) architecture: " + arch_target)
@@ -195,20 +217,27 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 print
         if self.options.results_by_arch:
             out.close()
-
+            self._filter_arch_file(arch_file_name, self.options.results_by_arch)
 
     def _transfer_from_other_file(self, goa, arch_target, arch_source):
+ 
+        confidence = self.options.max_pvalue
+        if self.options.ignore:
+            confidence = float("inf")
+            self.log.info("Ignored the significance value. We will filter results later.")
         ora = OverrepresentationAnalyser(self.go_tree, goa,
-                                         confidence=self.options.max_pvalue,
+                                         confidence=confidence,
                                          min_count=1, correction='None')
         cov = self.options.minimum_coverage / 100.0
         goterms = dict()
         for arch, prots in ArchReader(arch_source, cov):
             if arch != "NO_ASSIGNMENT":
                 goterms[arch] = ora.test_group(prots)
-
         if self.options.results_by_arch:
-            with open(self.options.results_by_arch, "w") as out:
+            arch_file_name = self.options.results_by_arch
+            if self.options.ignore:
+                arch_file_name += "_unfiltered"
+            with open(arch_file_name, "w") as out:
                 for arch in sorted(goterms.keys()):
                     out.write(arch + "\n")
                     for term, p_value in goterms[arch]:
@@ -229,6 +258,9 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                     print prot
                     print
 
+        if self.options.results_by_arch:
+            self._filter_arch_file(arch_file_name, self.options.results_by_arch)
+
     def run_real(self):
         """Runs the applications"""
         if len(self.args) != 3:
@@ -240,11 +272,6 @@ class TransferFunctionFromDomainArch(CommandLineApp):
 
         if self.options.max_pvalue < 0.0 or self.options.max_pvalue > 1.0:
             self.error("The maximum p-value should be between 0.0 and 1.0")
-
-        if self.options.ignore:
-            self.options.confidence = float("inf")
-            self.log.info("Ignored the significance value. We will filter results later.")
-
         codes = set(self.evidence[self.options.ev_codes])
 
         go_file, archA, goaB = self.args

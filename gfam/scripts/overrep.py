@@ -100,16 +100,17 @@ class OverrepresentationAnalysisApp(CommandLineApp):
 
         if self.options.arch_file:
             arch_file_name = self.options.arch_file
-	    if self.options.ignore:
-		arch_file_name += "_unfiltered"
+            if self.options.ignore:
+                arch_file_name += "_unfiltered"
             arch_file = open(arch_file_name, "w")
 
+        confidence = self.options.confidence
         if self.options.ignore:
-            self.options.confidence = float("inf")
-	    self.log.info("Ignored the significance value. We will filter results later.")
+            confidence = float("inf")
+        self.log.info("Ignored the significance value. We will filter results later.")
 
         overrep = OverrepresentationAnalyser(self.go_tree, self.go_mapping,
-                confidence = self.options.confidence,
+                confidence = confidence,
                 min_count = self.options.min_size,
                 correction = self.options.correction)
         cache = {}
@@ -155,15 +156,10 @@ class OverrepresentationAnalysisApp(CommandLineApp):
 
         if self.options.arch_file:
             arch_file.close()
-	    if self.options.ignore:
-		arch_file_name = self.options.arch_file
-		# we filter the file with the significance value
-		filterer = ResultFileFilter(arch_file_name)
-                conf = float(self.config.get("analysis:overrep", "confidence"))
-                filterer.filter(outfile, confidence=conf)
-
-		
-
+            if self.options.ignore:
+                # we filter the file with the significance value
+                filterer = ResultFileFilter(arch_file_name)
+                filterer.filter(self.options.arch_file, confidence=self.options.confidence)
 
 if __name__ == "__main__":
     sys.exit(OverrepresentationAnalysisApp().run())

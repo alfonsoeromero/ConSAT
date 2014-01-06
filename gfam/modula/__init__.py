@@ -137,8 +137,8 @@ def run(module_name, force=False, extra_args=None):
     # Run the modules that we collected, store the results
     for name in to_run:
         module = module_manager.get(name)
-	if name == module_name and extra_args is not None:
-	    module.add_extra_args(extra_args)
+        if name == module_name and extra_args is not None:
+            module.add_extra_args(extra_args)
         result = module.run()
         if result is not None:
             storage_engine.store(module, result)
