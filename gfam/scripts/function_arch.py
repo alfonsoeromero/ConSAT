@@ -96,7 +96,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         if self.options.ignore and self.options.results_by_arch:
             # we filter the file with the significance value
             filterer = ResultFileFilter(unfiltered)
-            filterer.filter(filtered, confidence=self.options.confidence)
+            filterer.filter(filtered, confidence=self.options.max_pvalue)
 
     def read_goa_file(self, goa_file, ev_codes):
         """Reads the GOA file, return a defaultdict that,
