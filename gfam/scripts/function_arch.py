@@ -133,6 +133,8 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             if self.options.ignore:
                 arch_file_name += "_unfiltered"
             out = open(arch_file_name, "w")
+
+        # for each architecture and its associated proteins...
         for arch, prots in ArchReader(arch_file, cov):
             targets = set(prots)
             annotated_prots = targets & all_annotated
@@ -140,16 +142,13 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 # if there is no annotation for proteins in the arch...
                 print (os.linesep * 2).join(prots), os.linesep
                 if self.options.results_by_arch:
-                    out.write(arch + "\n\n")
+                    out.write("{}\n\n".format(arch))
                 continue
-
             lines = os.linesep.join(["  %.4f: %s (%s)" % 
                 (p_value, term.id, term.name)
                 for term, p_value in ora.test_group(targets)])
             if self.options.results_by_arch:
-                out.write(arch + "\n")
-                out.write(lines + "\n")
-                out.write("\n")
+                out.write("{}\n{}\n\n".format(arch, lines))
             for prot in prots:
                 print prot
                 if prot in annotated_prots:

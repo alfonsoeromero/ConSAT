@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from gfam.utils import open_anything
+from gfam.indexed_file import IndexedReadOnlyFile
 import re
 import math 
 
@@ -44,11 +45,13 @@ class ResultFileFilter(object):
         self.input_file = input_file
 
     def filter(self, out_file, confidence=0.05):
-        reader = ResultFileReader(self.input_file)
-        data = reader.get_result_as_dict(confidence)
-        names = reader.get_go_names()
+        reader = ResultFileReader(self.input_file, confidence)
         writer = ResultFileWriter(out_file)
-        writer.write_result_from_dict(data, significance=confidence, go_names=names)
+        for key in reader.get_keys():
+            l = reader[key]
+            names = reader.get_go_names()
+            writer.write_single_register(key, l, significance=confidence, go_names=names)
+        writer.close()
 
 class ResultFileCombiner(object):
     """Combines two result files using Fisher's method
@@ -60,18 +63,16 @@ class ResultFileCombiner(object):
     def combine(self, out_file, confidence=0.05):
         infile1 = ResultFileReader(self.file_name1)
         infile2 = ResultFileReader(self.file_name2)
-        d1 = infile1.get_result_as_dict()
-        d2 = infile2.get_result_as_dict()
-        all_proteins = set(d1.keys()) | set(d2.keys())
-        names1 = infile1.get_go_names()
-        names2 = infile2.get_go_names()
-        names = dict(names1.items() + names2.items())
-        dout = dict()
-        for prot in sorted(all_proteins):
-            if prot in d1 and prot in d2:
-                l_out = []
-                p1 = dict(d1[prot])
-                p2 = dict(d2[prot])
+        keys1 = set(infile1.get_keys())
+        keys2 = set(infile2.get_keys())
+        all_keys = keys1 | keys2
+        out = ResultFileWriter(out_file)
+        names = dict()
+        for key in sorted(all_keys):
+            l_out = []
+            if key in keys1 and key in keys2:
+                p1 = dict(infile1[key])
+                p2 = dict(infile2[key])
                 for goterm in set(p1.keys()) | set(p2.keys()):
                     if goterm in p1 and goterm in p2:
                         l_out.append((goterm, self.combine_fisher(p1[goterm], p2[goterm])))
@@ -79,13 +80,14 @@ class ResultFileCombiner(object):
                         l_out.append((goterm, p1[goterm]))
                     else:
                         l_out.append((goterm, p2[goterm]))
-                dout[prot] = l_out                
-            elif prot in d1:
-                dout[prot] = d1[prot]
+            elif key in keys1:
+                l_out = infile1[key]
             else:
-                dout[prot] = d2[prot]
-        out = ResultFileWriter(out_file)
-        out.write_result_from_dict(dout, significance=confidence, go_names=names)
+                l_out = infile2[key]
+            names.update(infile1.get_go_names())
+            names.update(infile2.get_go_names())
+            out.write_single_register(key, l_out, significance=confidence, go_names=names)
+        out.close()
 
     def combine_fisher(self, pvalue1, pvalue2):
         if pvalue1 == 0.0 or pvalue2 == 0.0:
@@ -110,6 +112,28 @@ class ResultFileWriter(object):
     """
     def __init__(self, file_name):
         self.file_name = file_name
+        self.out = open(self.file_name, "w")
+
+    def close(self):
+        """ Closes the output stream where the results have been
+            written
+        """
+        self.out.close()
+
+    def write_single_register(self, key, l, significance=None, go_names=None):
+        """ Writes a single register represented by a `key` and a list `l` of
+            pairs (goterm, pvalue). We can add a `significance` cutoff and
+            a dictionary with the names of the GO terms
+        """
+        filter_pvalue = False or significance is not None
+        self.out.write("{}\n".format(key))
+        for goterm, pvalue in sorted(l, key=lambda x: x[1], reverse=True):
+            if not filter_pvalue or (filter_pvalue and pvalue < significance):
+                if go_names is not None and goterm in go_names:
+                    self.out.write("\t{:.5f}: {} ({})\n".format(pvalue, goterm, go_names[goterm]))
+                else:
+                    self.out.write("\t{:.5f}: {}\n".format(pvalue, goterm))
+        self.out.write("\n")            
 
     def write_result_from_dict(self, d, valid_proteins=None, significance=None, go_names=None):
         """Writes a result file from a dictionary structure where,
@@ -124,25 +148,16 @@ class ResultFileWriter(object):
         be written. If we specify a `significance`
         value, then only entries with a p-value less than `significance`
         will be considered.
-
         """
-        with open(self.file_name, "w") as out:
-            sorted_proteins = sorted(d.keys())
-            if valid_proteins is not None:
-                sorted_proteins = sorted(set(sorted_proteins) & set(valid_proteins))
-            filter_pvalue = False
-            if significance is not None:
-                filter_pvalue = True
-            for protein in sorted_proteins:
-                goterm_pvalues = d[protein]
-                out.write(protein + "\n")
-                for goterm, pvalue in sorted(goterm_pvalues, key=lambda x: x[1], reverse=True):
-                    if not filter_pvalue or (filter_pvalue and pvalue < significance):
-                        if go_names is not None and goterm in go_names:
-                            out.write("\t{:.5f}: {} ({})\n".format(pvalue, goterm, go_names[goterm]))
-                        else:
-                            out.write("\t{:.5f}: {}\n".format(pvalue, goterm))
-                out.write("\n")            
+        sorted_proteins = sorted(d.keys())
+        if valid_proteins is not None:
+            sorted_proteins = sorted(set(sorted_proteins) & set(valid_proteins))
+        filter_pvalue = False
+        if significance is not None:
+            filter_pvalue = True
+        for protein in sorted_proteins:
+            goterm_pvalues = d[protein]
+            self.write_single_register(protein, goterm_pvalues, significance, go_names)
 
 class ResultFileReader(object):
     """Class implementing a parser of the
@@ -158,53 +173,56 @@ class ResultFileReader(object):
         p-value: ...
         ...
     """
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-    def _read_result_file(self, file_name, significance=None):
-        """Reads the result file into a dictionary structure where,
-        for each protein identifier we get a list of tuples 
-        (goterm, pvalue) representing the assignment itself.
-        There is no need for up-propagation as the result files
-        should be already up-propagated. If we specify a `significance`
-        value, then only entries with a p-value less than `significance`
-        will be considered.
+    def __init__(self, file_name, significance=None):
+        """ Prepares a ResultFileReader to read such from a `file_name`.
+            If we specify a certain `significance`, we will only consider
+            those contents with a pvalue less than this `significance`.
         """
-        file_content = dict()
+        self.file = IndexedReadOnlyFile(file_name, "^\w+")
+        self.keys = self.file.get_keys()
+        self.pval_regex = re.compile("^\d")
         self.go_names = dict()
-        list_go_terms = []
-        prev_prot = ""
-        prot_regex = re.compile("^[A-Z]") 
-        pval_regex = re.compile("^\d")
         if significance is not None:
-            alpha = significance
+            self.alpha = significance
         else:
-            alpha = 1000.0
+            self.alpha = 1000.0
 
-        for line in open_anything(file_name):
+    def get_keys(self):
+        """ Return the set of protein-ids of the file
+        """
+        return self.keys
+
+    def get_result_as_dict(self):
+        """ Retrieves the whole dataset as a dictionary.
+            Not recommended if the file is too large.
+        """
+        d = dict()
+        for key in self.keys:
+            d[key] = self.__getitem__(key)
+        return d
+
+    def __getitem__(self, key):
+        """ Gets the set of GO terms and p-values for a
+            certain key (which should be a real key in
+            the file).
+        """
+        list_go_terms = []
+        for line in self.file[key]:
             l = line.strip()
-            if prot_regex.match(l):
-                if len(prev_prot) > 0:
-                    file_content[prev_prot] = list_go_terms
-                prev_prot = l
-                list_go_terms = []
-            elif pval_regex.match(l):
+            if self.pval_regex.match(l):
                 pvalue, goterm = l.split(' ')[0:2]
                 pvalue = float(pvalue.replace(':', ''))
-                if pvalue < alpha:
+                if pvalue < self.alpha:
                     list_go_terms.append((goterm, pvalue))
                     if goterm not in self.go_names:
                         name = l.split('(', 1)[1][0:-1]
                         self.go_names[goterm] = name
-        else:
-            if list_go_terms:
-                file_content[prev_prot] = list_go_terms
-        return file_content
-
-    def get_result_as_dict(self, significance=None):
-        return self._read_result_file(self.file_name, significance)
+        return list_go_terms
 
     def get_go_names(self):
+        if not self.go_names:
+            for key in self.keys:
+                self.__getitem__(key)            
         return self.go_names
 
 if __name__ == "__main__":
@@ -215,8 +233,9 @@ if __name__ == "__main__":
 
     in1, in2, out1, out2 = sys.argv[1:]
     print "Reading first file"
-    reader1 = ResultFileReader(in1)
-    reader1.get_result_as_dict()
+    reader1 = ResultFileReader(in1, 0.04)
+    for key in reader1.get_keys():
+        reader1[key]
     print "read ", len(reader1.get_go_names()), " goterms"
 
     print "Reading second file"

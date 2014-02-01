@@ -365,9 +365,10 @@ class ConSATMasterScript(CommandLineApp):
         # Run and export the label assignment
         outfile = os.path.join(outfolder, "assigned_labels.txt") 
         self.modula.run("label_assignment", force=self.options.force)
-        shutil.copy(self.modula.storage_engine.get_filename("label_assignment"),
-                outfile)
-        self.log.info("Exported label assignment to %s." % outfile)
+        if not os.path.exists(outfile):
+            shutil.copy(self.modula.storage_engine.get_filename("label_assignment"),
+                    outfile)
+            self.log.info("Exported label assignment to %s." % outfile)
 
         # Run and export the overrepresentation analysis
         there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")

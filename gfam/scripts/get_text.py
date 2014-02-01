@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*- 
 """Application that retrieves a set of weighted terms for the sequences
 in order to have clues of what is their function. The sources where the
 text is downloaded from are PubMed abstracts and the text appearing in
@@ -16,10 +17,13 @@ import urllib
 import tempfile
 import shutil
 import os
+import io
 import sys
 import math
 import re
 import operator
+import unicodedata
+import string
 from os import listdir
 from collections import Counter, defaultdict
 from gfam.scripts import CommandLineApp
@@ -215,6 +219,10 @@ class GetText(CommandLineApp):
 
         # 5.1.- the text file is created
         self.log.info("Creating file with all text pieces for each protein")
+        self._digits = re.compile('\d')
+        self.punctuation = set(string.punctuation) - set(['-'])
+        #self._numeral = re.compile(u"^[\+\<\>\~\~\≥\*\=\-\±]*\d+(\.\d*)?([\+\<\>\~\~\≥\*\=\-\±]+(\d+(\.\d*))?)?([nmcμ]m|%|μgml|[mtc]|[kmκ]b|[x×]|umg|mua|fold)*$")
+        self._numeral = re.compile(u"^([\+\<\>\~\~\≥\*\=\-\±]*\d+)(\.\d*)?([\+\<\>\~\~\≥\*\=\-\±·]+\d*(\.\d*)?)?([nmcμ]m|%|μgml|[mtc]|[kmκ]b|[x×]|umg|mua|fold)*$")
         self.create_text_file()
 
         # 6.- once the text has been extracted, the file is preprocessed
@@ -225,6 +233,7 @@ class GetText(CommandLineApp):
         self.weight_freq_file()
 
         if self.options.arch_file:
+            self.log.info("Creating weight arch file")
             self.weight_arch_file()
 
         # END of the module
@@ -236,30 +245,34 @@ class GetText(CommandLineApp):
         with open(self.options.mapping, "r") as f:
             for line in f:
                 fields = line.split("\t")
-                if len(fields[16].strip()) > 0:
+                if fields[16].strip():
                     seq_id, pmids = fields[0], fields[16]
                     seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
 
         self.log.info("Writing text file")
-        with open(self.text_file, "w") as out, open(self.options.sequences_file, 'r') as f:
+        with io.open(self.text_file, "w", encoding='utf8') as out, open(self.options.sequences_file, 'r') as f:
+            cache_pmid = dict()
             for line in f:
                 if line.startswith(">"):
                     id_prot = line.split()[0].replace(">", "")
-                    if id_prot.find("|") != -1:
+                    if "|" in id_prot:
                         id_prot = id_prot.split("|")[1]
-                    text_prot = line.split(" ", 1)[1].split("OS=")[0].strip()
-
+                    text_prot = self.normalize(line.split(" ", 1)[1].split("OS=")[0].strip())
+                    
                     text_pubmed = []
                     if id_prot in seq2pmid:
                         for pmid in seq2pmid[id_prot]:
+                            if pmid in cache_pmid:
+                                text_pubmed.append(cache_pmid[pmid])
+                                continue
                             pmid_fi = os.path.join(self.cachepubmed, str(pmid))
                             try:
-                                text_pmid = open(pmid_fi, 'r').read()
+                                text_pmid = self.normalize(open(pmid_fi, 'r').read())
                                 text_pubmed.append(text_pmid)
+                                cache_pmid[pmid] = text_pmid
                             except IOError:
                                 pass
-                    out.write("{0} {1} ".format(id_prot, text_prot))
-                    out.write("{}\n".format(" ".join(text_pubmed)))
+                    out.write(u"{0} {1} {2}\n".format(id_prot, text_prot, " ".join(text_pubmed)))
 
     def process_rdf_file(self):
         """Process the rdf file, extracting the relevant fields into
@@ -274,36 +287,35 @@ class GetText(CommandLineApp):
             pubmedid, title, abstract = "", "", []
 
             for line in f:
-                if line.find("<title>") != -1:
-                    opentitle = line.find("</title>") == -1
+                if "<title>" in line:
+                    opentitle = "</title>" not in line
                     if not opentitle:
                         title = line.split("<title>")[1].split("</title>")[0]
                     else:
                         title = line.split("<title>")[1]
-                elif line.find("http://www.ncbi.nlm.nih.gov/pubmed/") != -1:
+                elif "http://www.ncbi.nlm.nih.gov/pubmed/" in line:
                     pubmedid = line.split("pubmed/")[1].split("\"")[0]
-                elif line.find("</rdf:Description>") != -1:
+                elif "</rdf:Description>" in line:
                     # we process here the record
                     filename = os.path.join(self.cachepubmed, pubmedid)
                     with open(filename, "w") as out:
-                        out.write("{} ".format(title))
-                        out.write("{}".format(" ".join(abstract)))
+                        out.write("{} {}".format(title, " ".join(abstract)))
                     pubmedid, title, abstract = "", "", []
                     opentitle, openabstract = False, False
-                elif line.find("<rdfs:comment>") != -1:
-                    if line.find("</rdfs:comment>") != -1:
+                elif "<rdfs:comment>" in line:
+                    if "</rdfs:comment>" in line:
                         abstract.append(line.split("<rdfs:comment>")[1].
                                         split("</rdfs:comment>")[0])
                     else:
                         abstract.append(line.split("<rdfs:comment>")[1])
                         openabstract = True
                 elif opentitle:
-                    if line.find("</title>") == -1:
+                    if "</title>" not in line:
                         title += line
                     else:
                         title += line.split("</title>")[0]
                 elif openabstract:
-                    if line.find("</rdfs:comment>") == -1:
+                    if "</rdfs:comment>" not in line:
                         abstract.append(line)
                     else:
                         abstract.append(line.split("</rdfs:comment>")[0])
@@ -319,12 +331,36 @@ class GetText(CommandLineApp):
                     with open(filename, "w") as out:
                         out.write("{}".format(txt_protein))
 
+    def normalize(self, s):
+        """This is a pre-processing which is made to any text
+        before it is written to the disk (and prior to be
+        indexed). Unicode data is normalized, the stopwords
+        (and small tokens) are removed as well as numbers and URLs, 
+        and it is set to lowercase.
+        """
+        u_s = ''.join((c for c in unicodedata.normalize('NFD', unicode(s.lower(), "UTF-8"))
+            if unicodedata.category(c) != 'Mn'))
+        u_s = ''.join([c if not c in self.punctuation else ' ' for c in u_s])
+        return ' '.join([x.strip('-') for x in u_s.split() if len(x) > 2 and len(x) < 30 and 
+            x not in self.stopwords
+            and not self.is_number(x) 
+            and not self.is_numeral(x)
+            and not x.startswith('http') 
+        ])
+
     def tokenize(self, s):
         """Tokenizes and preprocesses a certain string into
         a list of strings. Yes, it can (should be) improved"""
-        return [x for x in s.translate(None, (",./;'?&()\"")).lower().split()
-                if x not in self.stopwords and not self.is_number(x)
-                and len(x) > 2]
+        u_s = unicode(s, "UTF-8")
+        return u_s.split()
+
+    def is_numeral(self, s):
+        """Checks if the string is sort of a number (i.e. an interval, or a percentage)
+        """
+        if not self._digits.search(s):
+            return False
+
+        return bool(self._numeral.match(s))
 
     def is_number(self, s):
         """Checks if a string is a number"""
@@ -347,28 +383,25 @@ class GetText(CommandLineApp):
                 [seq_id, rest] = line.split(" ", 1)
                 seq_ids.append(seq_id)
 
-                num_tokens = []
-                for token in self.tokenize(rest):
+                line = [seq_id]
+                for token, frequency in Counter(self.tokenize(rest)).iteritems():
+                    tok_id = 0
                     if token not in word_id:
-                        word_id[token] = len(word_id)
-                    num_tokens.append(word_id[token])
-
-                sorted_x = sorted(Counter(num_tokens).iteritems(),
-                                  key=operator.itemgetter(1))
-                output.write("{} ".format(seq_id))
-                for id_word, count in sorted_x:
-                    freq[id_word] += 1
-                    # write freq file
-                    output.write("{0}:{1} ".format(id_word, count))
-                output.write('\n')
+                        tok_id = len(word_id)
+                        word_id[token] = tok_id
+                    else:
+                        tok_id = word_id[token]
+                    line.append("{}:{}".format(tok_id, frequency))
+                    freq[tok_id] += 1
+                output.write("{}\n".format(" ".join(line)))
 
         self.N = len(seq_ids)
 
         # write lexicon
-        with open(self.lexicon_file, 'w') as lexicon:
-            for word, id_word in word_id.items():
+        with io.open(self.lexicon_file, 'w', encoding='utf8') as lexicon:
+            for word, id_word in word_id.iteritems():
                 if id_word in freq:
-                    lexicon.write("{0} {1} {2}\n".format(word, id_word, freq[id_word]))
+                    lexicon.write(u"{0} {1} {2}\n".format(word, id_word, freq[id_word]))
 
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
@@ -378,30 +411,29 @@ class GetText(CommandLineApp):
     def weight_arch_file(self):
         # 1.- read architectures to a dictionary of sets (key=architecture,
         # value set of sequences
+        self.log.info("Inverting dict")
         seqs_per_arch = dict((arch, set(prots)) for (arch, prots) in ArchReader(self.options.arch_file))
         arch_per_seq = dict()
-        for arch, prots in seqs_per_arch.items():
-            for prot in prots:
-                arch_per_seq[prot] = arch
+        for arch, prots in seqs_per_arch.iteritems():
+            arch_per_seq.update([(prot, arch) for prot in prots])
 
         # 2.- main loop
-        #with open(self.weight_file_arch, 'w') as output_file:
-        vec_per_arch = defaultdict(dict)
+        self.log.info("Creating weight arch file")
+        vec_per_arch = dict((arch, defaultdict(float)) for arch in seqs_per_arch.keys())
         for line in open(self.weight_file, 'r'):
             fields = line.split()
-            if not fields[0] in arch_per_seq:
+            if not fields[0] in arch_per_seq or len(fields) == 0:
                 continue
             arch = arch_per_seq[fields[0]]
             vec = vec_per_arch[arch] 
                 
             for field in fields[1:]:
                 term, weight = field.split(':')
-                if term in vec:
-                    vec[int(term)] += float(weight)
-                else:
-                    vec[int(term)] = float(weight)
+                vec[int(term)] += float(weight)
+
+        self.log.info("Printing weight arch file")
         for arch in seqs_per_arch: 
-            print arch, " ", " ".join(["{0}:{1}".format(t,w) for t,w in vec_per_arch[arch].items()])
+            print arch, " ", " ".join(["{0}:{1:.5f}".format(t,w) for t,w in vec_per_arch[arch].iteritems()])
 
     def weight_freq_file(self):
         """Reads the frequency file and produces the frequency file"""
@@ -413,18 +445,15 @@ class GetText(CommandLineApp):
 
         # we read the frequency file and write it
         with open(self.weight_file, 'w') as output_file:
+            idf = dict([(numid, math.log(float(self.N)/float(df))) for numid, df in freq.iteritems()])
             for line in open(self.freq_file, 'r'):
-                fields = line.split()
-                seq_id = fields.pop(0)
-                features = [i.split(":") for i in fields]
-                output_features = [seq_id]
-                for feat in features:
-                    l = [str(feat[0]),
-                         str(math.log(float(self.N)/freq[int(feat[0])]) *
-                         float(feat[1]))]
-                    output_features.append(":".join(l))
-                output_file.write(" ".join(output_features))
-                output_file.write('\n')
+                if " " in line.strip():
+                    seq_id, rest = line.split(" ", 1)
+                    features = [(int(f[0]), float(f[1])) for f in [i.split(":") for i in rest.split()]]
+                    output_file.write("{} {}\n".format(seq_id, " ".join(["{}:{:.5f}".format(feat[0], feat[1]*idf[feat[0]]) for feat in features])))
+                else:
+                    output_file.write("{}\n".format(seq_id))
+        self.log.info("Weight file done!")
 
     def check_not_exists(self, filename):
         try:
