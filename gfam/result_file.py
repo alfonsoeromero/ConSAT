@@ -125,14 +125,17 @@ class ResultFileWriter(object):
             pairs (goterm, pvalue). We can add a `significance` cutoff and
             a dictionary with the names of the GO terms
         """
-        filter_pvalue = False or significance is not None
         self.out.write("{}\n".format(key))
-        for goterm, pvalue in sorted(l, key=lambda x: x[1], reverse=True):
-            if not filter_pvalue or (filter_pvalue and pvalue < significance):
-                if go_names is not None and goterm in go_names:
-                    self.out.write("\t{:.5f}: {} ({})\n".format(pvalue, goterm, go_names[goterm]))
-                else:
-                    self.out.write("\t{:.5f}: {}\n".format(pvalue, goterm))
+        if significance is not None:
+            sorted_l = sorted([y for y in l if y[1] < significance], key=lambda x: x[1])
+        else:
+            sorted_l = sorted(l, key=lambda x: x[1])
+
+        for goterm, pvalue in sorted_l:
+            if go_names is not None and goterm in go_names:
+                self.out.write("\t{:.5f}: {} ({})\n".format(pvalue, goterm, go_names[goterm]))
+            else:
+                self.out.write("\t{:.5f}: {}\n".format(pvalue, goterm))
         self.out.write("\n")            
 
     def write_result_from_dict(self, d, valid_proteins=None, significance=None, go_names=None):
@@ -207,16 +210,14 @@ class ResultFileReader(object):
             the file).
         """
         list_go_terms = []
-        for line in self.file[key]:
-            l = line.strip()
-            if self.pval_regex.match(l):
-                pvalue, goterm = l.split(' ')[0:2]
-                pvalue = float(pvalue.replace(':', ''))
-                if pvalue < self.alpha:
-                    list_go_terms.append((goterm, pvalue))
-                    if goterm not in self.go_names:
-                        name = l.split('(', 1)[1][0:-1]
-                        self.go_names[goterm] = name
+        for line in [l for l in self.file[key] if self.pval_regex.match(l)]:
+            pvalue, goterm = line.split(' ',2)[0:2]
+            pvalue = float(pvalue[0:-1])
+            if pvalue < self.alpha:
+                list_go_terms.append((goterm, pvalue))
+                if goterm not in self.go_names:
+                    name = line.split('(', 1)[1][0:-1]
+                    self.go_names[goterm] = name
         return list_go_terms
 
     def get_go_names(self):

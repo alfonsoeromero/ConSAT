@@ -384,6 +384,7 @@ class ConSATMasterScript(CommandLineApp):
             if not os.path.exists(outfile):
                 filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
                 conf = float(self.config.get("analysis:overrep", "confidence"))
+                self.log.info("Obtaining filtered file from %s" % self.modula.storage_engine.get_filename("overrep"))
                 filterer.filter(outfile, confidence=conf)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
 
@@ -414,15 +415,17 @@ class ConSATMasterScript(CommandLineApp):
             outfile = os.path.join(outfolder, "combined_prediction.txt")
             # confidence is 0.05 (default value)
             # TODO: add this as a parameter in the configuration file
-            combiner = ResultFileCombiner(infile1, infile2)
-            combiner.combine(outfile)
+            if not os.path.exists(outfile):
+                combiner = ResultFileCombiner(infile1, infile2)
+                combiner.combine(outfile)
             # if there are files by arch, we combine them
             if self.config.get("generated", "file.overrep.arch_file") and self.config.get("generated", "file.function_arch.general_arch_file"):
                 infile_arch1 = self.config.get("generated", "file.overrep.arch_file") + "_unfiltered"
                 infile_arch2 = self.config.get("generated", "file.function_arch.general_arch_file") + "_unfiltered"
                 outfile_arch = os.path.join(outfolder, "combined_prediction_by_arch.txt")
-                combiner_arch = ResultFileCombiner(infile_arch1, infile_arch2)
-                combiner_arch.combine(outfile_arch)
+                if not os.path.exists(outfile_arch):
+                    combiner_arch = ResultFileCombiner(infile_arch1, infile_arch2)
+                    combiner_arch.combine(outfile_arch)
         else:
             # the combination is a copy of the overrep file
             infile = os.path.join(outfolder, "overrepresentation_analysis.txt")

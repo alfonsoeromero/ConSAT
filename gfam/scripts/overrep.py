@@ -133,7 +133,7 @@ class OverrepresentationAnalysisApp(CommandLineApp):
             if arch not in cache:
                 cache[arch] = overrep.test_group(arch)
                 if self.options.arch_file:
-                    arch_file.write(parts[3] + "\n") # architecture
+                    arch_file.write("{}\n".format(parts[3])) # architecture
                     for term, p_value in cache[arch]:
                         line = "  %.4f: %s (%s)\n" % (p_value, term.id, term.name)
                         arch_file.write(line)

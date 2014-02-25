@@ -28,11 +28,24 @@ from os import listdir
 from collections import Counter, defaultdict
 from gfam.scripts import CommandLineApp
 from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+import gfam.scripts
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
+
+
+try:
+    # if Snowball stemmer is installed, we use it
+    import Stemmer
+    stemmer = Stemmer.Stemmer('english')
+    def stem(word):
+        return stemmer.stemWord(word)
+except ImportError:
+    # ...otherwise no stemming is performed
+    def stem(word):
+        return word
 
 
 class GetText(CommandLineApp):
@@ -131,9 +144,7 @@ class GetText(CommandLineApp):
         list is donwnloaded"""
         if not fileName or not os.path.exists(fileName):
             # we download the SMART list
-            url = "http://jmlr.csail.mit.edu/papers/volume5/lewis04a/a11-smart-stop-list/english.stop"
-            fd, fileName = tempfile.mkstemp()
-            urllib.urlretrieve(url, fileName)
+            fileName = os.path.join(gfam.scripts.__path__[0], '', 'stopwords.txt')
 
         self.stopwords = set([line.strip() for line in open(fileName)])
         self.stopwords = self.stopwords | set(GetText.my_stopwords)
@@ -185,7 +196,10 @@ class GetText(CommandLineApp):
                        " exists, but it is not a directory")
 
         # we setup the output file names
-        output_dir = os.path.normpath(self.options.output)
+        output_dir = os.path.join(os.path.normpath(self.options.output), "text")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
         self.lexicon_file = os.path.join(output_dir, "lexicon")
         #self.check_not_exists(self.lexicon_file)
         self.freq_file = os.path.join(output_dir, "freq_file_per_sequence")
@@ -336,17 +350,20 @@ class GetText(CommandLineApp):
         before it is written to the disk (and prior to be
         indexed). Unicode data is normalized, the stopwords
         (and small tokens) are removed as well as numbers and URLs, 
-        and it is set to lowercase.
+        and it is set to lowercase. Text is stemmed, as well, if
+        Snowball stemmers are available.
         """
         u_s = ''.join((c for c in unicodedata.normalize('NFD', unicode(s.lower(), "UTF-8"))
             if unicodedata.category(c) != 'Mn'))
         u_s = ''.join([c if not c in self.punctuation else ' ' for c in u_s])
-        return ' '.join([x.strip('-') for x in u_s.split() if len(x) > 2 and len(x) < 30 and 
-            x not in self.stopwords
-            and not self.is_number(x) 
-            and not self.is_numeral(x)
-            and not x.startswith('http') 
-        ])
+        u_s = [stem(x.strip('-')) for x in u_s.split() 
+                if len(x) > 2 and len(x) < 30 
+                    and x not in self.stopwords
+                    and not self.is_number(x)
+                    and not self.is_numeral(x)
+                    and not x.startswith('http')
+              ]
+        return ' '.join([x for x in u_s if not x in self.stopwords])
 
     def tokenize(self, s):
         """Tokenizes and preprocesses a certain string into

@@ -9,7 +9,7 @@ __license__ = "MIT"
 
 __all__ = ["OverrepresentationAnalyser"]
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 from gfam.utils import bidict
 from math import exp, log
 from operator import itemgetter
@@ -76,10 +76,11 @@ def hypergeom_sf(k, M, n, N):
     tot, good = M, n
     bad = tot - good
     den = logchoose(tot, N)
-    result = 0.
-    for x in xrange(k, N+1):
-        a = exp(logchoose(good, x) + logchoose(bad, N-x) - den)
-        result += a
+    #result = 0.
+    #for x in xrange(k, N+1):
+    #   a = exp(logchoose(good, x) + logchoose(bad, N-x) - den)
+    #    result += a
+    result = sum([exp(logchoose(good, x) + logchoose(bad, N-x) - den) for x in xrange(k, N+1)])
     return result
 
 def binomial_sf(k, M, n, N):
@@ -103,6 +104,12 @@ def binomial_sf(k, M, n, N):
     for x in xrange(k, N+1):
         result += exp(logchoose(N, x) + float(x)*logp + float(N-x)*log1_min_p)
     return result
+
+class Correction(object):
+    none, off = 0, 0
+    fdr = 1
+    bonferroni = 2
+    sidak = 3
 
 class OverrepresentationAnalyser(object):
     """Performs overrepresentation analysis of Gene Ontology
@@ -149,7 +156,10 @@ class OverrepresentationAnalyser(object):
         self.mapping = self._propagate_go_term_ancestors(mapping)
         self.confidence = float(confidence)
         self.min_count = max(1, int(min_count))
-        self.correction = correction
+        cor = correction.lower()
+        if cor in Correction.__dict__:
+            self.correction = Correction.__dict__[cor]
+
         if test == "hypergeometric":
             self.test_func = hypergeom_sf
         elif test == "binomial":
@@ -199,21 +209,23 @@ class OverrepresentationAnalyser(object):
 
         # If we are doing Bonferroni or Sidak correction, adjust the
         # confidence level
-        if correction == "bonferroni":
+        if correction == Correction.bonferroni:
             confidence /= num_tests
-        elif correction == "sidak":
+        elif correction == Correction.sidak:
             confidence = 1 - (1. - confidence) ** (1. / num_tests)
 
         # Do the testing
-        result = []
-        for term, count in counts.iteritems():
-            if len(self.mapping.right[term]) < min_count:
-                continue
-            p = self.enrichment_p(term, count, group_size)
-            result.append((term, p))
+        result = [(term, self.enrichment_p(term, count, group_size)) 
+                    for term, count in counts.iteritems() if len(self.mapping.right[term]) >= min_count]
+        #result = []
+        #for term, count in counts.iteritems():
+        #    if len(self.mapping.right[term]) < min_count:
+        #        continue
+        #    p = self.enrichment_p(term, count, group_size)
+        #    result.append((term, p))
 
         # Filter the results
-        if correction == "fdr":
+        if correction == Correction.fdr:
             result.sort(key = itemgetter(1))
             num_tests = float(num_tests)
             for k in xrange(len(result)):
@@ -223,9 +235,9 @@ class OverrepresentationAnalyser(object):
         else:
             result = [item for item in result if item[1] <= confidence]
             result.sort(key = itemgetter(1))
-            if correction == "bonferroni":
+            if correction == Correction.bonferroni:
                 result = [(c, p * num_tests) for c, p in result]
-            elif correction == "sidak":
+            elif correction == Correction.sidak:
                 result = [(c, 1 - (1 - p) ** num_tests) for c, p in result]
 
         return result
@@ -235,11 +247,7 @@ class OverrepresentationAnalyser(object):
         `group` must be an iterable yielding objects that are in
         `self.mapping.left`.
         """
-        counts = defaultdict(int)
-        group_size = 0
-        for item in group:
-            terms = self.mapping.left.get(item, [])
-            for go_term in terms:
-                counts[go_term] += 1
-            group_size += 1
-        return self.test_counts(counts, group_size)
+        if not group:
+            return []
+        counts = Counter([go_term for item in group for go_term in self.mapping.left.get(item, [])])
+        return self.test_counts(counts, len(group))

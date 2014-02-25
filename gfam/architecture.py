@@ -36,7 +36,7 @@ class ArchitectureFileReaderPerArch(object):
         for line in self._f:
             fields = line.split("\t")
             prot, coverage, arch = fields[0], float(fields[2])/float(fields[1]), fields[3]
-            if previous_arch != "" and previous_arch != arch:
+            if previous_arch and previous_arch != arch:
                 if prots:
                     yield (previous_arch, prots)
                 prots = []
@@ -45,7 +45,6 @@ class ArchitectureFileReaderPerArch(object):
                 prots.append(prot)
         if prots and previous_arch != "":
             yield (previous_arch, prots)           
-
 
 class ArchitectureFileReader_old(object):
     """Iterates over proteins in a GFam architecture file, returning all

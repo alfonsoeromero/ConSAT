@@ -16,6 +16,7 @@ from gfam.utils import bidict
 from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
 from gfam.result_file import ResultFileFilter
 import operator
+import itertools
 import optparse
 import sys
 import os
@@ -135,24 +136,27 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             out = open(arch_file_name, "w")
 
         # for each architecture and its associated proteins...
+        cr = os.linesep
+        twocr = os.linesep * 2
+        self.log.info("Arch file: {}".format(arch_file))
         for arch, prots in ArchReader(arch_file, cov):
+            if not prots or arch == "NO_ASSIGNMENT":
+                # if there is no annotation for proteins in the arch...
+                print twocr.join(prots), cr 
+                if self.options.results_by_arch:
+                    out.write("{}{}".format(arch, twocr))
+                continue
             targets = set(prots)
             annotated_prots = targets & all_annotated
-            if not annotated_prots or arch == "NO_ASSIGNMENT":
-                # if there is no annotation for proteins in the arch...
-                print (os.linesep * 2).join(prots), os.linesep
-                if self.options.results_by_arch:
-                    out.write("{}\n\n".format(arch))
-                continue
-            lines = os.linesep.join(["  %.4f: %s (%s)" % 
+            lines = cr.join(["  %.4f: %s (%s)" % 
                 (p_value, term.id, term.name)
                 for term, p_value in ora.test_group(targets)])
             if self.options.results_by_arch:
-                out.write("{}\n{}\n\n".format(arch, lines))
-            for prot in prots:
+                out.write("{}{}{}{}".format(arch, cr, lines, twocr))
+            for rest, prot in itertools.izip(itertools.combinations(prots, len(prots)-1), reversed(prots)):
                 print prot
                 if prot in annotated_prots:
-                    for term, p_value in ora.test_group(targets - set([prot])):
+                    for term, p_value in ora.test_group(rest):
                         print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
                 else:
                     print lines
