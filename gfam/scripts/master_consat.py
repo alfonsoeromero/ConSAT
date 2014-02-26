@@ -372,16 +372,18 @@ class ConSATMasterScript(CommandLineApp):
 
         # Run and export the overrepresentation analysis
         there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")
+        overrep_detail = self.config.get("analysis:overrep", "per_protein")
+        transfer_detail = self.config.get("analysis:overrep", "per_protein")
         outfile = os.path.join(outfolder, "overrepresentation_analysis.txt")
 
         if not there_is_combination:
             self.modula.run("overrep", force=self.options.force)
-            if not os.path.exists(outfile):
+            if not os.path.exists(outfile) and overrep_detail:
                 shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
                 self.log.info("Exported overrepresentation analysis to %s." % outfile)
         else:
             self.modula.run("overrep", force=self.options.force, extra_args=["-i"])
-            if not os.path.exists(outfile):
+            if not os.path.exists(outfile) and overrep_detail:
                 filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
                 conf = float(self.config.get("analysis:overrep", "confidence"))
                 self.log.info("Obtaining filtered file from %s" % self.modula.storage_engine.get_filename("overrep"))
@@ -393,13 +395,13 @@ class ConSATMasterScript(CommandLineApp):
             if not there_is_combination:
                 self.modula.run("function_arch", force=self.options.force)    
                 outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
-                if not os.path.exists(outfile):
+                if not os.path.exists(outfile) and transfer_detail:
                     shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
                     self.log.info("Exported predicted function by transfer to %s." % outfile)
             else:
                 self.modula.run("function_arch", force=self.options.force, extra_args=["-i"])
                 outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
-                if not os.path.exists(outfile):
+                if not os.path.exists(outfile) and transfer_detail:
                     filterer = ResultFileFilter(self.modula.storage_engine.get_filename("function_arch"))
                     conf = float(self.config.get("analysis:function_arch", "max_pvalue"))
                     filterer.filter(outfile, confidence=conf)
@@ -415,7 +417,7 @@ class ConSATMasterScript(CommandLineApp):
             outfile = os.path.join(outfolder, "combined_prediction.txt")
             # confidence is 0.05 (default value)
             # TODO: add this as a parameter in the configuration file
-            if not os.path.exists(outfile):
+            if not os.path.exists(outfile) and overrep_detail and transfer_detail:
                 combiner = ResultFileCombiner(infile1, infile2)
                 combiner.combine(outfile)
             # if there are files by arch, we combine them
@@ -430,7 +432,8 @@ class ConSATMasterScript(CommandLineApp):
             # the combination is a copy of the overrep file
             infile = os.path.join(outfolder, "overrepresentation_analysis.txt")
             outfile = os.path.join(outfolder, "combined_prediction.txt")
-            shutil.copy(infile, outfile)
+            if overrep_detail:
+                shutil.copy(infile, outfile)
             # same for the overrep by arch, if it exists
             infile_arch = self.config.get("generated", "file.overrep.arch_file")
             outfile_arch = os.path.join(outfolder, "combined_prediction_by_arch.txt")
@@ -661,6 +664,11 @@ correction=fdr
 # to be considered in the overrepresentation analysis
 min_term_size=1
 
+# Set True to print the results per protein (False by default). Note that
+# the predictions per achitecture would allow getting the predictions
+# per protein
+per_protein=
+
 [analysis:coverage]
 
 # Empty section, this script has no individual parameters to tune, but
@@ -682,6 +690,13 @@ ev_codes=EXP
 # same file with the same architecture, and GO annotated proteins in the
 # exteneral given architecture to our target protein
 transfer_from_both=
+
+# Set True to print the results per protein (False by default). Note that
+# the predictions per protein, if set to true, will not consider 
+# the function assigned to this protein as a known result, making
+# the final prediction able for evaluation this task in a 
+# cross-validation form.
+per_protein=
 
 [analysis:get_text]
 # Empty section, this script has no individual parameters to tune, but

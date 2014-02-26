@@ -71,6 +71,12 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                 help="Produces an overrepresentation analysis file for "
                      "each architecture (optional)"
                 )
+        parser.add_option("-t", "--per_protein", dest="results_by_protein",
+                metavar="results_by_protein", default=False,
+                action="store_true", config_key="analysis:function_arch/per_protein",
+                help="prints a function assignment file per protein sequence "
+                     "in which no annotation of the protein is used for prediction."
+                )
         return parser
 
     def run_real(self):
@@ -80,6 +86,9 @@ class OverrepresentationAnalysisApp(CommandLineApp):
 
         go_tree_file, go_mapping_file, input_file = self.args
 
+        if not self.options.results_by_protein and not self.options.results_by_arch:
+            self.error("Either results by protein or by arch should be set")
+        
         self.log.info("Loading GO tree from %s..." % go_tree_file)
         self.go_tree = GOTree.from_obo(go_tree_file)
 
@@ -138,11 +147,11 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                         line = "  %.4f: %s (%s)\n" % (p_value, term.id, term.name)
                         arch_file.write(line)
                     arch_file.write("\n") 
-
-            print gene_id
-            for term, p_value in cache[arch]:
-                print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
-            print
+            if self.options.results_by_protein:
+                print gene_id
+                for term, p_value in cache[arch]:
+                    print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                print
 
             if len(cache[arch]) == 0:
                 num_no_annotations += 1

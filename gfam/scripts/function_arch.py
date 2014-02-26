@@ -91,6 +91,12 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                          config_key="generated/file.function_arch.general_arch_file",
                          help="File where the results per architecture will"
                          "be written (optional)")
+        parser.add_option("-t", "--per_protein", dest="results_by_protein",
+                         metavar="results_by_protein", default=False,
+                         action="store_true", config_key="analysis:function_arch/per_protein",
+                         help="prints a function assignment file per protein sequence "
+                             "in which no annotation of the protein is used for prediction."
+                         )
         return parser
 
     def _filter_arch_file(self, unfiltered, filtered):
@@ -142,7 +148,8 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         for arch, prots in ArchReader(arch_file, cov):
             if not prots or arch == "NO_ASSIGNMENT":
                 # if there is no annotation for proteins in the arch...
-                print twocr.join(prots), cr 
+                if self.options.results_by_protein:
+                    print twocr.join(prots), cr 
                 if self.options.results_by_arch:
                     out.write("{}{}".format(arch, twocr))
                 continue
@@ -153,14 +160,15 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 for term, p_value in ora.test_group(targets)])
             if self.options.results_by_arch:
                 out.write("{}{}{}{}".format(arch, cr, lines, twocr))
-            for rest, prot in itertools.izip(itertools.combinations(prots, len(prots)-1), reversed(prots)):
-                print prot
-                if prot in annotated_prots:
-                    for term, p_value in ora.test_group(rest):
-                        print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
-                else:
-                    print lines
-                print
+            if self.options.results_by_protein:
+                for rest, prot in itertools.izip(itertools.combinations(prots, len(prots)-1), reversed(prots)):
+                    print prot
+                    if prot in annotated_prots:
+                        for term, p_value in ora.test_group(rest):
+                            print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                    else:
+                        print lines
+                    print
         if self.options.results_by_arch:
             out.close()
             self._filter_arch_file(arch_file_name, self.options.results_by_arch)
@@ -199,7 +207,8 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             annotated_prots = targets & all_annotated
             if not annotated_prots or arch == "NO_ASSIGNMENT":
                 # if there is no annotation for proteins in the arch...
-                print (os.linesep * 2).join(prots), os.linesep
+                if self.options.results_by_protein:
+                    print (os.linesep * 2).join(prots), os.linesep
                 if self.options.results_by_arch:
                     out.write(arch + "\n\n")
                 continue
@@ -210,14 +219,15 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 out.write(arch + "\n")
                 out.write(lines)
                 out.write("\n")
-            for prot in prots:
-                print prot
-                if prot in annotated_prots:
-                    for term, p_value in ora.test_group(targets - set([prot])):
-                        print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
-                else:
-                    print lines
-                print
+            if self.options.results_by_protein:
+                for prot in prots:
+                    print prot
+                    if prot in annotated_prots:
+                        for term, p_value in ora.test_group(targets - set([prot])):
+                            print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                    else:
+                        print lines
+                    print
         if self.options.results_by_arch:
             out.close()
             self._filter_arch_file(arch_file_name, self.options.results_by_arch)
@@ -248,18 +258,18 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                         out.write(line)
                         out.write("\n")
                     out.write("\n")
-
-        for arch, prots in ArchReader(arch_target, cov):
-            if arch in goterms:
-                for prot in prots:
-                    print prot
-                    for term, p_value in goterms[arch]:
-                        print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
-                    print
-            else:
-                for prot in prots:
-                    print prot
-                    print
+        if self.options.results_by_protein:
+            for arch, prots in ArchReader(arch_target, cov):
+                if arch in goterms:
+                    for prot in prots:
+                        print prot
+                        for term, p_value in goterms[arch]:
+                            print "  %.4f: %s (%s)" % (p_value, term.id, term.name)
+                        print
+                else:
+                    for prot in prots:
+                        print prot
+                        print
 
         if self.options.results_by_arch:
             self._filter_arch_file(arch_file_name, self.options.results_by_arch)
@@ -272,6 +282,9 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         if self.options.ev_codes not in self.evidence:
             self.error("The three valid types of evidence codes are: " +
                        "EXP, ALL_BUT_IEA, and ALL")
+
+        if not self.options.results_by_protein and not self.options.results_by_arch:
+            self.error("Either results by protein or by arch should be set")
 
         if self.options.max_pvalue < 0.0 or self.options.max_pvalue > 1.0:
             self.error("The maximum p-value should be between 0.0 and 1.0")
