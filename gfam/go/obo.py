@@ -183,6 +183,8 @@ class Parser(object):
                         positions = [m.start() for m in re.finditer('"', line)]
                         if len(positions) != 2 or comment_char >= positions[1]:
                             line = line[0:comment_char].strip()
+                    else:
+                        line = line[0:comment_char].strip()
                     
                 except ValueError:
                     # No comment, fine
