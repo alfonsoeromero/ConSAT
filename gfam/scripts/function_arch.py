@@ -93,7 +93,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                          "be written (optional)")
         parser.add_option("-t", "--per_protein", dest="results_by_protein",
                          metavar="results_by_protein", default=False,
-                         action="store_true", config_key="analysis:function_arch/per_protein",
+                         config_key="analysis:function_arch/per_protein",
                          help="prints a function assignment file per protein sequence "
                              "in which no annotation of the protein is used for prediction."
                          )
@@ -121,6 +121,13 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                     d.add_left(prot_id, self.go_tree.lookup(goterm))
         self.log.info("GOA file read. " + str(d.len_left()) + " proteins loaded")
         return d
+
+    def __parse_bool(self, _string):
+        string = _string.strip()
+        if not string:
+            return False
+        else:
+            return string.lower() in ("true", "t", "1")
 
     def _transfer_from_same_file(self, goa, arch_file):
         """ Transfer function from same architecture file
@@ -283,6 +290,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             self.error("The three valid types of evidence codes are: " +
                        "EXP, ALL_BUT_IEA, and ALL")
 
+        self.options.results_by_protein = self.__parse_bool(self.options.results_by_protein)
         if not self.options.results_by_protein and not self.options.results_by_arch:
             self.error("Either results by protein or by arch should be set")
 

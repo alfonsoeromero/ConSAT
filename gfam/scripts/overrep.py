@@ -72,12 +72,19 @@ class OverrepresentationAnalysisApp(CommandLineApp):
                      "each architecture (optional)"
                 )
         parser.add_option("-t", "--per_protein", dest="results_by_protein",
-                metavar="results_by_protein", default=False,
-                action="store_true", config_key="analysis:function_arch/per_protein",
+                metavar="BOOL", default=False, 
+                config_key="analysis:overrep/per_protein",
                 help="prints a function assignment file per protein sequence "
                      "in which no annotation of the protein is used for prediction."
                 )
         return parser
+
+    def __parse_bool(self, _string):
+        string = _string.strip()
+        if not string:
+            return False
+        else:
+            return string.lower() in ("true", "t", "1")
 
     def run_real(self):
         """Runs the overrepresentation analysis application"""
@@ -85,10 +92,11 @@ class OverrepresentationAnalysisApp(CommandLineApp):
             self.error("expected exactly three input file names")
 
         go_tree_file, go_mapping_file, input_file = self.args
+        self.options.results_by_protein = self.__parse_bool(self.options.results_by_protein)
 
-        if not self.options.results_by_protein and not self.options.results_by_arch:
+        if not self.options.results_by_protein and not self.options.arch_file:
             self.error("Either results by protein or by arch should be set")
-        
+
         self.log.info("Loading GO tree from %s..." % go_tree_file)
         self.go_tree = GOTree.from_obo(go_tree_file)
 
