@@ -176,7 +176,14 @@ class Parser(object):
                 try:
                     # Search for a trailing comment
                     comment_char = line.rindex("!")
-                    line = line[0:comment_char].strip()
+                    if "\"" in line:
+                        # a hack to tackle nasty situations where a  "!" appears
+                        # in the middle of a quoted string and therefore it does
+                        # not mean a trailing comment
+                        positions = [m.start() for m in re.finditer('"', line)]
+                        if len(positions) != 2 or comment_char >= positions[1]:
+                            line = line[0:comment_char].strip()
+                    
                 except ValueError:
                     # No comment, fine
                     pass
