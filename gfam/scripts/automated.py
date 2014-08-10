@@ -177,7 +177,7 @@ class AutomatedConSAT(CommandLineApp):
     def create_parser(self):
         """Creates the command line parser for the automated script"""
         parser = super(AutomatedConSAT, self).create_parser()
-        parser.add_option("-d", "--data", dest="data_dir", actions="store_true",
+        parser.add_option("-d", "--data", dest="data_dir", action="store_true",
                 help="provides a certain (existing) data dir where the files will "\
                         "be taken")
         parser.add_option("-f", "--force", dest="force", action="store_true",
