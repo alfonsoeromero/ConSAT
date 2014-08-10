@@ -177,6 +177,9 @@ class AutomatedConSAT(CommandLineApp):
     def create_parser(self):
         """Creates the command line parser for the automated script"""
         parser = super(AutomatedConSAT, self).create_parser()
+        parser.add_option("-d", "--data", dest="data_dir", actions="store_true",
+                help="provides a certain (existing) data dir where the files will "\
+                        "be taken")
         parser.add_option("-f", "--force", dest="force", action="store_true",
                 help="force recalculation of results even when gfam thinks "\
                      "everything is up-to-date")
@@ -219,6 +222,10 @@ class AutomatedConSAT(CommandLineApp):
         elif self.mode == "consat" or self.mode == "uniprot_consat":
             self.error(self.mode + " mode should have a 'models' file (option -m)")
 
+        if self.options.data_dir:
+            if not os.path.exists(self.options.data_dir):
+                self.error("Specified data dir does not exist")
+
         if not self.mode.startswith("uniprot") and not self.options.sequences:
             self.error("No sequence file specified (-s option)")
 
@@ -254,9 +261,12 @@ class AutomatedConSAT(CommandLineApp):
         # 2.- create data, work and output dirs
         self.program_dir = dict()
         for dirname in ["data", "work", "output"]:
-            self.program_dir[dirname] = os.path.join(self.directory, dirname)
-            if not os.path.exists(self.program_dir[dirname]):
-                os.makedirs(self.program_dir[dirname])
+            if dirname == "data" and self.options.data_dir:
+                self.program_dir[dirname] = self.options.data_dir
+            else:
+                self.program_dir[dirname] = os.path.join(self.directory, dirname)
+                if not os.path.exists(self.program_dir[dirname]):
+                    os.makedirs(self.program_dir[dirname])
 
         if self.options.blast_route:
             self.params["folder.blast"] = self.options.blast_route
