@@ -7,6 +7,8 @@ given InterPro domain assignment file
 import bisect
 import optparse
 import sys
+import shelve
+import tempfile
 
 from collections import defaultdict
 from gfam import fasta
@@ -99,6 +101,30 @@ class FindUnassignedApp(CommandLineApp):
         self.print_unassigned()
 
     def process_sequences_file(self, fname):
+        """ In this version we use `shelve` to save
+            memory (the pairs (protein accession, length) are
+            stored in a temporary database. See `process_sequences_file_old`
+            for the old version.
+        """
+        self.log.info("Loading sequences from %s..." % fname)
+        #self.seq_ids_to_length = {}
+        parser = fasta.Parser(open_anything(fname))
+        parser = fasta.regexp_remapper(parser,
+                self.sequence_id_regexp
+        )
+        tf = tempfile.NamedTemporaryFile(delete=True)
+        self.seq_ids_to_length = shelve.open(tf.name)
+
+        for i, seq in enumerate(parser):
+            self.seq_ids_to_length[seq.id] = len(seq.seq)
+            if i%1000000 == 0:
+                self.log.info("Read {} seqs".format(i))
+        self.log.info("...loaded")
+
+    def process_sequences_file_old(self, fname):
+        """ This is the old version, all the entries are
+            loaded into memory
+        """
         self.log.info("Loading sequences from %s..." % fname)
         #self.seq_ids_to_length = {}
         parser = fasta.Parser(open_anything(fname))
