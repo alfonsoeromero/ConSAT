@@ -241,6 +241,8 @@ class HMMScanApp(CommandLineApp):
         args = []
         args.extend(["--cpu", str(self.options.num_threads)])
         args.extend(["--domtblout", hmm_output_file])
+        args.extend(["--noali"])
+        args.extend(["-o", os.devnull])
         args.extend(["--acc"])
         args.extend(["--incE", str(self.options.evalue)])
         args.append(self.hmm_file) #hmm database
