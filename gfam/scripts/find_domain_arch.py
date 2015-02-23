@@ -110,6 +110,7 @@ class FindDomainArchitectureApp(CommandLineApp):
             self.error("exactly two input files are expected")
 
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
+        AssignmentOverlapChecker.log = self.log
 
         if self.options.interpro_parent_child_file:
             self.log.info("Loading InterPro parent-child assignments from %s..." % \
@@ -272,7 +273,7 @@ class FindDomainArchitectureApp(CommandLineApp):
         from gfam.scripts.find_unassigned import FindUnassignedApp
         unassigned_app = FindUnassignedApp()
         unassigned_app.set_sequence_id_regexp(self.options.sequence_id_regexp)
-        unassigned_app.process_sequences_file(self.options.sequences_file)
+        unassigned_app.process_sequences_file_old(self.options.sequences_file)
         unassigned_app.process_infile(interpro_file, self.interpro)
         self.seqcat = unassigned_app.seqcat
         for seq_id in set(unassigned_app.seq_ids_to_length.keys()) - set(self.seqcat.keys()):

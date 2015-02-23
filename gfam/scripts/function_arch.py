@@ -65,6 +65,12 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         parser.add_option("-i", "--ignore-confidence", dest="ignore",
                 action="store_true", help="ignores the confidence value "\
                 "outputting all the predictions regardless of the p-value ")
+        parser.add_option("--correction", dest="correction",
+                metavar="METHOD", default="fdr",
+                choices=("none", "bonferroni", "sidak", "fdr"),
+                config_key="analysis:overrep/correction",
+                help="use the given correction METHOD for multiple "
+                     "hypothesis testing. Default: %default ")
         parser.add_option("-p", "--p-value", dest="max_pvalue",
                           type=float, default=0.05, metavar="FLOAT",
                           config_key="analysis:function_arch/max_pvalue",
@@ -138,7 +144,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             self.log.info("Ignored the significance value. We will filter results later.")
         ora = OverrepresentationAnalyser(self.go_tree, goa,
                                          confidence=confidence,
-                                         min_count=1, correction='None')
+                                         min_count=1, correction=self.options.correction)
         cov = self.options.minimum_coverage / 100.0
         self.log.info("Transferring function from same file. Min coverage=" + str(cov))
         all_annotated = frozenset(goa.left.keys())

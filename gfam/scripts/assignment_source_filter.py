@@ -200,7 +200,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
             # moment)
             seq = SequenceWithAssignments(name, seq_length)
             for a, _ in assignments:
-                seq.assign(a, False)
+                seq.assign(a, False, interpro=self.interpro)
             coverage[source] = seq.coverage()
 
         # Find the source giving the best coverage, add its domains into
@@ -212,11 +212,11 @@ class AssignmentSourceFilterApp(CommandLineApp):
                     x: x[0].get_assigned_length(), reverse=True)
             for a, line in sorted_assignments:
                 line = line.strip()
-                seq.assign(a)
-                tab_count = list(line).count("\t")
-                if tab_count < 13:
-                    line = line + "\t" * (13-tab_count)
-                result.append("%s\t%s" % (line, 1))
+                if seq.assign(a, True, interpro=self.interpro):
+                    tab_count = list(line).count("\t")
+                    if tab_count < 13:
+                        line = line + "\t" * (13-tab_count)
+                    result.append("%s\t%s" % (line, 1))
         else:
             best_source = None
 
@@ -227,6 +227,9 @@ class AssignmentSourceFilterApp(CommandLineApp):
             if source == best_source:
                 continue
             unused_assignments.extend(assignments)
+
+        if not unused_assignments:
+            return result
 
         # Try to fill the unassigned regions with the rest of the assignments
         # that were unused so far, starting from the longest assignment.
@@ -239,7 +242,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
         idx_to_stage = {}
         for stage_no, sources in enumerate(stages):
             for idx, (a, _) in enumerate(unused_assignments):
-                if a.source in sources and seq.assign(a):
+                if a.source in sources and seq.assign(a, True, interpro=self.interpro):
                     idx_to_stage[idx] = stage_no+2
         for idx in sorted(idx_to_stage.keys()):
             row = unused_assignments[idx][1].strip()

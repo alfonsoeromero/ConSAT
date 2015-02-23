@@ -679,6 +679,14 @@ per_protein=
 # to transfer/receive function
 minimum_coverage=80.0
 
+# The method used to account for multiple hypothesis testing.
+# Valid choices: bonferroni (Bonferroni correction), Sidak
+# (Sidak correction), fdr (Benjamini-Hochberg method), none (off).
+# The Bonferroni and Sidak correction methods control the
+# family-wise error rate (FWER), while the Benjamini-Hochberg method
+# control the false discovery rate.
+correction=fdr
+
 # Maximum allowed p-value for overrepresented GO terms
 max_pvalue=0.05
 

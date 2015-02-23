@@ -8,7 +8,10 @@ import bisect
 import optparse
 import sys
 import shelve
+import os
 import tempfile
+#import anydbm
+#anydbm._defaultmod = __import__('dumbdbm')  # we need this for oldish pythons
 
 from collections import defaultdict
 from gfam import fasta
@@ -85,7 +88,7 @@ class FindUnassignedApp(CommandLineApp):
             self.log.warning("minimum fragment length is not positive, assuming 1")
             self.options.min_fragment_length = 1
         self.set_sequence_id_regexp(self.options.sequence_id_regexp)
-        self.process_sequences_file(self.options.sequences_file)
+        self.process_sequences_file_old(self.options.sequences_file)
 
         for infile in (self.args or ["-"]):
             self.process_infile(infile)
@@ -113,7 +116,8 @@ class FindUnassignedApp(CommandLineApp):
                 self.sequence_id_regexp
         )
         tf = tempfile.NamedTemporaryFile(delete=True)
-        self.seq_ids_to_length = shelve.open(tf.name)
+        self.filename_shelve = os.path.join(tempfile.gettempdir(), "shelve_file")
+        self.seq_ids_to_length = shelve.open(self.filename_shelve)
 
         for i, seq in enumerate(parser):
             self.seq_ids_to_length[seq.id] = len(seq.seq)
@@ -154,7 +158,7 @@ class FindUnassignedApp(CommandLineApp):
                 raise ValueError, "different lengths encountered for %s: %d and %d" % (seq.name, seq.length, assignment.length)
             if interpro is not None:
                 assignment = assignment.resolve_interpro_ids(interpro)
-            seq.assign(assignment)
+            seq.assign(assignment, interpro)
 
     def get_unassigned(self):
         self.regions = []
