@@ -80,7 +80,6 @@ class OverlapType(Enum):
     `AssignmentOverlapChecker.check_single` for more details.
     """
     NO_OVERLAP = "NO_OVERLAP"
-    DUPLICATE = "DUPLICATE"
     INSERTION = "INSERTION"
     INSERTION_DIFFERENT = "INSERTION_DIFFERENT"
     SYNONYM_INSERTION = "SYNONYM_INSERTION"
@@ -94,12 +93,13 @@ class TreeRepresentation(object):
     and the second one, b, is a list (possibly empty) containing the
     "descendants" of that tree node
     """
-    def __init__(self, assignments):
+    def __init__(self, assignments, interpro=None):
+        self.interpro = interpro
         self.assignments = assignments
-        self.__find_parents(self.assignments)
+        self.__find_parents(self.assignments, interpro)
         self.tree = self.__get_tree_representation()
 
-    def __find_parents(self, assignments):
+    def __find_parents(self, assignments, interpro):
         """Finds the parents of the assignment. The `parents` dictionary
         will store all the possible parents of a domain, if any. Note that
         a domain within a nested insertion will have two parents, which would
@@ -107,12 +107,21 @@ class TreeRepresentation(object):
         """
         self.parents = defaultdict(list)
         for ass1, ass2 in combinations(assignments, 2):
-            overlap = AssignmentOverlapChecker.check_single(ass1, ass2)
+            overlap = AssignmentOverlapChecker.check_single(ass1, ass2, interpro)
             if overlap == OverlapType.INSERTION:
                 if ass1.get_assigned_length() >= ass2.get_assigned_length():
                     self.parents[ass2].append(ass1)
                 else:
                     self.parents[ass1].append(ass2)
+            #else: # OUT
+            #    AssignmentOverlapChecker.log.info("{} and {}, {}".format(ass1.short_repr(), ass2.short_repr(), overlap))
+            # OUT
+
+        # OUT
+        #for ass, parents in self.parents.items():
+        #    AssignmentOverlapChecker.log.info("Parents of {}: {}".format(ass.short_repr(), ", ".join([x.short_repr() for x in parents])))
+        #raw_input()
+        # OUT
 
     def __get_tree_representation(self):
         l = []
@@ -135,7 +144,6 @@ class TreeRepresentation(object):
                             explored.add(parent)
                             break
                     level += 1
-
                 current.append((ass, []))
         return l
 
@@ -145,7 +153,7 @@ class TreeRepresentation(object):
         """
         if not self.assignments:
             return "NO_ASSIGNMENT"
-        if l==None:
+        if l == None:
             l = self.tree
         if len(l) == 1:
             assignment, children = l[0]
@@ -204,22 +212,24 @@ class AssignmentOverlapChecker(object):
     #: assignment B already inserted, overlapping with C. If we checked only
     #: if there were an insertion, A would be accepted, as no further checks
     #: are done.
-    priority = [OverlapType.OVERLAP, OverlapType.DUPLICATE, 
+    priority = [OverlapType.OVERLAP,  
                 OverlapType.DIFFERENT, OverlapType.SYNONYM_INSERTION,
                 OverlapType.INSERTION_DIFFERENT,
                 OverlapType.INSERTION, OverlapType.NO_OVERLAP]
 
+
     @classmethod
-    def check(cls, sequence, assignment):
+    def check(cls, sequence, assignment, interpro):
         """Checks whether an `assignment` can be added to a partially
         assigned `sequence`. `sequence` must be an instance of
         `SequenceWithAssignments`, `assignment` must be an instance
-        of `Assignment`.
+        of `Assignment`. InterPro is an interpro data structure
+        (we use it to check for similar IPR domains).
 
         The most strict type of overlap (following the order defined
         in "priority" is returned)
         """
-        overlaps_found = set(cls.check_single(assignment, other_assignment)\
+        overlaps_found = set(cls.check_single(assignment, other_assignment, interpro)\
                     for other_assignment in sequence.assignments)
         for overlap_type in cls.priority:
             if overlap_type in overlaps_found:
@@ -227,15 +237,19 @@ class AssignmentOverlapChecker(object):
         return OverlapType.NO_OVERLAP
 
     @classmethod
-    def check_single(cls, assignment, other_assignment):
+    def similar(cls, ipr1, ipr2, interpro):
+        if ipr1 == ipr2:
+            return True
+        else:
+            return interpro.tree.get_most_remote_ancestor(ipr1) == interpro.tree.get_most_remote_ancestor(ipr2)
+
+    @classmethod
+    def check_single(cls, assignment, other_assignment, interpro=None):
         """Checks whether the given `assignment` overlaps with another
         assignment `other_assignment`. Returns one of the following:
 
         - `OverlapType.NO_OVERLAP`: there is no overlap between the
           two given assignments
-
-        - `OverlapType.DUPLICATE`: `assignment` is a duplicate of
-          `other_assignment` (same starting and ending positions)
 
         - `OverlapType.SYNONYM_INSERTION`: `assignment` is inserted into
           `other_assignment` or vice versa, but they share the same InterPro
@@ -261,46 +275,40 @@ class AssignmentOverlapChecker(object):
           in `AssignmentOverlapChecker.max_overlap`.
         """
         start, end = assignment.start, assignment.end
-        other_start, other_end = other_assignment.start, other_assignment.end
+        other_start, other_end = other_assignment.start, other_assignment.end   
+        # OUT
+        #try:
+        #    AssignmentOverlapChecker.log.info("{}, {}, {}, {}".format(start, end, other_start, other_end))
+        #except:
+        #    pass
+        # OUT
 
-        if other_start == start and other_end == end:
-            # This is a duplicate assignment, so we must skip it
-            return OverlapType.DUPLICATE
+        if ((other_start <= start and other_end >= end) or (other_start >= start and other_end <= end)):
+            # Domains are one inside the other: could be INSERTION, INSERTION_DIFFERENT, 
+            # SYNONYM_INSERTION or OVERLAP
+            similar_IPRs = (cls.similar(assignment.interpro_id, other_assignment.interpro_id, interpro) or
+                           assignment.domain == other_assignment.domain)
 
-        if (((other_start <= start and other_end >= end) or (
-                other_start >= start and other_end)) and
-            (assignment.interpro_id == other_assignment.interpro_id
-             or assignment.domain == other_assignment.domain) and
-            (abs(other_start-start) < cls.min_parent_inserted_size)):
-            return OverlapType.SYNONYM_INSERTION
-
-        if other_start <= start and other_end >= end:
-            if other_assignment.source == assignment.source:
-                # This is a valid domain insertion, assignment is inserted
-                # into other_assignment
-                return OverlapType.INSERTION
-            return OverlapType.INSERTION_DIFFERENT
-
-        if other_start >= start and other_end <= end:
-            if other_assignment.source == assignment.source:
+            if abs(other_start-start) + abs(other_end-end) < cls.min_parent_inserted_size:
+                if similar_IPRs and (abs(other_start - start) < cls.min_parent_inserted_size):
+                    return OverlapType.SYNONYM_INSERTION
+                else:
+                    return OverlapType.OVERLAP
+            elif other_assignment.source == assignment.source:
                 # This is a valid domain insertion, other_assignment is
                 # inserted into assignment
-                return OverlapType.INSERTION
-            return OverlapType.INSERTION_DIFFERENT
-
-        if other_start <= start and other_end <= end and other_end >= start:
-            if other_assignment.source == assignment.source:
-                # This is a partial overlap
-                overlap_size = other_end-start+1
-                if overlap_size > cls.max_overlap:
+                if not similar_IPRs or (abs(other_start - start) >= cls.min_parent_inserted_size):
+                    return OverlapType.INSERTION
+                else:
                     return OverlapType.OVERLAP
             else:
-                return OverlapType.DIFFERENT
+                return OverlapType.INSERTION_DIFFERENT
 
-        if other_start >= start and other_end >= end and other_start <= end:
+        if (other_start <= start and start <= other_end <= end) or (start <= other_start and other_start <= end <= other_end):
+            # Domains could overlap (either A B A' B' or B A B' A')
             if other_assignment.source == assignment.source:
                 # This is a partial overlap
-                overlap_size = end-other_start+1
+                overlap_size = min(other_end - start, end - other_start) + 1
                 if overlap_size > cls.max_overlap:
                     return OverlapType.OVERLAP
             else:
@@ -384,7 +392,7 @@ class SequenceWithAssignments(object):
                 evalue=None, length=self.length, comment=None)
         return self.assign(assignment, *args, **kwds)
 
-    def assign(self, assignment, overlap_check=True, tree=None):
+    def assign(self, assignment, overlap_check=True, tree=None, interpro=None):
         """Assigns a fragment of this sequence using the given assignment.
         If `overlap_check` is ``False``, we will not check for overlaps or
         conflicts with existing assignments.
@@ -399,7 +407,7 @@ class SequenceWithAssignments(object):
             assignment = assignment._replace(domain=new_domain)
 
         if overlap_check:
-            overlap_state = self.overlap_checker.check(self, assignment)
+            overlap_state = self.overlap_checker.check(self, assignment, interpro)
             if overlap_state not in self.acceptable_overlaps:
                 return False
         self.assignments.append(assignment)

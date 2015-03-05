@@ -1,8 +1,8 @@
 """Common routines and utility classes for GFam that fit nowhere else."""
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
-__copyright__ = "Copyright (c) 2010, Tamas Nepusz"
+__author__  = "Tamas Nepusz, Alfonso E. Romero"
+__email__   = "tamas@cs.rhul.ac.uk, aeromero@cs.rhul.ac.uk"
+__copyright__ = "Copyright (c) 2014, Tamas Nepusz"
 __license__ = "GPL"
 
 __all__ = ["bidict", "complementerset", "Histogram",
@@ -27,6 +27,21 @@ from contextlib import contextmanager
 from math import ceil
 from shutil import rmtree
 from tempfile import mkdtemp
+
+def goid_to_num(identifier):
+    """ Takes a GO `identifier` (e.g. "GO:0001308") and
+        returns the corresponding integer (1308 in the
+        above case).
+    """
+    return int(identifier.split(":")[1])
+
+def num_to_goid(num):
+    """ Takes an integer `num` (e.g. 1308) and returns a 
+        valid GO identifier by prepending "GO:" and filling
+        with zeros in the left up to seven figures (resulting
+        in "GO:0001308" in the above mentioned example).
+    """
+    return "GO:{0:0>7}".format(num)
 
 class bidict(object):
     """Bidirectional many-to-many mapping.
