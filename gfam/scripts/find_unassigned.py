@@ -90,17 +90,21 @@ class FindUnassignedApp(CommandLineApp):
         self.set_sequence_id_regexp(self.options.sequence_id_regexp)
         self.process_sequences_file_old(self.options.sequences_file)
 
+        self.log.info("Processing assignments file...")
         for infile in (self.args or ["-"]):
             self.process_infile(infile)
 
+        self.log.info("Getting unassigned pieces")
         self.get_unassigned()
 
         # if there is a file with low complexity regions, process it
         # and remove low complexity regions from unassigned fragments
         if self.options.low_complexity_file:
+            self.log.info("Removing low complexity regions")
             self.read_low_complexity_regions(self.options.low_complexity_file)
             self.remove_low_complexity_regions()
 
+        self.log.info("Getting unassigned pieces")
         self.print_unassigned()
 
     def process_sequences_file(self, fname):
@@ -123,6 +127,7 @@ class FindUnassignedApp(CommandLineApp):
             self.seq_ids_to_length[seq.id] = len(seq.seq)
             if i%1000000 == 0:
                 self.log.info("Read {} seqs".format(i))
+                self.seq_ids_to_length.sync()
         self.log.info("...loaded")
 
     def process_sequences_file_old(self, fname):

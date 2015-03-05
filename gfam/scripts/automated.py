@@ -177,9 +177,9 @@ class AutomatedConSAT(CommandLineApp):
     def create_parser(self):
         """Creates the command line parser for the automated script"""
         parser = super(AutomatedConSAT, self).create_parser()
-        parser.add_option("-t", "--data", dest="data_dir", action="store_true",
+        parser.add_option("-t", "--data", dest="data_dir",
                 help="provides a certain (existing) data dir where the files will "\
-                        "be taken")
+                        "be taken", metavar="DIR")
         parser.add_option("-f", "--force", dest="force", action="store_true",
                 help="force recalculation of results even when gfam thinks "\
                      "everything is up-to-date")
@@ -195,7 +195,7 @@ class AutomatedConSAT(CommandLineApp):
                 help="regular expression to extract protein ids (gfam/consat)")
         parser.add_option("-n", "--no-download", dest="no_download", 
                 action="store_true", help="does not download data, use if you"\
-                        "want to continue a previous execution")
+                        " want to continue a previous execution")
         parser.add_option("-g", "--goa", dest="goa", help="GOA file to transfer"\
                          "the function from")
         parser.add_option("-b", "--blast-route", dest="blast_route", help="route to"\
@@ -210,7 +210,7 @@ class AutomatedConSAT(CommandLineApp):
 
     def process_arguments(self):
         if len(self.args) != 2:
-            self.error("Wrong argument number")
+            self.error("Wrong argument number. Command executed: {}".format(" ".join(self.args)))
 
         self.mode, self.directory = self.args
 
