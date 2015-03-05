@@ -82,12 +82,12 @@ def count_architectures(output_file, arch_table_file, sequences, residues):
         residues_covered += len_covered
 
         proteins_per_arch[arch] += 1
-        if "GFAM" in arch:
+        if "CPPD" in arch:
             archs_with_gfams.add(arch)
             sequences_covered_gfams += 1
             only_gfam = True
             for domain in arch_with_assignments.replace('}', ' ').replace('{', ' ').replace(';', ' ').split():
-                if domain.startswith("GFAM"):
+                if domain.startswith("CPPD"):
                     start, end = domain.split("(")[1].replace(')', '').split('-')
                     covered_residues_gfams += (int(end) - int(start) + 1)
                 else:
@@ -103,12 +103,12 @@ def count_architectures(output_file, arch_table_file, sequences, residues):
         out.write("Number of residues covered by ConSAT: {} ({}%)\n".format(residues_covered, float(residues_covered)*100.0/residues))
         out.write("\n\n")
         out.write("Number of different architectures found: {}\n".format(len(proteins_per_arch)))
-        out.write("\t of which {} ({}%) are participated by GFAMs domains\n".format(len(archs_with_gfams), float(len(archs_with_gfams))/len(proteins_per_arch)*100.0))
-        out.write("\t where {} are architectures only formed by GFAMs\n".format(len(archs_with_only_gfams)))
+        out.write("\t of which {} ({}%) are participated by CPPDs domains\n".format(len(archs_with_gfams), float(len(archs_with_gfams))/len(proteins_per_arch)*100.0))
+        out.write("\t where {} are architectures only formed by CPPDs\n".format(len(archs_with_only_gfams)))
         out.write("\n\n")
-        out.write("GFAMs domains cover {} residues ({}%)\n".format(covered_residues_gfams, float(covered_residues_gfams)*100.0/residues))
+        out.write("CPPDs domains cover {} residues ({}%)\n".format(covered_residues_gfams, float(covered_residues_gfams)*100.0/residues))
         out.write("\t from {} sequences ({}%)\n".format(sequences_covered_gfams, float(sequences_covered_gfams)*100.0/sequences))
-        out.write("\t of which {} are covered only with GFAMs\n".format(sequences_only_gfams))
+        out.write("\t of which {} are covered only with CPPDs\n".format(sequences_only_gfams))
 
     c = Counter(proteins_per_arch.values())
     with open("values", "w") as out:

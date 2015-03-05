@@ -12,7 +12,7 @@ There are four use cases in this program:
     rest (TremBL). The models learnt by GFam in SwissProt will be used by ConSAT
     although the user can include a previously found set of models of putative
     new domains to extend this and maintain the names with respect to the old
-    domains. The putative models found will be named GFAM00001, GFAM00002, etc.
+    domains. The putative models found will be named CPPD00001, CPPD00002, etc.
     It is assumed that the provided models are also following this naming
     convention.
 
@@ -107,7 +107,7 @@ class AutomatedConSAT(CommandLineApp):
     rest (TremBL). The models learnt by GFam in SwissProt will be used by ConSAT
     although the user can include a previously found set of models of putative
     new domains to extend this and maintain the names with respect to the old
-    domains. The putative models found will be named GFAM00001, GFAM00002, etc.
+    domains. The putative models found will be named CPPD00001, CPPD00002, etc.
     It is assumed that the provided models are also following this naming
     convention.
 
@@ -447,8 +447,8 @@ class AutomatedConSAT(CommandLineApp):
             id_mapping_file = id_mapping_file.replace(".gz", "")
             self.params["file.idmapping"] = id_mapping_file
 
-            # we set the prefix to "GFAM"
-            self.params["prefix"] = "GFAM"
+            # we set the prefix to "CPPD"
+            self.params["prefix"] = "CPPD"
 
         elif self.mode == "consat" or self.mode == "gfam": 
             # gfam or consat modes, we first copy two input files
