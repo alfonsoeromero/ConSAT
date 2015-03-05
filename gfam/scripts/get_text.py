@@ -249,7 +249,6 @@ class GetText(CommandLineApp):
         if self.options.arch_file:
             self.log.info("Creating weight arch file")
             self.weight_arch_file()
-
         # END of the module
 
     def create_text_file(self):
@@ -448,6 +447,17 @@ class GetText(CommandLineApp):
                 term, weight = field.split(':')
                 vec[int(term)] += float(weight)
 
+        # 3.- for each arch, we trim its vector to the best 500 terms (sorted via weight)
+        LIMIT = 500
+        vec_per_arch2 = {}
+        for arch, vec in vec_per_arch.items():
+            val = vec
+            if len(vec) > 500:
+                val = dict(sorted(vec.items(), key=lambda x:x[1], reverse=True)[:500])
+            vec_per_arch2[arch] = val
+        vec_per_arch = vec_per_arch2
+
+        # we print the file
         self.log.info("Printing weight arch file")
         for arch in seqs_per_arch: 
             print arch, " ", " ".join(["{0}:{1:.5f}".format(t,w) for t,w in vec_per_arch[arch].iteritems()])
