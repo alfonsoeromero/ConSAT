@@ -13,15 +13,14 @@ from __future__ import with_statement
 import os
 import subprocess
 import sys
-
-from gfam import fasta
 from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything, search_file, temporary_dir
+from gfam.utils import search_file, temporary_dir
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class AllAgainstAllBLASTApp(CommandLineApp):
     """\
@@ -40,41 +39,41 @@ class AllAgainstAllBLASTApp(CommandLineApp):
         parser = super(AllAgainstAllBLASTApp, self).create_parser()
 
         parser.add_option("-m", dest="blast_output_format",
-                default=8, type=int, metavar="FORMAT",
-                help="use FORMAT as the output format. This option "
-                "is passed on intact to blastall. Default: %default",
-                config_key="analysis:allblast/output_format"
-        )
+                          default=8, type=int, metavar="FORMAT",
+                          help="use FORMAT as the output format. This option "
+                               "is passed on intact to blastall. "
+                               "Default: %default",
+                          config_key="analysis:allblast/output_format")
         parser.add_option("-a", dest="num_threads", default=1,
-                type=int, metavar="N",
-                help="instruct BLAST to use N threads. This option "
-                "is passed on intact to blastall. Default: %default",
-                config_key="analysis:allblast/num_cpu_cores"
-        )
+                          type=int, metavar="N",
+                          help="instruct BLAST to use N threads. This option "
+                               "is passed on intact to blastall. "
+                               "Default: %default",
+                          config_key="analysis:allblast/num_cpu_cores")
         parser.add_option("-o", dest="output_file", metavar="FILE",
-                help="send the BLAST output to FILE. This option "
-                "is passed on intact to blastall if present.",
-                config_key="analysis:allblast/output_file"
-        )
+                          help="send the BLAST output to FILE. This option "
+                               "is passed on intact to blastall if present.",
+                          config_key="analysis:allblast/output_file")
         parser.add_option("-p", dest="blast_tool",
-                default="blastp", metavar="TOOL",
-                help="run the given BLAST tool after formatdb. "
-                "This option is passed on intact to blastall. "
-                "Default: %default",
-                config_key="analysis:allblast/blast_tool"
-        )
+                          default="blastp", metavar="TOOL",
+                          help="run the given BLAST tool after formatdb. "
+                               "This option is passed on intact to blastall. "
+                               "Default: %default",
+                          config_key="analysis:allblast/blast_tool")
         parser.add_option("--formatdb-path", dest="formatdb_path",
-                help="uses PATH as the path to the formatdb executable",
-                config_key="utilities/util.formatdb", metavar="PATH"
-        )
+                          help="uses PATH as the path to the formatdb "
+                               "executable",
+                          config_key="utilities/util.formatdb",
+                          metavar="PATH")
         parser.add_option("--blastall-path", dest="blastall_path",
-                help="uses PATH as the path to the blastall executable",
-                config_key="utilities/util.blastall", metavar="PATH"
-        )
+                          help="uses PATH as the path to the blastall "
+                               "executable",
+                          config_key="utilities/util.blastall",
+                          metavar="PATH")
 
         return parser
 
-    def get_blast_cmdline(self, tool_name, args = None):
+    def get_blast_cmdline(self, tool_name, args=None):
         """Given the name of a BLAST tool in `tool_name`, looks up the
         value of the corresponding option from the command line, and tries
         to figure out whether it is a path to a folder containing the tools
@@ -103,10 +102,6 @@ class AllAgainstAllBLASTApp(CommandLineApp):
             # the folder and see if the folder exists.
             base, tool_name = os.path.split(tool_path)
 
-        if os.path.isdir(tool_path):
-            # The path exists and points to a folder
-            base = os.path.normpath(tool_path)
-
         # Okay, first check for the actual tool in the folder
         full_path = os.path.join(tool_path, tool_name)
         if os.path.isfile(full_path):
@@ -119,7 +114,6 @@ class AllAgainstAllBLASTApp(CommandLineApp):
 
         # Nothing succeeded
         return None
-
 
     def run_real(self):
         """Runs the application and returns the exit code"""
@@ -165,11 +159,12 @@ class AllAgainstAllBLASTApp(CommandLineApp):
         args = ["-n", "database", "-i", sequence_file, "-o", "F"]
         args = self.get_blast_cmdline("formatdb", args)
         if not args:
-            self.log.fatal("cannot find formatdb in %s" % self.options.formatdb_path)
+            self.log.fatal("cannot find formatdb in %s"
+                           % self.options.formatdb_path)
             return False
 
-        formatdb = subprocess.Popen(args, stdin=open(os.devnull), \
-                stdout=sys.stderr)
+        formatdb = subprocess.Popen(args, stdin=open(os.devnull),
+                                    stdout=sys.stderr)
         retcode = formatdb.wait()
         if retcode != 0:
             self.log.fatal("formatdb exit code was %d, exiting..." % retcode)
@@ -195,7 +190,8 @@ class AllAgainstAllBLASTApp(CommandLineApp):
 
         args = self.get_blast_cmdline("blastall", args)
         if not args:
-            self.log.fatal("cannot find blastall in %s" % self.options.blastall_path)
+            self.log.fatal("cannot find blastall in %s"
+                           % self.options.blastall_path)
             return False
 
         blastall = subprocess.Popen(args, stdin=open(os.devnull))
@@ -206,6 +202,7 @@ class AllAgainstAllBLASTApp(CommandLineApp):
 
         self.log.info("blastall returned successfully.")
         return True
+
 
 if __name__ == "__main__":
     sys.exit(AllAgainstAllBLASTApp().run())

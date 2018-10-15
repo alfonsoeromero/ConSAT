@@ -2,10 +2,9 @@
 Storage classes for Modula
 """
 
+import os
 from gfam.modula.hash import sha1
 from gfam.modula.log import get_logger
-
-import os
 
 try:
     import cPickle as pickle
@@ -13,8 +12,11 @@ except ImportError:
     # Python 3
     import pickle
 
+
 class NotFoundError(Exception):
-    def __init__(self, name, resource=None, nestedExc = None):
+    """ Exception for resources not found
+    """
+    def __init__(self, name, resource=None, nestedExc=None):
         if resource:
             msg = "%s (module/source name: %s)" % (resource, name)
         else:
@@ -48,7 +50,7 @@ class AbstractStorageEngine(object):
         try:
             module = self.module_manager.get(source_name)
             return module.get_handle(mode)
-        except Exception, ex:
+        except Exception as ex:
             raise NotFoundError(source_name, source_name, ex)
 
     def get_result(self, module, parameters=None):
@@ -80,8 +82,7 @@ class AbstractStorageEngine(object):
         module = self.module_manager.get(module_or_source)
         if hasattr(module, "parameters"):
             return self.get_result(module, *args, **kwds)
-        else:
-            return self.get_source(module_or_source, *args, **kwds)
+        return self.get_source(module_or_source, *args, **kwds)
 
     def store(self, module, parameters, result):
         """Stores the result of the given module with the given parameter
@@ -97,9 +98,9 @@ class DiskStorageEngine(AbstractStorageEngine):
         self.storage_dir = self.config["@paths.storage"]
         self.storage_hash = sha1
         if not os.path.isdir(self.storage_dir):
-            self.logger.warning("Creating storage path: %s" % self.storage_dir)
+            self.logger.warning("Creating storage path: %s", self.storage_dir)
             os.makedirs(self.storage_dir)
-        self.logger.debug("Using storage path: %s" % self.storage_dir)
+        self.logger.debug("Using storage path: %s", self.storage_dir)
 
     def _get_module_result_filename(self, module, parameters=None):
         """Retrieves the name of the result file corresponding to the
@@ -107,12 +108,11 @@ class DiskStorageEngine(AbstractStorageEngine):
         if parameters is None:
             parameters = module.parameters
         keys = sorted(parameters.keys())
-        hash = self.storage_hash()
-        hash.update(",".join("%r=%r" % (key, parameters[key]) \
-                             for key in keys))
-        hash = hash.hexdigest()
-        return os.path.join(self.storage_dir, module.name, hash)
-
+        hash_method = self.storage_hash()
+        hash_method.update(",".join("%r=%r" % (key, parameters[key])
+                                    for key in keys))
+        hash_method = hash_method.hexdigest()
+        return os.path.join(self.storage_dir, module.name, hash_method)
 
     def get_result(self, module, parameters=None):
         """Retrieves the result object of a given module with the
@@ -133,9 +133,9 @@ class DiskStorageEngine(AbstractStorageEngine):
         fname = self._get_module_result_filename(module, parameters)
 
         if "w" in mode:
-            dir = os.path.split(fname)[0]
-            if not os.path.isdir(dir):
-                os.makedirs(dir)
+            directory = os.path.split(fname)[0]
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
 
         return open(fname, mode)
 
@@ -143,7 +143,7 @@ class DiskStorageEngine(AbstractStorageEngine):
         fname = self._get_module_result_filename(module)
         try:
             return os.stat(fname).st_mtime
-        except OSError, ex:
+        except OSError as ex:
             raise NotFoundError(module, fname, ex)
 
     def store(self, module, result):
@@ -151,8 +151,7 @@ class DiskStorageEngine(AbstractStorageEngine):
         set on the disk. `module` must be an instance of
         :class:`modula.module.Module`."""
         fname = self._get_module_result_filename(module)
-        dir = os.path.split(fname)[0]
-        if not os.path.isdir(dir):
-            os.makedirs(dir)
+        directory = os.path.split(fname)[0]
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
         pickle.dump(result, open(fname, "wb"), pickle.HIGHEST_PROTOCOL)
-

@@ -4,26 +4,26 @@ It is not meant to be a full-fledged FASTA parser (check BioPython_ if you
 need one), but it works well in most cases, at least for neatly formatted
 FASTA files.
 """
+from __future__ import print_function
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 __all__ = ["Parser", "regexp_remapper", "Writer"]
 
 import re
-
-from gfam.sequence import SeqRecord, Sequence
-from itertools import izip
+from itertools import tee
 from textwrap import TextWrapper
-from itertools import tee, izip
+from gfam.sequence import SeqRecord, Sequence
+
 
 class Parser(object):
     """Parser for FASTA files.
-    
+
     Usage example::
-        
+
         parser = Parser(open("test.ffa"))
         for sequence in parser:
             print sequence.seq
@@ -77,7 +77,7 @@ class Parser(object):
                     yield seq_record
                 descr = line[1:]
                 seq_id = descr.split()[0]
-                seq_record = SeqRecord(Sequence(), id=seq_id, name=seq_id, \
+                seq_record = SeqRecord(Sequence(), id=seq_id, name=seq_id,
                                        description=descr)
                 seq = []
             else:
@@ -110,7 +110,7 @@ class Parser(object):
 
         .. _BioPython: http://www.biopython.org
         """
-        result = dict(izip(seq.id, seq) for seq in cls(*args, **kwds))
+        result = dict(zip(seq.id, seq) for seq in cls(*args, **kwds))
         return result
 
 
@@ -150,44 +150,31 @@ class Writer(object):
         at construction time.
         """
         if seq_record.description:
-            print >> self.handle, ">%s" % seq_record.description
+            print(">%s" % seq_record.description, file=self.handle)
         else:
-            print >> self.handle, ">%s" % (seq_record.id, )
-        print >> self.handle, "\n".join(self.wrapper.wrap(seq_record.seq))
+            print(">%s" % (seq_record.id, ), file=self.handle)
+        print("\n".join(self.wrapper.wrap(seq_record.seq)), file=self.handle)
+
 
 class FastWriter(object):
     """Writes `SeqRecord` objects in FASTA format to a given file handle.
-    This is a version of `Writer` which does not use `TextWrapper` for 
+    This is a version of `Writer` which does not use `TextWrapper` for
     efficiency reasons`"""
 
     def __init__(self, handle):
         self.handle = handle
 
     def _pairwise(self, iterable):
-        a, b = tee(iterable)
-        next(b, None)
-        return izip(a, b)
+        obj1, obj2 = tee(iterable)
+        next(obj2, None)
+        return zip(obj1, obj2)
 
     def write(self, seq_record):
         """Writes the given sequence record to the file handle passed
         at construction time
         """
-        print >> self.handle, ">%s" % seq_record.id
-        n = len(seq_record.seq)
-        l = range(0, n, 70) + [n]
-        for v, w in self._pairwise(l):
-            print >> self.handle, seq_record.seq[v:w]
-
-def test():
-    """Short self-test routines"""
-    from urllib2 import urlopen
-
-    #f = urlopen("ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans_Kin4_M_uid58009/NC_005213.ffn")
-    f = open("/home/local/aeromero/databases/uniprot/uniprot_trembl.fasta")
-    parser = Parser(f)
-    parser = regexp_remapper(parser, r'(\w+\|)(?P<id>\w+)(\|\w+)+')
-    for seq in parser:
-        print seq.id
-
-if __name__ == "__main__":
-    test()
+        print(">%s" % seq_record.id, file=self.handle)
+        num_residues = len(seq_record.seq)
+        pos = range(0, num_residues, 70) + [num_residues]
+        for beg_pos, end_pos in self._pairwise(pos):
+            print(seq_record.seq[beg_pos:end_pos], file=self.handle)

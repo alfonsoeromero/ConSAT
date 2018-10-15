@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
-from gfam.utils import open_anything
-from gfam.indexed_file import IndexedReadOnlyFile
+""" Utilities and functions to process a result
+    file (i.e. triplets protein identifier, GO term
+    and p-values)
+"""
+
+from __future__ import print_function
 import re
-import math 
+import math
+from gfam.indexed_file import IndexedReadOnlyFile
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -13,32 +18,34 @@ __license__ = "GPL"
 try:
     from scipy.stats import chisqprob
 except ImportError:
-    def chisqprob(chi, df):
-        """Return prob(chisq >= chi, with df degrees of
+    def chisqprob(chi, deg):
+        """Return prob(chisq >= chi, with deg degrees of
             freedom).
-            df must be even.
-            copypasted from 
-            http://www.linuxjournal.com/files/linuxjournal.com/linuxjournal/articles/064/6467/6467s2.html
+            deg must be even.
+            copypasted from
+            http://www.linuxjournal.com/files/linuxjournal.com/
+                   linuxjournal/articles/064/6467/6467s2.html
         """
-        assert df & 1 == 0
+        assert deg & 1 == 0
         # XXX If chi is very large, exp(-m) will underflow to 0.
-        m = chi / 2.0
-        sum = term = math.exp(-m)
-        for i in range(1, df//2):
-            term *= m / i
-            sum += term
-        # With small chi and large df, accumulated
+        half_chi = chi / 2.0
+        summation = term = math.exp(-half_chi)
+        for i in range(1, deg//2):
+            term *= half_chi / i
+            summation += term
+        # With small chi and large deg, accumulated
         # roundoff error, plus error in
         # the platform exp(), can cause this to spill
         # a few ULP above 1.0. For
         # example, chi2P(100, 300) on my box
-        # has sum == 1.0 + 2.0**-52 at this
+        # has summation == 1.0 + 2.0**-52 at this
         # point.  Returning a value even a teensy
         # bit over 1.0 is no good.
-        return min(sum, 1.0)
+        return min(summation, 1.0)
+
 
 class ResultFileFilter(object):
-    """Filters a result file by p-value, keeping only 
+    """Filters a result file by p-value, keeping only
         those entries under a certain significance value
     """
     def __init__(self, input_file):
@@ -48,10 +55,13 @@ class ResultFileFilter(object):
         reader = ResultFileReader(self.input_file, confidence)
         writer = ResultFileWriter(out_file)
         for key in reader.get_keys():
-            l = reader[key]
+            li = reader[key]
             names = reader.get_go_names()
-            writer.write_single_register(key, l, significance=confidence, go_names=names)
+            writer.write_single_register(key, li,
+                                         significance=confidence,
+                                         go_names=names)
         writer.close()
+
 
 class ResultFileCombiner(object):
     """Combines two result files using Fisher's method
@@ -71,31 +81,38 @@ class ResultFileCombiner(object):
         for key in sorted(all_keys):
             l_out = []
             if key in keys1 and key in keys2:
-                p1 = dict(infile1[key])
-                p2 = dict(infile2[key])
-                for goterm in set(p1.keys()) | set(p2.keys()):
-                    if goterm in p1 and goterm in p2:
-                        l_out.append((goterm, self.combine_fisher(p1[goterm], p2[goterm])))
-                    elif goterm in p1:
-                        l_out.append((goterm, p1[goterm]))
+                pvalues_1 = dict(infile1[key])
+                pvalues_2 = dict(infile2[key])
+                for goterm in set(pvalues_1.keys()) | set(pvalues_2.keys()):
+                    if goterm in pvalues_1 and goterm in pvalues_2:
+                        l_out.append((goterm,
+                                      self.combine_fisher(pvalues_1[goterm],
+                                                          pvalues_2[goterm])))
+                    elif goterm in pvalues_1:
+                        l_out.append((goterm, pvalues_1[goterm]))
                     else:
-                        l_out.append((goterm, p2[goterm]))
+                        l_out.append((goterm, pvalues_2[goterm]))
             elif key in keys1:
                 l_out = infile1[key]
             else:
                 l_out = infile2[key]
             names.update(infile1.get_go_names())
             names.update(infile2.get_go_names())
-            out.write_single_register(key, l_out, significance=confidence, go_names=names)
+            out.write_single_register(key, l_out, significance=confidence,
+                                      go_names=names)
         out.close()
 
     def combine_fisher(self, pvalue1, pvalue2):
+        """ Combine two p-values using Fihser's method. See
+            https://en.wikipedia.org/wiki/Fisher%27s_method for
+            more details
+        """
         if pvalue1 == 0.0 or pvalue2 == 0.0:
             return 0.0
-        else:
-            chi = -2.0 * (math.log(pvalue1) + math.log(pvalue2))
-            p_out = chisqprob(chi, 4)
-            return p_out
+        chi = -2.0 * (math.log(pvalue1) + math.log(pvalue2))
+        p_out = chisqprob(chi, 4)
+        return p_out
+
 
 class ResultFileWriter(object):
     """Class implementing a result file writer, with the
@@ -108,7 +125,7 @@ class ResultFileWriter(object):
     protein_id2
         p-value: ...
         ...
-    
+
     """
     def __init__(self, file_name):
         self.file_name = file_name
@@ -120,33 +137,38 @@ class ResultFileWriter(object):
         """
         self.out.close()
 
-    def write_single_register(self, key, l, significance=None, go_names=None):
-        """ Writes a single register represented by a `key` and a list `l` of
+    def write_single_register(self, key, l_r,
+                              significance=None, go_names=None):
+        """ Writes a single register represented by a `key` and a list `l_r` of
             pairs (goterm, pvalue). We can add a `significance` cutoff and
             a dictionary with the names of the GO terms
         """
         self.out.write("{}\n".format(key))
         if significance is not None:
-            sorted_l = sorted([y for y in l if y[1] < significance], key=lambda x: x[1])
+            sorted_l = sorted([y for y in l_r if y[1] < significance],
+                              key=lambda x: x[1])
         else:
-            sorted_l = sorted(l, key=lambda x: x[1])
+            sorted_l = sorted(l_r, key=lambda x: x[1])
 
         for goterm, pvalue in sorted_l:
             if go_names is not None and goterm in go_names:
-                self.out.write("\t{:.5f}: {} ({})\n".format(pvalue, goterm, go_names[goterm]))
+                self.out.write("\t{:.5f}: {} ({})\n".format(pvalue,
+                                                            goterm,
+                                                            go_names[goterm]))
             else:
                 self.out.write("\t{:.5f}: {}\n".format(pvalue, goterm))
-        self.out.write("\n")            
+        self.out.write("\n")
 
-    def write_result_from_dict(self, d, valid_proteins=None, significance=None, go_names=None):
+    def write_result_from_dict(self, d, valid_proteins=None, significance=None,
+                               go_names=None):
         """Writes a result file from a dictionary structure where,
-        for each protein identifier we get a list of tuples 
+        for each protein identifier we get a list of tuples
         (goterm, pvalue) representing the assignment itself.
         There is no need for up-propagation as the result files
         should be already up-propagated. If we specify a `significance`
         value, then only entries with a p-value less than `significance`
         will be considered.
-        If `valid_proteins` is specified, only sequences in the 
+        If `valid_proteins` is specified, only sequences in the
         intersection of that list and the keys of the dictionary will
         be written. If we specify a `significance`
         value, then only entries with a p-value less than `significance`
@@ -154,13 +176,14 @@ class ResultFileWriter(object):
         """
         sorted_proteins = sorted(d.keys())
         if valid_proteins is not None:
-            sorted_proteins = sorted(set(sorted_proteins) & set(valid_proteins))
-        filter_pvalue = False
-        if significance is not None:
-            filter_pvalue = True
+            sorted_proteins = sorted(set(sorted_proteins) &
+                                     set(valid_proteins))
+        # filter_pvalue = significance is not None
         for protein in sorted_proteins:
             goterm_pvalues = d[protein]
-            self.write_single_register(protein, goterm_pvalues, significance, go_names)
+            self.write_single_register(protein, goterm_pvalues,
+                                       significance, go_names)
+
 
 class ResultFileReader(object):
     """Class implementing a parser of the
@@ -181,9 +204,9 @@ class ResultFileReader(object):
             If we specify a certain `significance`, we will only consider
             those contents with a pvalue less than this `significance`.
         """
-        self.file = IndexedReadOnlyFile(file_name, "^\w+")
+        self.file = IndexedReadOnlyFile(file_name, r"^\w+")
         self.keys = self.file.get_keys()
-        self.pval_regex = re.compile("^\d")
+        self.pval_regex = re.compile(r"^\d")
         self.go_names = dict()
         if significance is not None:
             self.alpha = significance
@@ -199,10 +222,10 @@ class ResultFileReader(object):
         """ Retrieves the whole dataset as a dictionary.
             Not recommended if the file is too large.
         """
-        d = dict()
+        results = dict()
         for key in self.keys:
-            d[key] = self.__getitem__(key)
-        return d
+            results[key] = self.__getitem__(key)
+        return results
 
     def __getitem__(self, key):
         """ Gets the set of GO terms and p-values for a
@@ -211,7 +234,7 @@ class ResultFileReader(object):
         """
         list_go_terms = []
         for line in [l for l in self.file[key] if self.pval_regex.match(l)]:
-            pvalue, goterm = line.split(' ',2)[0:2]
+            pvalue, goterm = line.split(' ', 2)[0:2]
             pvalue = float(pvalue[0:-1])
             if pvalue < self.alpha:
                 list_go_terms.append((goterm, pvalue))
@@ -223,33 +246,5 @@ class ResultFileReader(object):
     def get_go_names(self):
         if not self.go_names:
             for key in self.keys:
-                self.__getitem__(key)            
+                self.__getitem__(key)
         return self.go_names
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) != 5:
-        print "ERROR: arguments should be p-value_file1 p-value_file2 output_combined output_filtered"
-        sys.exit(-1)
-
-    in1, in2, out1, out2 = sys.argv[1:]
-    print "Reading first file"
-    reader1 = ResultFileReader(in1, 0.04)
-    for key in reader1.get_keys():
-        reader1[key]
-    print "read ", len(reader1.get_go_names()), " goterms"
-
-    print "Reading second file"
-    reader2 = ResultFileReader(in2)
-    reader2.get_result_as_dict()
-    print "read ", len(reader2.get_go_names()), " goterms"
-
-    print "Combining files and writing it"
-    comb = ResultFileCombiner(in1, in2)
-    comb.combine(out1)
-
-    print "Filtering combined file"
-    filterer = ResultFileFilter(out1)
-    filterer.filter(out2, confidence=0.05)
-
-    print "Everything done!"

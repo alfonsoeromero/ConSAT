@@ -5,17 +5,18 @@ built-in `optparse.OptionParser` that lets you provide default values for
 command-line options from a given configuration file.
 """
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 __all__ = ["ConfigurableOption", "ConfigurableOptionParser"]
 
-from ConfigParser import ConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 from optparse import OptionParser, Option
-
-import sys
 
 
 class ConfigurableOption(Option):
@@ -93,8 +94,8 @@ class ConfigurableOptionParser(OptionParser):
         self.config = None
 
         self.add_option("-c", "--config-file", dest="config_file",
-                help="name of the configuration FILE", metavar="FILE",
-                default=None)
+                        help="name of the configuration FILE", metavar="FILE",
+                        default=None)
 
     def parse_args(self, *args, **kwds):
         """Parses the command line and returns a tuple ``(options, args)``,
@@ -120,10 +121,9 @@ class ConfigurableOptionParser(OptionParser):
                 continue
 
             if config.has_option(section, item):
-                option.process(option.config_key, config.get(section, item), \
-                        options, self)
+                option.process(option.config_key, config.get(section, item),
+                               options, self)
 
         self.config = config
 
         return options, args
-

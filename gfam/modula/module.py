@@ -8,8 +8,11 @@ from gfam.modula.storage import NotFoundError
 import inspect
 import os
 import sys
+try:
+    from configparser import NoSectionError
+except ImportError:
+    from ConfigParser import NoSectionError
 
-from ConfigParser import NoSectionError
 
 class Module(object):
     """This class represents a Modula module (calculation, local file etc)"""
@@ -46,7 +49,7 @@ class LocalFile(Module):
 
     def get_handle(self, mode="rb"):
         """Returns a handle to this file with the given mode"""
-        return file(self.filename, mode)
+        return open(self.filename, mode)
 
 
 class CalculationModule(Module):
@@ -71,7 +74,7 @@ class CalculationModule(Module):
             return
         if inspect.ismodule(self.module):
             key = None
-            for key, mod in sys.modules.iteritems():
+            for key, mod in sys.modules.items():
                 if mod == self.module:
                     del sys.modules[key]
                     break
@@ -80,7 +83,7 @@ class CalculationModule(Module):
         """Returns the names of the modules this module depends on"""
         try:
             depends = self.config.get("%s.depends" % self.name)
-        except:
+        except KeyError:
             depends = ""
         depends = [str(x).strip() for x in depends.split(",") if x]
         return depends
@@ -89,8 +92,8 @@ class CalculationModule(Module):
         """Returns when the module result file was last updated for the
         current parameter set"""
         # At this point, the Modula engine should be initialized
-        from gfam.modula import storage_engine as storage
-        
+        from gfam.modula import STORAGE_ENGINE as storage
+
         try:
             return storage.get_result_modification_time(self)
         except NotFoundError:
@@ -151,7 +154,7 @@ class DefaultModuleManager(ModuleManager):
 
     def __init__(self, config, module_factory=CalculationModule):
         """Initializes the module manager from the given configuration.
-        
+
         `config` is the `Configuration` object to be used.
         `module_factory` is a factory method that creates `Module`
         instances. This will be used by `DefaultModuleManager.get`."""
@@ -168,12 +171,13 @@ class DefaultModuleManager(ModuleManager):
         elif self.config["@inputs.%s" % module_name]:
             result = LocalFile(module_name, self.config)
         else:
-            raise KeyError, module_name
+            raise KeyError(module_name)
         return result
 
     def has_module(self, module_name):
         """Checks if a given module exists"""
-        if os.path.exists(os.path.join(self.module_dir, "%s.py" % module_name)):
+        if os.path.exists(os.path.join(self.module_dir,
+                                       "%s.py" % module_name)):
             return True
         return False
 
@@ -185,4 +189,3 @@ class DefaultModuleManager(ModuleManager):
             if fnmatch.fnmatch(f, '*.py'):
                 result.append(f[0:-3])
         return result
-

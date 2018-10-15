@@ -3,8 +3,13 @@ Configuration file reader for modula
 """
 
 import os
+try:
+    from configparser import NoOptionError
+    from configparser import SafeConfigParser as Parser
+except ImportError:
+    from ConfigParser import NoOptionError
+    from ConfigParser import SafeConfigParser as Parser
 
-from ConfigParser import SafeConfigParser as Parser
 
 class Configuration(object):
     """Class storing configuration details for Modula"""
@@ -25,7 +30,7 @@ class Configuration(object):
             self.cfg.read(cfgfiles)
 
         # Add defaults
-        for k, v in defaults.iteritems():
+        for k, v in defaults.items():
             if k not in self:
                 self[k] = v
 
@@ -37,7 +42,6 @@ class Configuration(object):
         for k, v in self.items("@inputs"):
             self["@inputs.%s" % k] = os.path.abspath(os.path.expanduser(v))
 
-
     def _parse_name(self, name):
         if "." in name:
             section, option = name.split(".", 1)
@@ -45,12 +49,24 @@ class Configuration(object):
             section = "@global"
             option = name
         return section, option
-    def sections(self): return self.cfg.sections()
-    def get(self, name): return self.cfg.get(*self._parse_name(name))
-    def getInt(self, name): return self.cfg.getint(*self._parse_name(name))
-    def getFloat(self, name): return self.cfg.getfloat(*self._parse_name(name))
-    def getBoolean(self, name): return self.cfg.getboolean(*self._parse_name(name))
-    def items(self, section): return self.cfg.items(section)
+
+    def sections(self):
+        return self.cfg.sections()
+
+    def get(self, name):
+        return self.cfg.get(*self._parse_name(name))
+
+    def getInt(self, name):
+        return self.cfg.getint(*self._parse_name(name))
+
+    def getFloat(self, name):
+        return self.cfg.getfloat(*self._parse_name(name))
+
+    def getBoolean(self, name):
+        return self.cfg.getboolean(*self._parse_name(name))
+
+    def items(self, section):
+        return self.cfg.items(section)
 
     def __contains__(self, name):
         return self.cfg.has_option(*self._parse_name(name))
@@ -58,7 +74,7 @@ class Configuration(object):
     def __getitem__(self, name):
         try:
             return self.cfg.get(*self._parse_name(name))
-        except:
+        except KeyError:
             raise KeyError(name)
 
     def __setitem__(self, name, value):
@@ -71,6 +87,7 @@ class Configuration(object):
         section, option = self._parse_name(name)
         try:
             ok = self.cfg.remove_option(section, option)
-            if not ok: raise NoOptionError
-        except:
-            raise KeyError, name
+            if not ok:
+                raise NoOptionError()
+        except NoOptionError:
+            raise KeyError(name)

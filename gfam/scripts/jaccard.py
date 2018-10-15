@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
-
 from collections import defaultdict
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class JaccardSimilarityApp(CommandLineApp):
     """\
@@ -35,17 +36,21 @@ class JaccardSimilarityApp(CommandLineApp):
     def create_parser(self):
         parser = super(JaccardSimilarityApp, self).create_parser()
         parser.add_option("-n", "--no-loops", dest="add_loops",
-                action="store_false", default=True,
-                config_key="analysis:jaccard/assume_loops",
-                help="don't assume that a protein is connected to itself")
+                          action="store_false",
+                          default=True,
+                          config_key="analysis:jaccard/assume_loops",
+                          help="don't assume that a protein "
+                               "is connected to itself")
         parser.add_option("-l", "--only-linked", dest="only_linked",
-                action="store_true", default=False,
-                config_key="analysis:jaccard/only_linked",
-                help="report only those pairs that are linked in the input file")
+                          action="store_true", default=False,
+                          config_key="analysis:jaccard/only_linked",
+                          help="report only those pairs that are linked "
+                               "in the input file")
         parser.add_option("-m", "--min-similarity", dest="min_similarity",
-                default=0, type=float, metavar="VALUE",
-                config_key="analysis:jaccard/min_similarity",
-                help="report only pairs with similarity not less than VALUE")
+                          default=0, type=float, metavar="VALUE",
+                          config_key="analysis:jaccard/min_similarity",
+                          help="report only pairs with similarity not"
+                               " less than VALUE")
         return parser
 
     def run_real(self):
@@ -55,7 +60,7 @@ class JaccardSimilarityApp(CommandLineApp):
 
     def process_file(self, filename):
         """Processes the input file with the given filename"""
-        self.log.info("Processing %s..." % filename)
+        self.log.info("Processing %s...", filename)
         infile = open_anything(filename)
         neis = defaultdict(set)
         for line_no, line in enumerate(infile):
@@ -68,11 +73,11 @@ class JaccardSimilarityApp(CommandLineApp):
             neis[parts[1]].add(parts[0])
 
         if self.options.add_loops:
-            for k, v in neis.iteritems():
-                v.add(k)
+            for k, vals in neis.items():
+                vals.add(k)
 
         all_ids = sorted(neis.keys())
-        lens = dict((id, len(neis1)) for id, neis1 in enumerate(neis))
+        # lens = dict((id, len(neis1)) for id, neis1 in enumerate(neis))
         for id1 in all_ids:
             neis1 = neis[id1]
             len1 = float(len(neis1))
@@ -88,7 +93,7 @@ class JaccardSimilarityApp(CommandLineApp):
                 sim = isect / (len1+len(neis2)-isect)
                 if sim < self.options.min_similarity:
                     continue
-                print "%s\t%s\t%.8f" % (id1, id2, sim)
+                print("%s\t%s\t%.8f" % (id1, id2, sim))
 
 
 if __name__ == "__main__":

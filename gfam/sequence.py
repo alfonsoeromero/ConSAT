@@ -5,9 +5,10 @@ class. `Sequence` instances are just strings for the time being, while a
 .. _BioPython: http://www.biopython.org
 """
 
+
 class Sequence(str):
     """String representing a sequence.
-    
+
     This class tries to be compatible with `BioPython`_'s `Sequence`
     class; however, there is no guarantee that it will always stay
     so.
@@ -17,12 +18,13 @@ class Sequence(str):
     """
     pass
 
+
 class SeqRecord(object):
     """A sequence with its associated metadata.
 
     This class is very close to `BioPython`_'s `SeqRecord` class;
     however, there is no guarantee about API compatibility.
-    
+
     The class has the following fields:
 
     - ``seq``: the sequence itself, an instance of `Sequence`.
@@ -37,8 +39,8 @@ class SeqRecord(object):
 
     __slots__ = ("seq", "id", "name", "description")
 
-    def __init__(self, seq, id="<unknown id>", name="<unknown name>", \
-            description="<no description>"):
+    def __init__(self, seq, id="<unknown id>", name="<unknown name>",
+                 description="<no description>"):
         self.seq = seq
         self.id = id
         self.name = name

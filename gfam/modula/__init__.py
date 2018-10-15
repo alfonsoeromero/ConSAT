@@ -3,32 +3,32 @@ Modula -- a modular calculation framework for Python
 
 Especially for scientific calculations and stuff
 """
-
-from gfam.modula.configuration import Configuration
-from gfam.modula.log import init_master_logger, ColoredConsoleHandler
-from gfam.modula.module import DefaultModuleManager
-from gfam.modula.storage import DiskStorageEngine
-
+from __future__ import print_function
 from collections import deque
-
-import logging
 import optparse
 import os
 import sys
+from gfam.modula.configuration import Configuration
+from gfam.modula.log import init_master_logger
+from gfam.modula.module import DefaultModuleManager
+from gfam.modula.storage import DiskStorageEngine
 
 __version__ = "0.1"
 
-config = None
-logger = None
-module_manager = None
-storage_engine = None
+CONFIG = None
+LOGGER = None
+MODULE_MANAGER = None
+STORAGE_ENGINE = None
+if sys.version_info[0] >= 3:
+    unicode = str
 
-def init(configuration=".", \
+
+def init(configuration=".",
          module_manager_factory=DefaultModuleManager,
          storage_engine_factory=DiskStorageEngine,
          debug=False):
     """Initializes the Modula engine
-    
+
     `configuration` is either a `Configuration` instance or the name of the
     directory containing the module configuration file.
 
@@ -39,48 +39,48 @@ def init(configuration=".", \
     `debug` is ``True`` if debug messages should be printed; otherwise
     it is ``False``.
     """
-    global config, module_manager, storage_engine, logger
+    global CONFIG, MODULE_MANAGER, STORAGE_ENGINE, LOGGER
 
     if isinstance(configuration, (str, unicode)):
-        config = Configuration(rootdir=configuration)
+        CONFIG = Configuration(rootdir=configuration)
     else:
-        config = Configuration(cfg=configuration)
+        CONFIG = Configuration(cfg=configuration)
 
-    logger = init_master_logger(debug=debug)
-    module_manager = module_manager_factory(config)
-    storage_engine = storage_engine_factory(config, module_manager)
+    LOGGER = init_master_logger(debug=debug)
+    MODULE_MANAGER = module_manager_factory(CONFIG)
+    STORAGE_ENGINE = storage_engine_factory(CONFIG, MODULE_MANAGER)
 
 
 def init_project(rootdir):
     """Initializes a Modula project in a directory"""
-    import stat
 
     if not os.path.isdir(rootdir):
         os.mkdir(rootdir)
 
-    for dir in ["lib", "figures", "modules", "storage"]:
-        d = os.path.join(rootdir, dir) 
-        if not os.path.isdir(d): os.mkdir(d)
+    for directory in ["lib", "figures", "modules", "storage"]:
+        full_path = os.path.join(rootdir, directory)
+        if not os.path.isdir(full_path):
+            os.mkdir(full_path)
 
-    f = os.path.join(rootdir, "modules.cfg")
-    if not os.path.isfile(f):
-        f = file(f, "w")
-        print >>f, """[@global]
+    modules_fh = os.path.join(rootdir, "modules.cfg")
+    if not os.path.isfile(modules_fh):
+        modules_fh = open(modules_fh, "w")
+        print("""[@global]
 
 [@inputs]
 # Enter input files here in the following format:
 # id1=path
 # id2=path
 # ...
-"""
-        f.close()
+""", file=modules_fh)
+        modules_fh.close()
 
 
 def main():
     """Main entry point when Modula is run from the command line"""
     parser = optparse.OptionParser(usage="%prog [options] [command]")
     parser.add_option("-f", "--force", dest="force", action="store_true",
-            help="force the execution of the given command")
+                      help="force the execution of the given command")
 
     # Parse command line
     options, args = parser.parse_args()
@@ -101,26 +101,27 @@ def main():
 
 def run(module_name, force=False, extra_args=None):
     """Runs the given module in the Modula framework"""
-    global config, module_manager, storage_engine, logger
+    global CONFIG, MODULE_MANAGER, STORAGE_ENGINE, LOGGER
 
     # Check dependencies, run them if needed
     to_check, to_run = deque([module_name]), []
     while to_check:
         name = to_check.popleft()
 
-        module = module_manager.get(name)
+        module = MODULE_MANAGER.get(name)
         last_updated_at = module.get_last_updated_at()
         depends = module.get_dependencies()
 
         should_run = False
         for dependency in depends:
-            dep = module_manager.get(dependency)
+            dep = MODULE_MANAGER.get(dependency)
             if dep.get_last_updated_at() >= last_updated_at:
                 should_run = True
                 if dependency not in to_check:
                     to_check.append(dependency)
             else:
-                logger.debug("%s is newer than %s, not running" % (dependency, name))
+                LOGGER.debug("%s is newer than %s, not running",
+                             dependency, name)
 
         if should_run:
             to_run.append(name)
@@ -131,15 +132,14 @@ def run(module_name, force=False, extra_args=None):
         to_run = [module_name]
 
     if not to_run:
-        logger.info("Nothing to do")
+        LOGGER.info("Nothing to do")
         return
 
     # Run the modules that we collected, store the results
     for name in to_run:
-        module = module_manager.get(name)
+        module = MODULE_MANAGER.get(name)
         if name == module_name and extra_args is not None:
             module.add_extra_args(extra_args)
         result = module.run()
         if result is not None:
-            storage_engine.store(module, result)
-
+            STORAGE_ENGINE.store(module, result)

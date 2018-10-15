@@ -5,20 +5,23 @@ Simple enumeration class and metaclass.
 
 __all__ = ["Enum"]
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 
+import six
 
-def first(iter):
+
+def first(iterable):
     """Helper function that takes an iterable and returns the
     first element. No big deal, but it makes the code readable
     in some cases. It is typically useful when `iter` is a
     generator expression as you can use the indexing operator
     for ordinary lists and tuples."""
-    for item in iter:
+    for item in iterable:
         return item
     raise ValueError("iterable is empty")
+
 
 class EnumMeta(type):
     """Metaclass for enum classes.
@@ -40,9 +43,9 @@ class EnumMeta(type):
                 enum_values.update(base.__enum__)
 
         # Extend enum_values with the items directly declared here
-        for key, value in attrs.iteritems():
+        for key, value in attrs.items():
             # Skip internal methods, properties and callables
-            if key[:2] != "__" and not hasattr(value, "__call__") \
+            if key[:2] != "__" and not callable(value) \
                     and not isinstance(value, property):
                 inst = cls(key, value, override=True)
                 enum_values[key] = inst
@@ -50,7 +53,6 @@ class EnumMeta(type):
 
         # Store enum_values in the class
         cls.__enum__ = enum_values
-
 
     def __setattr__(self, name, value):
         """Raises an `AttributeError` to prevent users from messing
@@ -87,22 +89,22 @@ class EnumMeta(type):
     def from_value(self, value):
         """Constructs an instance of this enum from its value"""
         try:
-            return first(val for val in self.__enum__.itervalues() \
+            return first(val for val in self.__enum__.values()
                          if val.value == value)
         except ValueError:
             raise ValueError("no enum item with the given value: %r" % value)
 
     def has_key(self, key):
         """Returns whether this enum has the given key or not"""
-        return self.__enum__.has_key(key)
+        return key in self.__enum__
 
     def iteritems(self):
         """Returns an iterator over key-value pairs of this enum"""
-        return self.__enum__.iteritems()
+        return self.__enum__.items()
 
     def itervalues(self):
         """Returns an iterator over key-value pairs of this enum"""
-        return self.__enum__.itervalues()
+        return self.__enum__.values()
 
     def keys(self):
         """Returns the keys in this enum"""
@@ -113,7 +115,7 @@ class EnumMeta(type):
         return self.__enum__.values()
 
 
-class Enum(object):
+class Enum(six.with_metaclass(EnumMeta, object)):
     """An instance of an enumeration value and a class representing a
     whole enum.
 
@@ -147,7 +149,7 @@ class Enum(object):
 
         >>> sorted(Spam.keys())
         ['BACON', 'EGGS', 'SPAM']
-    
+
     You can also get an instance of the enum from its symbolic name or value:
 
         >>> Spam.from_name("BACON")
@@ -155,8 +157,6 @@ class Enum(object):
         >>> Spam.from_value("Spam spam spam")
         Spam.SPAM
     """
-
-    __metaclass__ = EnumMeta
     __slots__ = ("_key", "_value")
 
     def __init__(self, key, value, **kwds):

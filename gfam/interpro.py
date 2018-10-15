@@ -2,7 +2,6 @@
 
 import re
 
-from collections import defaultdict
 from gfam.assignment import Assignment
 from gfam.utils import bidict, open_anything
 
@@ -11,18 +10,18 @@ try:
 except ImportError:
     from gfam.compat import Mapping
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
-__all__ = ["AssignmentReader", "InterPro", "InterProIDMapper", \
+__all__ = ["AssignmentReader", "InterPro", "InterProIDMapper",
            "InterProNames", "InterProTree", "InterPro2GOMapping"]
 
 
 class AssignmentReader(object):
     """Iterates over assignments in an InterPro domain assignment file.
-    
+
     This reader parses the output of ``iprscan`` and yields appropriate
     `Assignment` instances for each line.
     """
@@ -72,20 +71,19 @@ class AssignmentReader(object):
         if parts[11] == 'NULL' or not parts[11]:
             parts[11] = None
 
-        assignment = Assignment( \
-                id = parts[0],
-                length = int(parts[2]),
-                source = parts[3],
-                domain = parts[4],
-                start = int(parts[6]),
-                end = int(parts[7]),
-                evalue = evalue,
-                interpro_id = parts[11],
-                comment = parts[14]
+        assignment = Assignment(
+            id=parts[0],
+            length=int(parts[2]),
+            source=parts[3],
+            domain=parts[4],
+            start=int(parts[6]),
+            end=int(parts[7]),
+            evalue=evalue,
+            interpro_id=parts[11],
+            comment=parts[14]
         )
 
         return assignment
-
 
     def __iter__(self):
         return self.assignments()
@@ -94,15 +92,15 @@ class AssignmentReader(object):
 class InterProTree(Mapping):
     """Dict-like object that tells the parent ID corresponding to every InterPro
     domain ID.
-    
+
     This class is usually not constructed directly; an instance of this class
     is a member of every instance of `InterPro`.
 
     The class behaves much like a dictionary that returns the parent ID for
     every InterPro domain ID. For unknown domain IDs, the domain ID itself is
-    returned. For sub-subfamilies, the returned value is the ID of the subfamily,
-    not the family; use `get_most_remote_ancestor` if you always need the family
-    ID no matter what.
+    returned. For sub-subfamilies, the returned value is the ID of
+    the subfamily, not the family; use `get_most_remote_ancestor`
+    if you always need the family ID no matter what.
 
     Usage example::
 
@@ -133,9 +131,9 @@ class InterProTree(Mapping):
 
     def get_most_remote_ancestor(self, item):
         """Returns the most remote ancestor of the given item.
-        
-        For family IDs, this returns the ID itself. For subfamily IDs and below,
-        this returns the corresponding family ID."""
+
+        For family IDs, this returns the ID itself. For subfamily ID
+        and below, this returns the corresponding family ID."""
         parent, child = self._data.get(item, item), item
         while parent != child:
             parent, child = self._data.get(parent, parent), parent
@@ -157,7 +155,7 @@ class InterProTree(Mapping):
 class InterProIDMapper(object):
     """Dict-like object that maps domain IDs from various data sources
     to their corresponding InterPro IDs.
-    
+
     This class is usually not constructed directly; an instance of this class
     is a member of every instance of `InterPro`.
 
@@ -235,7 +233,7 @@ class InterProNames(object):
 
     def load(self, filename):
         """Loads ID-name assignments from a simple tab-separated flat file.
-        
+
         Lines not containins any tab characters are silently ignored."""
         for line in open_anything(filename):
             parts = line.strip().split("\t", 1)
@@ -251,7 +249,7 @@ class InterProNames(object):
     @classmethod
     def FromFile(cls, filename):
         """Shortcut method that does exactly what the following snippet does::
-        
+
             >>> names = InterProNames()
             >>> names.load(filename)           #doctest: +SKIP
         """
@@ -355,4 +353,3 @@ class InterPro2GOMapping(bidict):
                 continue
             result.add_annotation(match.group(1), tree.lookup(match.group(2)))
         return result
-

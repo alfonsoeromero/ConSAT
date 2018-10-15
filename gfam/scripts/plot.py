@@ -4,23 +4,28 @@ statistics of E-value distributions, overlap sizes and domain lengths.
 """
 
 from __future__ import division
+from __future__ import print_function
 
-import matplotlib
 import os
 import sys
-
-from collections import defaultdict
-from gfam.assignment import Assignment, AssignmentOverlapChecker
-from gfam.interpro import AssignmentReader
-from gfam.scripts import CommandLineApp
-from gfam.utils import Histogram, open_anything
 from math import ceil, log10
 from textwrap import TextWrapper
+from collections import defaultdict
+import matplotlib
+from gfam.assignment import AssignmentOverlapChecker
+from gfam.interpro import AssignmentReader
+from gfam.scripts import CommandLineApp
+from gfam.utils import Histogram
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 
 def figure_name(name):
@@ -37,19 +42,18 @@ def friendly_source_name(name):
     with proper capitalization. E.g., for ``"hmmpfam"``, this function
     returns ``HMMPfam``."""
     known_names = dict(
-            blastprodom="BlastProDom",
-            fprintscan="FPrintScan",
-            gene3d="Gene3D",
-            hamap="HAMAP",
-            hmmpir="HMMPIR",
-            hmmpanther="HMMPanther",
-            hmmpfam="HMMPfam",
-            hmmsmart="HMMSmart",
-            hmmtigr="HMMTIGR",
-            patternscan="PatternScan",
-            profilescan="ProfileScan",
-            superfamily="SUPERFAMILY"
-    )
+        blastprodom="BlastProDom",
+        fprintscan="FPrintScan",
+        gene3d="Gene3D",
+        hamap="HAMAP",
+        hmmpir="HMMPIR",
+        hmmpanther="HMMPanther",
+        hmmpfam="HMMPfam",
+        hmmsmart="HMMSmart",
+        hmmtigr="HMMTIGR",
+        patternscan="PatternScan",
+        profilescan="ProfileScan",
+        superfamily="SUPERFAMILY")
     return known_names.get(name.lower(), name)
 
 
@@ -98,31 +102,33 @@ class PlotApp(CommandLineApp):
         """Creates the parser that parses the command line options"""
         parser = super(PlotApp, self).create_parser()
         parser.add_option("-a", "--assignment-file", dest="assignment_file",
-                metavar="FILE", config_key="file.input.iprscan",
-                help="read InterPro domain assignments from FILE")
+                          metavar="FILE", config_key="file.input.iprscan",
+                          help="read InterPro domain assignments from FILE")
         parser.add_option("-o", "--output", dest="output", metavar="FILE",
-                help="save the plot to the given FILE. Supported extensions: "
-                     "png, pdf, eps, txt")
+                          help="save the plot to the given FILE. "
+                               "Supported extensions: "
+                               "png, pdf, eps, txt")
         parser.add_option("--cumulative", dest="cumulative",
-                action="store_true",
-                help="plot cumulative distributions (if that makes sense "
-                     "for a given plot)")
+                          action="store_true",
+                          help="plot cumulative distributions (if "
+                               "that makes sense for a given plot)")
         parser.add_option("--relative", dest="relative", action="store_true",
-                help="plot relative frequencies instead of absolute counts "
-                     "on the Y axis (if that makes sense for a given plot)")
+                          help="plot relative frequencies instead of absolute "
+                               "counts on the Y axis (if that makes sense for "
+                               "a given plot)")
         parser.add_option("--survival", dest="survival",
-                action="store_true",
-                help="plot survival distributions (if that makes sense for "
-                     "a given plot)")
+                          action="store_true",
+                          help="plot survival distributions (if "
+                               "that makes sense for a given plot)")
         parser.add_option("-t", "--text-mode", dest="text_mode",
-                action="store_true",
-                help="assume text-only mode. Plots will be replaced by "
-                     "ASCII art histograms. This option is assumed to "
-                     "be given if the extension of the output file is "
-                     ".txt")
+                          action="store_true",
+                          help="assume text-only mode. Plots will be replaced "
+                               "by ASCII art histograms. This option is "
+                               "assumed to be given if the extension of "
+                               "the output file is .txt")
         return parser
 
-    def calculate_histograms_from_assignments(self, funcs, bin_size=1):
+    def histograms_from_assignments(self, funcs, bin_size=1):
         """Calculates some measures derived from individual assignments
         and returns a histogram for each of them. `funcs` is a dict of
         names and callables. Each callable is called for each InterPro
@@ -148,7 +154,7 @@ class PlotApp(CommandLineApp):
             lambda: Histogram(bin_size)
         ))
         for assignment in self.get_assignment_reader():
-            for name, func in funcs.iteritems():
+            for name, func in funcs.items():
                 value = func(assignment)
                 if value is None:
                     continue
@@ -165,7 +171,8 @@ class PlotApp(CommandLineApp):
             lines.append(friendly_source_name(label))
             lines.append("=" * len(label))
             lines.append("")
-            lines.append(histograms[label].to_string(show_counts=True, show_bars=False))
+            lines.append(histograms[label].to_string(show_counts=True,
+                                                     show_bars=False))
             lines.append("")
         return "\n".join(lines)
 
@@ -178,8 +185,8 @@ class PlotApp(CommandLineApp):
 
     def get_available_figures(self):
         """Returns the list of available figures"""
-        return sorted((method[5:], func) \
-                      for method, func in self.__class__.__dict__.iteritems() \
+        return sorted((method[5:], func)
+                      for method, func in self.__class__.__dict__.items()
                       if method.startswith("plot_") and callable(func))
 
     def get_barplot_from_histograms(self, histograms, xlabel=None, xlim=None):
@@ -223,8 +230,8 @@ class PlotApp(CommandLineApp):
                 if self.options.relative:
                     points = [(x, y/total) for x, y in points]
                     total = 1.0
-                # For cumulative and survival plots, check the limits of the axes and
-                # add extra bars if necessary
+                # For cumulative and survival plots, check the limits
+                # of the axes and add extra bars if necessary
                 if xlim is not None:
                     min_x, max_x = xlim
                     if self.options.survival and min_x is not None:
@@ -236,7 +243,7 @@ class PlotApp(CommandLineApp):
                         if points[0][1] > 0:
                             points.insert(0, (min_x, 0))
                         if points[-1][0] < max_x:
-                            last = points[-1][0] + histogram.bin_width
+                            # last = points[-1][0] + histogram.bin_width
                             points.append((max_x, total))
 
             # Set the label of the Y axis
@@ -246,7 +253,7 @@ class PlotApp(CommandLineApp):
                 ylabel = "Count"
 
             axes = figure.add_subplot(num_fig_rows, num_fig_cols, idx+1)
-            args = zip(*points)
+            args = list(zip(*points))
             if self.options.cumulative or self.options.survival:
                 # Use simple line plots for cumulative/survival distributions
                 args.append('r-')
@@ -278,8 +285,8 @@ class PlotApp(CommandLineApp):
                               "to be plotted")
 
         if self.options.cumulative and self.options.survival:
-            self.parser.error("--cumulative and --survival are mutually exclusive, "
-                    "please specify only one of them")
+            self.parser.error("--cumulative and --survival are mutually "
+                              "exclusive, please specify only one of them")
 
         if self.options.output:
             _, output_ext = os.path.splitext(self.options.output)
@@ -296,7 +303,7 @@ class PlotApp(CommandLineApp):
             output_ext = None
 
         available_figures = self.get_available_figures()
-        figure_names = [name for name, _ in available_figures]
+        figure_names = [name for name, __ in available_figures]
         for arg in self.args:
             try:
                 method_name = match(arg, figure_names)
@@ -312,11 +319,11 @@ class PlotApp(CommandLineApp):
             elif isinstance(figure, basestring):
                 # Did we receive a string? Print it to the output file as is.
                 if self.options.output:
-                    fp = open(self.options.output, "w")
-                    fp.write(figure)
+                    file_output = open(self.options.output, "w")
+                    file_output.write(figure)
                     if figure and figure[-1] != '\n':
-                        fp.write('\n')
-                    fp.close()
+                        file_output.write('\n')
+                    file_output.close()
                 else:
                     sys.stdout.write(figure)
             else:
@@ -329,12 +336,12 @@ class PlotApp(CommandLineApp):
 
     def plot_list(self):
         """Lists the names of the available figures"""
-        wrapper = TextWrapper(subsequent_indent = " " * 22,
-                              width = 78)
+        wrapper = TextWrapper(subsequent_indent=" " * 22,
+                              width=78)
         for method, func in self.get_available_figures():
             if method != "list":
                 wrapper.initial_indent = ("%-20s " % method).ljust(22)
-                print wrapper.fill(func.figure_name)
+                print(wrapper.fill(func.figure_name))
 
     @figure_name("Distribution of log E-values, sorted by data sources")
     def plot_evalue_distribution(self):
@@ -342,42 +349,46 @@ class PlotApp(CommandLineApp):
         of the data sources"""
 
         def trimmed_log_evalue(assignment):
+            """ Return the decimal logarithm of an
+                E-value, trimmed to -20 (i.e., that
+                is the minimum value that will be
+                returned)
+            """
             if assignment.evalue is None:
                 return None
             if assignment.evalue <= 1e-20:
                 return -20
             return log10(assignment.evalue)
 
-        histograms = self.calculate_histograms_from_assignments(
+        histograms = self.histograms_from_assignments(
             {"log_evalue": trimmed_log_evalue}
         )["log_evalue"]
 
         if self.options.text_mode:
             return self.get_ascii_art_from_histograms(histograms)
-        else:
-            return self.get_barplot_from_histograms(histograms,
-                    xlabel="log(E-value)", xlim=(-20, 5))
+        return self.get_barplot_from_histograms(histograms,
+                                                xlabel="log(E-value)",
+                                                xlim=(-20, 5))
 
     @figure_name("Distribution of domain lengths, sorted by data sources")
     def plot_length_distribution(self):
         """Plots the distribution of domain lengths from each one
         of the data sources"""
-
         max_length = 600
 
         def trimmed_length(assignment):
             length = assignment.get_assigned_length()
             return min(length, max_length-1)
 
-        histograms = self.calculate_histograms_from_assignments(
+        histograms = self.histograms_from_assignments(
             {"length": trimmed_length},
             bin_size=int(max_length / 25)
         )["length"]
         if self.options.text_mode:
             return self.get_ascii_art_from_histograms(histograms)
-        else:
-            return self.get_barplot_from_histograms(histograms,
-                    xlabel="Domain length", xlim=(0, max_length))
+        return self.get_barplot_from_histograms(histograms,
+                                                xlabel="Domain length",
+                                                xlim=(0, max_length))
 
     @figure_name("Distribution of overlap lengths, sorted by data sources")
     def plot_overlap_distribution(self):
@@ -411,10 +422,10 @@ class PlotApp(CommandLineApp):
 
         if self.options.text_mode:
             return self.get_ascii_art_from_histograms(histograms)
-        else:
-            return self.get_barplot_from_histograms(histograms,
-                    xlabel="Overlap length", xlim=(0, 100))
+        return self.get_barplot_from_histograms(histograms,
+                                                xlabel="Overlap length",
+                                                xlim=(0, 100))
+
 
 if __name__ == "__main__":
     sys.exit(PlotApp().run())
-

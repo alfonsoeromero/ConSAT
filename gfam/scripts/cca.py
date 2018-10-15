@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 """Script that runs a breadth-first search on a weighted undirected graph"""
 
+from __future__ import print_function
 import sys
 
 from collections import defaultdict, deque
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything, UniqueIdGenerator
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
@@ -58,9 +59,9 @@ class ConnectedComponentAnalysisApp(CommandLineApp):
         """Creates the command line parser for the CCA analysis application"""
         parser = super(ConnectedComponentAnalysisApp, self).create_parser()
         parser.add_option("-t", "--threshold", dest="threshold",
-                type=float, default=0, metavar="EPS",
-                config_key="analysis:cca/threshold",
-                help="ignores edges with weight less than EPS")
+                          type=float, default=0, metavar="EPS",
+                          config_key="analysis:cca/threshold",
+                          help="ignores edges with weight less than EPS")
         return parser
 
     def run_real(self):
@@ -105,7 +106,7 @@ class ConnectedComponentAnalysisApp(CommandLineApp):
         not_seen = set(range(len(idgen)))
         while not_seen:
             component = list(bfs.run(not_seen.pop()))
-            print "\t".join(names[idx] for idx in component)
+            print("\t".join(names[idx] for idx in component))
             not_seen.difference_update(component)
 
 

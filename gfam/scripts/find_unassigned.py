@@ -1,17 +1,12 @@
-#!/usr/bin/env python
 """Command line script that finds all the regions of a given set
 of sequences that are not assigned to any InterPro domain in a
-given InterPro domain assignment file
-"""
+given InterPro domain assignment file"""
 
-import bisect
-import optparse
+from __future__ import print_function
 import sys
 import shelve
 import os
 import tempfile
-#import anydbm
-#anydbm._defaultmod = __import__('dumbdbm')  # we need this for oldish pythons
 
 from collections import defaultdict
 from gfam import fasta
@@ -20,10 +15,11 @@ from gfam.scripts import CommandLineApp
 from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
 from gfam.utils import open_anything
 
-__authors__  = "Tamas Nepusz, Alfonso E. Romero"
-__email__   = "tamas@cs.rhul.ac.uk"
+__authors__ = "Tamas Nepusz, Alfonso E. Romero"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class FindUnassignedApp(CommandLineApp):
     """\
@@ -47,45 +43,60 @@ class FindUnassignedApp(CommandLineApp):
     def __init__(self, *args, **kwds):
         super(FindUnassignedApp, self).__init__(*args, **kwds)
         self.seqcat = {}
+        self.seq_ids_to_length = None
+        self.regions = None
+        self.low_complexity_regions = None
+        self.filename_shelve = ""
+        self.sequence_id_regexp = ""
 
     def create_parser(self):
         """Creates the command line parser used by this script"""
         parser = super(FindUnassignedApp, self).create_parser()
         parser.add_option("-l", "--min-length", dest="min_length",
-                metavar="LENGTH",
-                help="minimum sequence LENGTH needed for a sequence in order to include its fragments in the output",
-                config_key="analysis:find_unassigned/min_seq_length",
-                default=0, type=int)
-        parser.add_option("-f", "--min-fragment-length", dest="min_fragment_length",
-                metavar="LENGTH",
-                help="minimum fragment LENGTH needed in the output",
-                config_key="analysis:find_unassigned/min_fragment_length",
-                default=0, type=int)
+                          metavar="LENGTH",
+                          help="minimum sequence LENGTH needed for a sequence"
+                               " in order to include its fragments in "
+                               "the output",
+                          config_key="analysis:find_unassigned/min_seq_length",
+                          default=0, type=int)
+        parser.add_option("-f", "--min-fragment-length",
+                          dest="min_fragment_length",
+                          metavar="LENGTH",
+                          help="minimum fragment LENGTH needed in the output",
+                          config_key="analysis:find_unassigned/"
+                                     "min_fragment_length",
+                          default=0, type=int)
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
-                help="remap sequence IDs using REGEXP",
-                config_key="sequence_id_regexp",
-                dest="sequence_id_regexp")
+                          help="remap sequence IDs using REGEXP",
+                          config_key="sequence_id_regexp",
+                          dest="sequence_id_regexp")
         parser.add_option("-S", "--sequences",
-                dest="sequences_file", metavar="FILE",
-                help="FASTA file containing all the sequences of the representative gene model",
-                config_key="analysis:find_unassigned/sequences_file",
-                default=None)
+                          dest="sequences_file", metavar="FILE",
+                          help="FASTA file containing all the sequences "
+                               "of the representative gene model",
+                          config_key="analysis:find_unassigned/sequences_file",
+                          default=None)
         parser.add_option("--max-overlap", metavar="SIZE",
-                help="sets the maximum overlap size allowed between "
-                     "assignments of the same data source. Default: %default",
-                config_key="max_overlap",
-                dest="max_overlap", type=int, default=20)
+                          help="sets the maximum overlap size allowed between "
+                               "assignments of the same data source."
+                               " Default: %default",
+                          config_key="max_overlap",
+                          dest="max_overlap", type=int, default=20)
         parser.add_option("--low-complexity-regions-file", metavar="FILE",
-                help="file with low complexity regions (in segmask format) which will be not considered as unassigned",
-                config_key="analysis:find_unassigned/low_complexity_regions_file",
-                dest="low_complexity_file",default=None)
+                          help="file with low complexity regions"
+                               "(in segmask format) which will be"
+                               " not considered as unassigned",
+                          config_key="analysis:find_unassigned/"
+                                     "low_complexity_regions_file",
+                          dest="low_complexity_file", default=None)
         return parser
 
     def run_real(self):
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
 
         if self.options.min_fragment_length < 1:
-            self.log.warning("minimum fragment length is not positive, assuming 1")
+            self.log.warning("minimum fragment length is not "
+                             "positive, assuming 1")
             self.options.min_fragment_length = 1
         self.set_sequence_id_regexp(self.options.sequence_id_regexp)
         self.process_sequences_file_old(self.options.sequences_file)
@@ -113,19 +124,17 @@ class FindUnassignedApp(CommandLineApp):
             stored in a temporary database. See `process_sequences_file_old`
             for the old version.
         """
-        self.log.info("Loading sequences from %s..." % fname)
-        #self.seq_ids_to_length = {}
+        self.log.info("Loading sequences from {}...".format(fname))
         parser = fasta.Parser(open_anything(fname))
         parser = fasta.regexp_remapper(parser,
-                self.sequence_id_regexp
-        )
-        tf = tempfile.NamedTemporaryFile(delete=True)
-        self.filename_shelve = os.path.join(tempfile.gettempdir(), "shelve_file")
+                                       self.sequence_id_regexp)
+        self.filename_shelve = os.path.join(tempfile.gettempdir(),
+                                            "shelve_file")
         self.seq_ids_to_length = shelve.open(self.filename_shelve)
 
         for i, seq in enumerate(parser):
             self.seq_ids_to_length[seq.id] = len(seq.seq)
-            if i%1000000 == 0:
+            if i % 1000000 == 0:
                 self.log.info("Read {} seqs".format(i))
                 self.seq_ids_to_length.sync()
         self.log.info("...loaded")
@@ -135,24 +144,20 @@ class FindUnassignedApp(CommandLineApp):
             loaded into memory
         """
         self.log.info("Loading sequences from %s..." % fname)
-        #self.seq_ids_to_length = {}
         parser = fasta.Parser(open_anything(fname))
         parser = fasta.regexp_remapper(parser,
-                self.sequence_id_regexp
-        )
+                                       self.sequence_id_regexp)
         seqs, lens = [], []
         for i, seq in enumerate(parser):
             seqs.append(seq.id)
             lens.append(len(seq.seq))
-            if i%1000000 == 0:
+            if i % 1000000 == 0:
                 self.log.info("Read {} seqs".format(i))
         self.log.info("...loaded")
         self.seq_ids_to_length = dict(zip(seqs, lens))
-            #self.seq_ids_to_length[seq.id] = len(seq.seq)
 
     def process_infile(self, fname, interpro=None):
         self.log.info("Processing input file: %s" % fname)
-        import sys
         for assignment in AssignmentReader(fname):
             try:
                 seq = self.seqcat[assignment.id]
@@ -160,33 +165,39 @@ class FindUnassignedApp(CommandLineApp):
                 seq = SequenceWithAssignments(assignment.id, assignment.length)
                 self.seqcat[assignment.id] = seq
             if seq.length != assignment.length:
-                raise ValueError, "different lengths encountered for %s: %d and %d" % (seq.name, seq.length, assignment.length)
+                raise ValueError("different lengths encountered "
+                                 "for %s: %d and %d" % (seq.name,
+                                                        seq.length,
+                                                        assignment.length))
             if interpro is not None:
                 assignment = assignment.resolve_interpro_ids(interpro)
             seq.assign(assignment, interpro)
 
     def get_unassigned(self):
         self.regions = []
-        for seqID, seq in self.seqcat.iteritems():
+        for seq_id, seq in self.seqcat.items():
             if seq.length < self.options.min_length:
                 continue
             for start, end in seq.unassigned_regions():
                 if end-start+1 < self.options.min_fragment_length:
                     continue
-                self.regions.append((seqID, start, end))
-        maximum = max(self.options.min_length, self.options.min_fragment_length)
-        for seqID in set(self.seq_ids_to_length.keys()) - set(self.seqcat.keys()):
-            if self.seq_ids_to_length[seqID] >= maximum:
-                self.regions.append((seqID, 1, self.seq_ids_to_length[seqID]))
+                self.regions.append((seq_id, start, end))
+        maximum = max(self.options.min_length,
+                      self.options.min_fragment_length)
+        seqcat_keys = set(self.seqcat.keys())
+        for seq_id in set(self.seq_ids_to_length.keys()) - seqcat_keys:
+            if self.seq_ids_to_length[seq_id] >= maximum:
+                self.regions.append((seq_id, 1,
+                                     self.seq_ids_to_length[seq_id]))
 
     def read_low_complexity_regions(self, file_name):
         self.low_complexity_regions = defaultdict(list)
         current_prot_id = ""
 
         if self.sequence_id_regexp:
-            import re 
+            import re
             regexp = re.compile(self.sequence_id_regexp)
-        else: 
+        else:
             regexp = None
 
         for line in open_anything(file_name):
@@ -199,15 +210,17 @@ class FindUnassignedApp(CommandLineApp):
                     current_prot_id = regexp.sub(r'\g<id>', current_prot_id)
             else:
                 (left, _, right) = line.split()
-                self.low_complexity_regions[current_prot_id].append((int(left),int(right)))
-
+                left = int(left)
+                right = int(right)
+                self.low_complexity_regions[current_prot_id].append((left,
+                                                                     right))
 
     def substract_interval_from_interval(self, interval1, interval2):
-        """Substract from an interval (left, right) another interval 
-        (leftr,rightr), returning a list of resulting intervals 
+        """Substract from an interval (left, right) another interval
+        (leftr,rightr), returning a list of resulting intervals
         (which may be empty) equivalent to the set difference
         """
-        (left,   right) = interval1
+        (left, right) = interval1
         (leftr, rightr) = interval2
 
         if leftr > right or rightr < left:
@@ -222,47 +235,46 @@ class FindUnassignedApp(CommandLineApp):
             return [(left, leftr-1)]
         else:
             # case leftr > left and rightr < right
-            return [(left,leftr-1), (rightr+1, right)]
+            return [(left, leftr-1), (rightr+1, right)]
 
     def substract(self, region, list_to_substract):
-        (id, left, right) = region
+        (reg_id, left, right) = region
 
         # we obtain those regions which overlaps with our region
         # if our region is (left,right) and the set of iterated regions is
         # (leftr, rightr), the overlapping are those (leftr,rightr) where
-        # 
-        subtrahend = [(leftr, rightr) for (leftr, rightr) \
-                in list_to_substract \
-                if leftr <= right and rightr >= left]
+        subtrahend = [(leftr, rightr) for (leftr, rightr)
+                      in list_to_substract
+                      if leftr <= right and rightr >= left]
 
-        if len(subtrahend) == 0:
+        if not subtrahend:
             # no overlap, the region is returned "as is"
             return [region]
-        else :
-            minuend = [(left,right)]
-            for sub in subtrahend:
-                minuend.extend( \
-                    self.substract_interval_from_interval(minuend.pop(), sub))
-                if len(minuend) == 0:
-                    return []
-            return [(id, le, ri) for (le, ri) in minuend]
+        minuend = [(left, right)]
+        for sub in subtrahend:
+            minuend.extend(
+                self.substract_interval_from_interval(minuend.pop(), sub))
+            if not minuend:
+                return []
+        return [(reg_id, le, ri) for (le, ri) in minuend]
 
     def remove_low_complexity_regions(self):
         new_regions = []
         for region in self.regions:
-            (id, left, right) = region
-            if id not in self.low_complexity_regions:
+            reg_id = region[0]
+            if reg_id not in self.low_complexity_regions:
                 new_regions.append(region)
             else:
-                new_regions.extend(self.substract(region, self.low_complexity_regions[id])) 
-
+                lcr_ids = self.low_complexity_regions[reg_id]
+                new_regions.extend(self.substract(region, lcr_ids))
         self.regions = new_regions
 
     def print_unassigned(self):
-        maximum = max(self.options.min_length, self.options.min_fragment_length)
+        maximum = max(self.options.min_length,
+                      self.options.min_fragment_length)
         for region in self.regions:
             if region[2] - region[1] + 1 >= maximum:
-                print "%s\t%d\t%d" % region
+                print("%s\t%d\t%d" % region)
 
     def set_sequence_id_regexp(self, regexp):
         self.sequence_id_regexp = regexp

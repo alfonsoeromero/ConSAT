@@ -3,12 +3,13 @@
 Generates a reStructuredText documentation from the configuration file
 template in `gfam.scripts.master`_.
 """
-
+from __future__ import print_function
 import re
 import string
 
 from gfam.scripts.master import CONFIGURATION_FILE_TEMPLATE
 from textwrap import dedent, TextWrapper
+
 
 def main():
     regex = re.compile(r"""
@@ -36,30 +37,31 @@ def main():
             (match.group('name'), match.group('value'), comment)
         )
 
-    wrapper = TextWrapper(initial_indent     = "    ",
-                          subsequent_indent  = "    ")
+    wrapper = TextWrapper(initial_indent="    ",
+                          subsequent_indent="    ")
 
     for section in sorted(keys.keys()):
         if not keys[section]:
             continue
 
         title = "Section ``%s``" % section
-        print "%s\n%s\n" % (title, "^"*len(title))
+        print("%s\n%s\n" % (title, "^"*len(title)))
         for name, value, comment in keys[section]:
-            print "``%s``" % name
+            print("``%s``" % name)
             for para in comment.split("\n\n"):
                 if para[-1] in string.lowercase:
                     para = para+"."
-                print wrapper.fill(para)
-                print "    "
+                print(wrapper.fill(para))
+                print("    ")
             if value:
                 match = re.match(r"%\(([-a-zA-Z0-9._:]+)\)s$", value)
                 if match:
                     value = "same as ``%s``" % match.group(1)
                 else:
                     value = "``%s``" % value
-                print "    Default value: %s" % value
-                print "    "
+                print("    Default value: %s" % value)
+                print("    ")
+
 
 if __name__ == "__main__":
     main()

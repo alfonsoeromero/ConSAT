@@ -14,22 +14,22 @@ implementing functionality common for all the scripts, such as:
   signaling fatal errors to the caller
 """
 
-from gfam.config import ConfigurableOptionParser
 from textwrap import dedent
-
 import logging
+from gfam.config import ConfigurableOptionParser
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
-
 __all__ = ["CommandLineApp"]
+
 
 class CommandLineApp(object):
     """Generic command line application class that provides
     common functionality for all GFam command line scripts.
     """
+    short_name = "command_line_app"
 
     def __init__(self, logger=None):
         """Creates a command line script instance that will use
@@ -53,6 +53,7 @@ class CommandLineApp(object):
         else:
             self.log = self.create_logger()
         self.options, self.args = None, None
+        self.parser = None
 
     def create_parser(self):
         """Creates a command line parser for the application.
@@ -72,9 +73,9 @@ class CommandLineApp(object):
         doc = self.__class__.__doc__
         parser = ConfigurableOptionParser(usage=dedent(doc).strip())
         parser.add_option("-v", "--verbose", dest="verbose",
-                action="store_true", help="verbose logging")
+                          action="store_true", help="verbose logging")
         parser.add_option("-d", "--debug", dest="debug",
-                action="store_true", help="show debug messages")
+                          action="store_true", help="show debug messages")
         return parser
 
     def create_logger(self):
@@ -100,7 +101,7 @@ class CommandLineApp(object):
         child classes unless you know what you are doing. If you want to
         implement the actual logic of your application, override `run_real`
         instead.
-        
+
         `args` contains the command line arguments that should be parsed.
         If `args` is ``None``, the arguments will be obtained from
         ``sys.argv[1:]``."""
@@ -117,4 +118,3 @@ class CommandLineApp(object):
     def run_real(self):
         self.log.info("Nothing to do.")
         return 0
-
