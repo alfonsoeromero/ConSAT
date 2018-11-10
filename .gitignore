@@ -1,6 +1,7 @@
 *~
 *.pyc
 .*.swp
+.vscode
 data/*
 build/*
 dist/*
