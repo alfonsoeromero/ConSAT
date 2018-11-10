@@ -1,7 +1,7 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 import os.path
-import re
 from collections import defaultdict
 from gfam.go import Tree as GOTree
 from gfam.utils import open_anything
@@ -38,7 +38,7 @@ class Evaluation(object):
         self.go_tree = GOTree.from_obo(go_file)
         self.terms_per_ontology = defaultdict(set)
         self.ontology_per_term = {}
-        for goterm, term in self.go_tree.terms.items():
+        for _goterm, term in self.go_tree.terms.items():
             try:
                 namespace = str(term.tags["namespace"][0])
                 goterm_id = str(term.tags["id"][0])
@@ -49,7 +49,7 @@ class Evaluation(object):
                 pass
 
         for ontology, terms in self.terms_per_ontology.items():
-            print ontology, " ", len(terms)
+            print("{} {}".format(ontology, len(terms)))
 
         self.goa = self._read_goa_file(goa_file)
         self.output_dir = output_directory
@@ -72,16 +72,16 @@ class Evaluation(object):
     def _get_all_proteins(self, assoc, name):
         """Returns all protein identifiers in the result file
         """
-        l = self._read_result_file(assoc, name)
-        return [prot for prot in l]
+        identifier_list = self._read_result_file(assoc, name)
+        return [prot for prot in identifier_list]
 
-    def _get_orphan_proteins(self, assoc, name, significance):
+    def _get_orphan_proteins(self, assoc, name, significance=0.05):
         """Returns the set of protein ids without any
         annotation
         """
-        l = self._read_result_file(assoc, name)
-        return [prot for prot in l if len([p 
-            for p in l[prot] if p[1] <= significance]) == 0]
+        li = self._read_result_file(assoc, name)
+        return [prot for prot in li if len([p
+                for p in li[prot] if p[1] <= significance]) == 0]
 
     def _evaluate_orphans(self, overrep_file, transfer_file):
         orphan_file = os.path.join(self.output_dir, "01_orphans")
@@ -92,45 +92,63 @@ class Evaluation(object):
         num_prots_overrep = float(len(prots_overrep))
         prots_transfer = self._get_all_proteins(transfer_file, "transfer")
         num_prots_transfer = float(len(prots_transfer))
-        print "Analysis of orphan proteins"
-        print "============================="
-        print "Total number of proteins with some result: ", len(all_proteins)
+        print("Analysis of orphan proteins")
+        print("=============================")
+        print("Total number of proteins with some result: {}".format(
+            len(all_proteins)))
         for significance in self.significance_levels:
-            print "When selecting only assignments with p <= ", significance
-            orphans_overrep = self._get_orphan_proteins(overrep_file, "overrep", significance)
-            orphans_transfer = self._get_orphan_proteins(transfer_file, "transfer", significance)
+            print("When selecting only assignments with p <= {}".format(
+                significance))
+            orphans_overrep = self._get_orphan_proteins(overrep_file,
+                                                        "overrep",
+                                                        significance)
+            orphans_transfer = self._get_orphan_proteins(transfer_file,
+                                                         "transfer",
+                                                         significance)
             num_orphans_overrep = float(len(orphans_overrep))
             num_predicted_overrep = num_prots_overrep - num_orphans_overrep
             num_orphans_transfer = float(len(orphans_transfer))
             num_predicted_transfer = num_prots_transfer - num_orphans_transfer
-            print "Number of orphans in overrep: %d" % (num_orphans_overrep)
-            print "Number of proteins with some prediction in overrep: %d " % (num_predicted_overrep)
-            print "perc of orphans over total proteins | maximum_predicted: %2.2f  | %2.2f " % (100.0*num_orphans_overrep/num_all, 100.0*num_orphans_overrep/num_prots_overrep) 
-            print "Number of orphans in transfer: %d" % num_orphans_transfer
-            print "Number of proteins with some prediction in transfer: %d" % (num_predicted_transfer)
-            print "perc of orphans over total proteins | maximum_predicted: %2.2f  | %2.2f " % (100.0*num_orphans_transfer/num_all, 100.0*num_orphans_transfer/num_prots_transfer)
-            print "Of which %d are common" % (len(set(orphans_overrep) & set(orphans_transfer)))
+            print("Number of orphans in overrep: %d" % (num_orphans_overrep))
+            print("Number of proteins with some prediction in overrep: %d "
+                  % (num_predicted_overrep))
+            print("perc of orphans over total proteins | maximum_predicted:"
+                  " %2.2f  | %2.2f " % (100.0*num_orphans_overrep / num_all,
+                                        100.0*num_orphans_overrep /
+                                        num_prots_overrep))
+            print("Number of orphans in transfer: %d" % num_orphans_transfer)
+            print("Number of proteins with some prediction in transfer: %d" %
+                  (num_predicted_transfer))
+            print("perc of orphans over total proteins | "
+                  "maximum_predicted: %2.2f  | %2.2f " % (
+                      100.0*num_orphans_transfer/num_all,
+                      100.0*num_orphans_transfer/num_prots_transfer))
+            print("Of which %d are common" % (len(set(orphans_overrep) &
+                                                  set(orphans_transfer))))
         sys.stdout = sys.__stdout__
 
     def _evaluate_single(self, file_name, name):
         """We compare the obtained labels with those in the
-        ground truth, for those GO terms obtained and for 
+        ground truth, for those GO terms obtained and for
         each one of the ontologies
         """
-        single_file = os.path.join(self.output_dir, "02_evaluate_single_" + file_name)
+        single_file = os.path.join(self.output_dir,
+                                   "02_evaluate_single_" + file_name)
         sys.stdout = open(single_file, "w")
         result = self._read_result_file(file_name, name)
-        print "Evaluation of single file ", file_name
-        print "(note we are ignoring the p-values)"
-        print
+        print("Evaluation of single file {}".format(file_name))
+        print("(note we are ignoring the p-values)")
+        print()
 
         # we ignore the thresholds (p-values)
         TP, FP, FN = 0, 0, 0
         Nempty, Nres = 0, 0
         avprec, avrec, avf1 = 0.0, 0.0, 0.0
-        avprec_ont, avrec_ont, avf1_ont = defaultdict(int), defaultdict(int), defaultdict(int)
-        TP_ont, FP_ont, FN_ont = defaultdict(int), defaultdict(int), defaultdict(int)
-        for protein, terms_gs_ in self.goa.iteritems():
+        avprec_ont = defaultdict(int)
+        avrec_ont, avf1_ont = defaultdict(int), defaultdict(int)
+        TP_ont, FP_ont = defaultdict(int), defaultdict(int)
+        FN_ont = defaultdict(int)
+        for protein, terms_gs_ in self.goa.items():
             terms_gs = set(terms_gs_)
             # computation of global results
             if protein in result:
@@ -170,7 +188,8 @@ class Evaluation(object):
                     else:
                         rec_onto = 0.0
                     if prec_onto + rec_onto > 0.0:
-                        f1_onto = 2.0*prec_onto*rec_onto/float(prec_onto + rec_onto)
+                        f1_onto = 2.0*prec_onto*rec_onto/float(prec_onto +
+                                                               rec_onto)
                     else:
                         f1_onto = 0.0
                     avprec_ont[onto] += prec_onto
@@ -185,31 +204,44 @@ class Evaluation(object):
                 FN += len(terms_gs)
                 for onto, terms in self.terms_per_ontology.items():
                     FN_ont[onto] += len(terms_gs & terms)
-        print "Global results: "
-        print "Precision: ", float(TP)/float(TP+FP)
-        print "Recall: ", float(TP)/float(TP+FN)
-        print "F1: ", 2.0*TP/float(2.0*TP + FP + FN)
+        print("Global results: ")
+        print("Precision: {}".format(float(TP)/float(TP+FP)))
+        print("Recall: {}".format(float(TP)/float(TP+FN)))
+        print("F1: {}".format(2.0*TP/float(2.0*TP + FP + FN)))
         for ontology in self.terms_per_ontology:
-            print "Results for ontology ", ontology
-            print "Precision: ", float(TP_ont[ontology])/float(TP_ont[ontology]+FP_ont[ontology])
-            print "Recall: ", float(TP_ont[ontology])/float(TP_ont[ontology]+FN_ont[ontology])
-            print "F1: ", 2.0*TP_ont[ontology]/float(2.0*TP_ont[ontology] + FP_ont[ontology] + FN_ont[ontology])
-        print
-        print "Results per protein: "
-        print "Average precision: ", avprec/float(Nempty + Nres)
-        print "Average precision only on predicted: ", avprec/float(Nres)
-        print "Average recall: ", avrec/float(Nempty + Nres)
-        print "Average recall only on predicted: ", avrec/float(Nres)
-        print "Average F1: ", avf1/float(Nempty + Nres)
-        print "Average F1 only on predicted: ", avf1/float(Nres)
+            print("Results for ontology {}".format(ontology))
+            prec_on = float(TP_ont[ontology])/float(
+                TP_ont[ontology] + FP_ont[ontology])
+            print("Precision: {}".format(prec_on))
+            rec_on = float(TP_ont[ontology])/float(
+                TP_ont[ontology] + FN_ont[ontology])
+            print("Recall: {}".format(rec_on))
+            f1_on = 2.0*TP_ont[ontology]/float(
+                2.0*TP_ont[ontology] + FP_ont[ontology] + FN_ont[ontology])
+            print("F1: {}".format(f1_on))
+        print()
+        print("Results per protein: ")
+        print("Average precision: {}".format(avprec/float(Nempty + Nres)))
+        print("Average precision only on predicted: {}".format(
+            avprec/float(Nres)))
+        print("Average recall: {}".format(avrec/float(Nempty + Nres)))
+        print("Average recall only on predicted: {}".format(avrec/float(Nres)))
+        print("Average F1: {}".format(avf1/float(Nempty + Nres)))
+        print("Average F1 only on predicted: ", avf1/float(Nres))
         for ontology in self.terms_per_ontology:
-            print "Results for ontology ", ontology
-            print "Average precision: ", avprec_ont[ontology]/float(Nempty + Nres)
-            print "Average precision only on predicted: ", avprec_ont[ontology]/float(Nres)
-            print "Average recall: ", avrec_ont[ontology]/float(Nempty + Nres)
-            print "Average recall only on predicted: ", avrec_ont[ontology]/float(Nres)
-            print "Average F1: ", avf1_ont[ontology]/float(Nempty + Nres)
-            print "Average F1 only on predicted: ", avf1_ont[ontology]/float(Nres)
+            print("Results for ontology {}".format(ontology))
+            print("Average precision: {}".format(
+                avprec_ont[ontology]/float(Nempty + Nres)))
+            print("Average precision only on predicted: {}".format(
+                avprec_ont[ontology]/float(Nres)))
+            print("Average recall: {}".format(
+                avrec_ont[ontology]/float(Nempty + Nres)))
+            print("Average recall only on predicted: {}".format(
+                avrec_ont[ontology]/float(Nres)))
+            print("Average F1: {}".format(
+                avf1_ont[ontology]/float(Nempty + Nres)))
+            print("Average F1 only on predicted: {}".format(
+                avf1_ont[ontology]/float(Nres)))
         sys.stdout = sys.__stdout__
 
     def _join(self, name1, name2, final_name):
@@ -241,7 +273,7 @@ class Evaluation(object):
         does not exist.
         """
         if os.path.exists(self.output_dir):
-            print "ERROR: the specified output directory alread exists"
+            print("ERROR: the specified output directory alread exists")
             sys.exit(-1)
 
         os.makedirs(self.output_dir)
@@ -267,18 +299,21 @@ class Evaluation(object):
         for ontology, terms in self.terms_per_ontology.items():
             gs_terms_o = self.go_terms_gs & terms
             self.go_terms_gs_ont[ontology] = gs_terms_o
-            print "# of Terms in ", ontology, " in GOA file: ", len(gs_terms_o)
+            print("# of Terms in {} in GOA file: {}".format(
+                ontology, len(gs_terms_o)))
 
         return d
 
+
 def usage():
-    print "ERROR. The list of arguments is the following:"
-    print " gene_ontology_file goa_file output_dir list_of_proteins_file"
-    print "       association_file_1 [association_file_2]"
-    print
-    print "If two association files are given, the first is"
-    print "assumed to come from overrrepresentation analysis"
-    print "of InterPro labels, and the other one from transfer"
+    print("""ERROR. The list of arguments is the following:
+             gene_ontology_file goa_file output_dir list_of_proteins_file
+             association_file_1 [association_file_2]
+
+             If two association files are given, the first is
+             assumed to come from overrrepresentation analysis
+             of InterPro labels, and the other one from transfer""")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 6:

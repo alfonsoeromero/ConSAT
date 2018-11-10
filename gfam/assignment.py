@@ -1,9 +1,14 @@
 """Classes corresponding to domain assignments (`Assignment`) and
 sequences with corresponding domain assignments (`SequenceWithAssignments`).
 """
+from collections import defaultdict
+from collections import namedtuple
+from itertools import combinations
+import operator
+from gfam.enum import Enum
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
@@ -11,26 +16,24 @@ __all__ = ["Assignment", "AssignmentOverlapChecker", "OverlapType",
            "SequenceWithAssignments", "EValueFilter", "TreeRepresentation"]
 
 try:
-    from collections import namedtuple
-except ImportError:
-    # For Python 2.5 and older
-    from gfam.compat import namedtuple
+    basestring
+except NameError:
+    basestring = str
 
-from gfam.enum import Enum
-from collections import defaultdict
-from itertools import combinations
-import operator
 
 # pylint: disable-msg=C0103,E1101
 # C0103: invalid name
 # E1101: instance has no 'foo' member. Pylint does not know namedtuple
 # trickery.
-class Assignment(namedtuple("Assignment", \
-    "id length start end source domain evalue interpro_id comment")):
+
+
+class Assignment(namedtuple("Assignment",
+                            "id length start end source " +
+                            "domain evalue interpro_id comment")):
     """Class representing a record in an InterPro ``iprscan`` output.
-    
+
     An InterPro domain assignment has the following fields:
-        
+
     - ``id``: the ID of the sequence
     - ``length``: the length of the sequence
     - ``start``: the starting position of the region in the sequence
@@ -58,7 +61,7 @@ class Assignment(namedtuple("Assignment", \
         that the domain is equal to the highest common ancestor of the
         InterPro ID in the InterPro tree. If the assignment does not have
         an InterPro ID yet, this method tries to look it up.
-        
+
         Returns a new tuple which might or might not be equal to this one.
         """
         if self.interpro_id:
@@ -86,6 +89,7 @@ class OverlapType(Enum):
     DIFFERENT = "DIFFERENT"
     OVERLAP = "OVERLAP"
 
+
 class TreeRepresentation(object):
     """A class for printing a nice tree-representation of the domains
     composing the architecture of a protein. "tree" is a list where
@@ -107,31 +111,23 @@ class TreeRepresentation(object):
         """
         self.parents = defaultdict(list)
         for ass1, ass2 in combinations(assignments, 2):
-            overlap = AssignmentOverlapChecker.check_single(ass1, ass2, interpro)
+            overlap = AssignmentOverlapChecker.check_single(ass1, ass2,
+                                                            interpro)
             if overlap == OverlapType.INSERTION:
                 if ass1.get_assigned_length() >= ass2.get_assigned_length():
                     self.parents[ass2].append(ass1)
                 else:
                     self.parents[ass1].append(ass2)
-            #else: # OUT
-            #    AssignmentOverlapChecker.log.info("{} and {}, {}".format(ass1.short_repr(), ass2.short_repr(), overlap))
-            # OUT
-
-        # OUT
-        #for ass, parents in self.parents.items():
-        #    AssignmentOverlapChecker.log.info("Parents of {}: {}".format(ass.short_repr(), ", ".join([x.short_repr() for x in parents])))
-        #raw_input()
-        # OUT
 
     def __get_tree_representation(self):
-        l = []
+        li = []
         s = sorted(self.assignments, key=operator.attrgetter("start"))
         for ass in sorted(s, key=operator.attrgetter("length"), reverse=True):
             if ass not in self.parents:
-                l.append((ass,[]))
+                li.append((ass, []))
             else:
                 # a recursively insertion, one level per parent
-                current = l
+                current = li
                 explored = set()
                 level = 0
                 pars = self.parents[ass]
@@ -139,47 +135,47 @@ class TreeRepresentation(object):
                 while level < len(pars):
                     for parent in pars:
                         cur = [domain for domain, _ in current]
-                        if not parent in explored and parent in cur:
+                        if parent not in explored and parent in cur:
                             _, current = current[cur.index(parent)]
                             explored.add(parent)
                             break
                     level += 1
                 current.append((ass, []))
-        return l
+        return li
 
-    def get_string_positions(self, l=None):
+    def get_string_positions(self, li=None):
         """Gets the tree representation as one string listing the positions
         and the models
         """
         if not self.assignments:
             return "NO_ASSIGNMENT"
-        if l == None:
-            l = self.tree
-        if len(l) == 1:
-            assignment, children = l[0]
+        if li is None:
+            li = self.tree
+        if len(li) == 1:
+            assignment, children = li[0]
             rep = assignment.short_repr()
-            if len(children) != 0:
+            if children:
                 rep += "{" + self.get_string_positions(children) + "}"
             return rep
         else:
-            return ";".join([self.get_string_positions([ass]) for ass in l])
+            return ";".join([self.get_string_positions([ass]) for ass in li])
 
-    def get_string(self, l=None):
+    def get_string(self, li=None):
         """Gets the tree representation as one string where only the models
         are listed
         """
         if not self.assignments:
             return "NO_ASSIGNMENT"
-        if l == None:
-            l = self.tree
-        if len(l) == 1:
-            assignment, children = l[0]
+        if li is None:
+            li = self.tree
+        if len(li) == 1:
+            assignment, children = li[0]
             rep = assignment.domain
-            if len(children) != 0:
+            if children:
                 rep += "{" + self.get_string(children) + "}"
             return rep
         else:
-            return ";".join([self.get_string([ass]) for ass in l])
+            return ";".join([self.get_string([ass]) for ass in li])
 
 
 class AssignmentOverlapChecker(object):
@@ -194,10 +190,10 @@ class AssignmentOverlapChecker(object):
     max_overlap = 20
 
     #: This is the minimum number of residues that a domain with the same
-    #: InterPro id can leave uncovered in the parent until it starts. 
+    #: InterPro id can leave uncovered in the parent until it starts.
     #: Otherwise it is discarded and considered as the same domain. Therefore,
     #: if two domains with the same InterPro are inserted and the beginning of
-    #: both has a difference between 0 and 20 residues, the insertion is 
+    #: both has a difference between 0 and 20 residues, the insertion is
     #: labeled as a synonym insertion
     min_parent_inserted_size = 20
 
@@ -208,15 +204,14 @@ class AssignmentOverlapChecker(object):
     #: If so, this overlap type is returned. If not, we pass on to the next
     #: `OverlapType`, until all the types have been tested. This is done to
     #: avoid unwanted behaviour. For instance, an assignment C might be found
-    #: as an insertion in a large assignment A, which also contains an 
+    #: as an insertion in a large assignment A, which also contains an
     #: assignment B already inserted, overlapping with C. If we checked only
     #: if there were an insertion, A would be accepted, as no further checks
     #: are done.
-    priority = [OverlapType.OVERLAP,  
+    priority = [OverlapType.OVERLAP,
                 OverlapType.DIFFERENT, OverlapType.SYNONYM_INSERTION,
                 OverlapType.INSERTION_DIFFERENT,
                 OverlapType.INSERTION, OverlapType.NO_OVERLAP]
-
 
     @classmethod
     def check(cls, sequence, assignment, interpro):
@@ -229,8 +224,9 @@ class AssignmentOverlapChecker(object):
         The most strict type of overlap (following the order defined
         in "priority" is returned)
         """
-        overlaps_found = set(cls.check_single(assignment, other_assignment, interpro)\
-                    for other_assignment in sequence.assignments)
+        overlaps_found = set(cls.check_single(assignment, other_assignment,
+                                              interpro)
+                             for other_assignment in sequence.assignments)
         for overlap_type in cls.priority:
             if overlap_type in overlaps_found:
                 return overlap_type
@@ -241,7 +237,8 @@ class AssignmentOverlapChecker(object):
         if ipr1 == ipr2:
             return True
         else:
-            return interpro.tree.get_most_remote_ancestor(ipr1) == interpro.tree.get_most_remote_ancestor(ipr2)
+            return interpro.tree.get_most_remote_ancestor(ipr1) ==\
+                   interpro.tree.get_most_remote_ancestor(ipr2)
 
     @classmethod
     def check_single(cls, assignment, other_assignment, interpro=None):
@@ -253,10 +250,10 @@ class AssignmentOverlapChecker(object):
 
         - `OverlapType.SYNONYM_INSERTION`: `assignment` is inserted into
           `other_assignment` or vice versa, but they share the same InterPro
-           term, and very few amino acids in the parent (less than 
-           `min_parent_inserted_size`) are covered in the starting fragment. 
-           Therefore we might think it is not a real insertion, but two 
-           expressions of the same domain (belonging for example to two 
+           term, and very few amino acids in the parent (less than
+           `min_parent_inserted_size`) are covered in the starting fragment.
+           Therefore we might think it is not a real insertion, but two
+           expressions of the same domain (belonging for example to two
            different signature databases).
 
         - `OverlapType.INSERTION`: there is a complete domain insertion in
@@ -266,8 +263,8 @@ class AssignmentOverlapChecker(object):
           `other_assignment` or vice versa, but they have different data
           sources.
 
-        - `OverlapType.DIFFERENT`: `other_assignment` overlaps with `assignment`
-          partially, but they have different data sources
+        - `OverlapType.DIFFERENT`: `other_assignment` overlaps with
+        `assignment` partially, but they have different data sources
 
         - `OverlapType.OVERLAP`: `other_assignment` overlaps with `assignment`
           partially, they have the same data source, but the size of
@@ -275,36 +272,38 @@ class AssignmentOverlapChecker(object):
           in `AssignmentOverlapChecker.max_overlap`.
         """
         start, end = assignment.start, assignment.end
-        other_start, other_end = other_assignment.start, other_assignment.end   
-        # OUT
-        #try:
-        #    AssignmentOverlapChecker.log.info("{}, {}, {}, {}".format(start, end, other_start, other_end))
-        #except:
-        #    pass
-        # OUT
+        other_start, other_end = other_assignment.start, other_assignment.end
 
-        if ((other_start <= start and other_end >= end) or (other_start >= start and other_end <= end)):
-            # Domains are one inside the other: could be INSERTION, INSERTION_DIFFERENT, 
+        if ((other_start <= start and other_end >= end)
+           or (other_start >= start and other_end <= end)):
+            # Domains are one inside the other: could be INSERTION,
+            # INSERTION_DIFFERENT,
             # SYNONYM_INSERTION or OVERLAP
-            similar_IPRs = (cls.similar(assignment.interpro_id, other_assignment.interpro_id, interpro) or
-                           assignment.domain == other_assignment.domain)
+            similar_IPRs = (cls.similar(assignment.interpro_id,
+                                        other_assignment.interpro_id,
+                                        interpro) or
+                            assignment.domain == other_assignment.domain)
 
-            if abs(other_start-start) + abs(other_end-end) < cls.min_parent_inserted_size:
-                if similar_IPRs and (abs(other_start - start) < cls.min_parent_inserted_size):
+            if abs(other_start-start) + abs(other_end-end)\
+               < cls.min_parent_inserted_size:
+                if similar_IPRs and\
+                   (abs(other_start - start) < cls.min_parent_inserted_size):
                     return OverlapType.SYNONYM_INSERTION
                 else:
                     return OverlapType.OVERLAP
             elif other_assignment.source == assignment.source:
                 # This is a valid domain insertion, other_assignment is
                 # inserted into assignment
-                if not similar_IPRs or (abs(other_start - start) >= cls.min_parent_inserted_size):
+                if not similar_IPRs or\
+                   (abs(other_start - start) >= cls.min_parent_inserted_size):
                     return OverlapType.INSERTION
                 else:
                     return OverlapType.OVERLAP
             else:
                 return OverlapType.INSERTION_DIFFERENT
 
-        if (other_start <= start and start <= other_end <= end) or (start <= other_start and other_start <= end <= other_end):
+        if (other_start <= start and start <= other_end <= end) or\
+           (start <= other_start and other_start <= end <= other_end):
             # Domains could overlap (either A B A' B' or B A B' A')
             if other_assignment.source == assignment.source:
                 # This is a partial overlap
@@ -387,12 +386,12 @@ class SequenceWithAssignments(object):
         `domain_name` is the name of the domain, `source` is the assignment
         source (``Novel`` by default).
         """
-        assignment = Assignment(id=self.name, start=start, end=end, \
-                interpro_id=None, source=source, domain=domain, \
-                evalue=None, length=self.length, comment=None)
+        assignment = Assignment(id=self.name, start=start, end=end,
+                                interpro_id=None, source=source, domain=domain,
+                                evalue=None, length=self.length, comment=None)
         return self.assign(assignment, *args, **kwds)
 
-    def assign(self, assignment, overlap_check=True, tree=None, interpro=None):
+    def assign(self, assignment, overlap_check=True, interpro=None):
         """Assigns a fragment of this sequence using the given assignment.
         If `overlap_check` is ``False``, we will not check for overlaps or
         conflicts with existing assignments.
@@ -407,7 +406,8 @@ class SequenceWithAssignments(object):
             assignment = assignment._replace(domain=new_domain)
 
         if overlap_check:
-            overlap_state = self.overlap_checker.check(self, assignment, interpro)
+            overlap_state = self.overlap_checker.check(self, assignment,
+                                                       interpro)
             if overlap_state not in self.acceptable_overlaps:
                 return False
         self.assignments.append(assignment)
@@ -418,8 +418,8 @@ class SequenceWithAssignments(object):
         sequence.
 
         `sources` specifies the data sources to be included in the coverage
-        calculation. If `None`, all the data sources will be considered; otherwise
-        it must be a set containing the accepted sources.
+        calculation. If `None`, all the data sources will be considered;
+        otherwise it must be a set containing the accepted sources.
         """
         ok = [0] * self.length
         if sources is None:
@@ -436,26 +436,28 @@ class SequenceWithAssignments(object):
     def coverage(self, sources=None):
         """Returns the coverage of the sequence, i.e. the fraction of residues
         covered by at least one assignment.
-        
+
         `sources` specifies the data sources to be included in the coverage
-        calculation. If `None`, all the data sources will be considered; otherwise
-        it must be a set containing the accepted sources."""
+        calculation. If `None`, all the data sources will be considered;
+        otherwise it must be a set containing the accepted sources."""
         return self.num_covered(sources) / float(self.length)
 
     def data_sources(self):
-        """Returns the list of data sources that were used in this assignment."""
+        """Returns the list of data sources that were used in
+        this assignment."""
         return sorted(set(a.source for a in self.assignments))
 
     def domain_architecture(self, sources=None):
         """Returns the domain architecture of the assignment.
 
-        The domain architecture is a list which contains the IDs of the assigned
-        regions (domains) in ascending order of their starting positions. If
-        `sources` is ``None``, all data sources will be considered; otherwise it
-        must be a set or iterable which specifies the data sources to be
-        included in the result.
+        The domain architecture is a list which contains the IDs of the
+        assigned regions (domains) in ascending order of their starting
+        positions. If `sources` is ``None``, all data sources will be
+        considered; otherwise it must be a set or iterable which specifies
+        the data sources to be included in the result.
         """
-        sorted_assignments = sorted(self.assignments, key=operator.attrgetter("start"))
+        sorted_assignments = sorted(self.assignments,
+                                    key=operator.attrgetter("start"))
         if sources is None:
             return [a.domain for a in sorted_assignments]
         if isinstance(sources, basestring):
@@ -470,7 +472,7 @@ class SequenceWithAssignments(object):
     def resolve_interpro_ids(self, interpro):
         """Calls `Assignment.resolve_interpro_ids` on each assignment of this
         sequence"""
-        self.assignments = [assignment.resolve_interpro_ids(interpro) \
+        self.assignments = [assignment.resolve_interpro_ids(interpro)
                             for assignment in self.assignments]
 
     def unassigned_regions(self):
@@ -510,26 +512,27 @@ class EValueFilter(object):
 
     def is_acceptable(self, assignment):
         """Checks whether the given assignment is acceptable.
-        
+
         This method looks up the E-value threshold corresponding to the
         ``source`` of the assignment and returns ``True`` if the E-value
         of the assignment is less than the threshold, ``False``
         otherwise."""
-        threshold = self.thresholds.get(assignment.source, self.default_e_value)
+        threshold = self.thresholds.get(assignment.source,
+                                        self.default_e_value)
         return assignment.evalue <= threshold
 
     @classmethod
     def FromString(cls, description):
         """Constructs an E-value filter from a string description that
         can be used in command line arguments and configuration files.
-        
+
         The string description is a semicolon-separated list of
         source-threshold pairs. For instance, the following is a valid
         description giving an E-value of 0.001 for HMMPfam sources,
         0.005 for HMMSmart sources and 0.007 for everything else::
 
             HMMPfam=0.001;HMMSmart=0.005;0.007
-        
+
         The last entry denotes the default E-value; in particular, if a
         number is not preceded by a source name, it is assumed to be a
         default E-value. If no default E-value is given, infinity will
@@ -545,4 +548,3 @@ class EValueFilter(object):
             else:
                 result.default_e_value = float(part)
         return result
-

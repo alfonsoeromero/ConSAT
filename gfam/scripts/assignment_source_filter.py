@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import re
 import sys
 
 from collections import defaultdict
-from gfam.assignment import Assignment, AssignmentOverlapChecker, EValueFilter, SequenceWithAssignments
+from gfam.assignment import AssignmentOverlapChecker, EValueFilter
+from gfam.assignment import SequenceWithAssignments
 from gfam.interpro import AssignmentReader, InterPro
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, open_anything
@@ -33,11 +35,12 @@ class AssignmentSourceFilterApp(CommandLineApp):
            and use it as a primary assignment. In this step, HMMPanther and
            Gene3D domains are excluded.
 
-        2. Loop over the unused domains and try to augment the primary assignment
-           with them. Domain insertions and overlaps are allowed only if both
-           domains (the one being inserted and the one which is already there in
-           the assignment) have the same data source. In this step, HMMPanther
-           and Gene3D domains are still excluded.
+        2. Loop over the unused domains and try to augment the primary
+           assignment with them. Domain insertions and overlaps are allowed
+           only if both
+           domains (the one being inserted and the one which is already
+           there in the assignment) have the same data source.
+           In this step, HMMPanther and Gene3D domains are still excluded.
 
         3. Try step 2 again with HMMPanther and Gene3D domains.
     """
@@ -50,18 +53,21 @@ class AssignmentSourceFilterApp(CommandLineApp):
         parser.add_option("-x", "--exclude", dest="ignored",
                           metavar="SOURCE",
                           help="add SOURCE to the list of ignored sources",
-                          config_key="analysis:iprscan_filter/untrusted_sources",
+                          config_key="analysis:iprscan_filter/" +
+                                     "untrusted_sources",
                           action="append", default=[])
         parser.add_option("-e", "--e-value", dest="max_e",
                           metavar="THRESHOLD",
                           help="E-value THRESHOLD to filter assignments",
-                          config_key="analysis:iprscan_filter/e_value_thresholds",
+                          config_key="analysis:iprscan_filter/" +
+                                     "e_value_thresholds",
                           default="inf")
         parser.add_option("-i", "--interpro-file", dest="interpro_file",
                           metavar="FILE",
                           help="use the InterPro parent-child "
                                " FILE to remap IDs",
-                          config_key="analysis:iprscan_filter/interpro_parent_child_mapping",
+                          config_key="analysis:iprscan_filter/" +
+                                     "interpro_parent_child_mapping",
                           default=None)
         parser.add_option("-g", "--gene-ids", dest="gene_id_file",
                           metavar="FILE", help="only consider those IDs which "
@@ -125,7 +131,6 @@ class AssignmentSourceFilterApp(CommandLineApp):
         self.log.info("Processing %s..." % fname)
 
         current_id, assignments_by_source = None, defaultdict(list)
-        valid_ids = self.valid_sequence_ids
         evalue_filter = EValueFilter.FromString(self.options.max_e)
 
         reader = AssignmentReader(fname)
@@ -162,13 +167,14 @@ class AssignmentSourceFilterApp(CommandLineApp):
         # inconsistent and the sequence will be skipped).
         source = assignments_by_source.keys()[0]
         seq_length = assignments_by_source[source][0][0].length
-        for source, assignments in assignments_by_source.iteritems():
-            if any(assignment.length != seq_length \
+        for _source, assignments in assignments_by_source.items():
+            if any(assignment.length != seq_length
                    for assignment, _ in assignments):
                 self.log.warning("Sequence %s has multiple assignments with "
                                  "different sequence lengths in the "
                                  "input file, skipping" % name)
-                self.log_exclusion(name, "ambiguous sequence length in input file")
+                self.log_exclusion(name, "ambiguous sequence " +
+                                         "length in input file")
                 return []
 
         # Initially, the result is empty
@@ -190,12 +196,12 @@ class AssignmentSourceFilterApp(CommandLineApp):
         # and is allowed in stage 1
         first_stage = stages.pop(0)
         coverage = {}
-        for source, assignments in assignments_by_source.iteritems():
+        for source, assignments in assignments_by_source.items():
             # Exclude those sources that we don't consider in the first stage
             if source not in first_stage:
                 continue
 
-            # Calculate the coverage: we add all the residues covered by 
+            # Calculate the coverage: we add all the residues covered by
             # each sequence, not taking overlaps into consideration (by the
             # moment)
             seq = SequenceWithAssignments(name, seq_length)
@@ -207,9 +213,11 @@ class AssignmentSourceFilterApp(CommandLineApp):
         # the current assignment.
         seq = SequenceWithAssignments(name, seq_length)
         if coverage:
-            best_source = max(coverage.keys(), key = coverage.__getitem__)
-            sorted_assignments = sorted(assignments_by_source[best_source], key=lambda
-                    x: x[0].get_assigned_length(), reverse=True)
+            best_source = max(coverage.keys(), key=coverage.__getitem__)
+            sorted_assignments = sorted(assignments_by_source[best_source],
+                                        key=lambda x:
+                                            x[0].get_assigned_length(),
+                                        reverse=True)
             for a, line in sorted_assignments:
                 line = line.strip()
                 if seq.assign(a, True, interpro=self.interpro):
@@ -223,7 +231,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
         # Collect the unused assignments (not from the best source)
         # into unused_assignments
         unused_assignments = []
-        for source, assignments in assignments_by_source.iteritems():
+        for source, assignments in assignments_by_source.items():
             if source == best_source:
                 continue
             unused_assignments.extend(assignments)
@@ -233,7 +241,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
 
         # Try to fill the unassigned regions with the rest of the assignments
         # that were unused so far, starting from the longest assignment.
-        unused_assignments.sort(key = lambda x: -x[0].get_assigned_length())
+        unused_assignments.sort(key=lambda x: -x[0].get_assigned_length())
 
         # Okay, we're done with the first stage, process the rest.
         # idx_to_stage will contain the indices of the selected
@@ -242,7 +250,8 @@ class AssignmentSourceFilterApp(CommandLineApp):
         idx_to_stage = {}
         for stage_no, sources in enumerate(stages):
             for idx, (a, _) in enumerate(unused_assignments):
-                if a.source in sources and seq.assign(a, True, interpro=self.interpro):
+                if a.source in sources and seq.assign(a, True,
+                                                      interpro=self.interpro):
                     idx_to_stage[idx] = stage_no+2
         for idx in sorted(idx_to_stage.keys()):
             row = unused_assignments[idx][1].strip()
@@ -267,7 +276,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
             self.log_exclusion(name, "not in the list of valid gene IDs")
             return
         for row in self.filter_assignments(name, assignments_by_source):
-            print row
+            print(row)
 
     def get_stages_from_config(self):
         """Turns to the configuration file specified at startup to

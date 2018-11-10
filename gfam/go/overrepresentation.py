@@ -1,18 +1,19 @@
 """
 Overrepresentation analysis of Gene Ontology terms
 """
+from __future__ import print_function
+import sys
+from collections import Counter
+from math import exp, log
+from operator import itemgetter
+from gfam.utils import bidict
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "MIT"
 
 __all__ = ["OverrepresentationAnalyser"]
-
-from collections import defaultdict, Counter
-from gfam.utils import bidict
-from math import exp, log
-from operator import itemgetter
 
 try:
     from scipy.special import gammaln
@@ -23,8 +24,8 @@ except ImportError:
             return float('inf')
         if n < 3:
             return 0.0
-        c = [76.18009172947146, -86.50532032941677, \
-             24.01409824083091, -1.231739572450155, \
+        c = [76.18009172947146, -86.50532032941677,
+             24.01409824083091, -1.231739572450155,
              0.001208650973866179, -0.5395239384953 * 0.00001]
         x, y = float(n), float(n)
         tm = x + 5.5
@@ -35,8 +36,10 @@ except ImportError:
             se += c[j] / y
         return -tm + log(2.5066282746310005 * se / x)
 
+
 def memoize(function):
     cache = {}
+
     def decorated_function(*args):
         if args in cache:
             return cache[args]
@@ -45,6 +48,7 @@ def memoize(function):
             cache[args] = val
             return val
     return decorated_function
+
 
 def logchoose(n, k):
     """ Computes the logarithm of the binomial
@@ -55,6 +59,7 @@ def logchoose(n, k):
     else:
         return _logchoose(n, k)
 
+
 @memoize
 def _logchoose(n, k):
     """Calculates the logarithm of n-choose-k"""
@@ -63,11 +68,13 @@ def _logchoose(n, k):
     lgnk1 = gammaln(n-k+1)
     return lgn1 - (lgnk1 + lgk1)
 
+
 def hypergeom_pmf(k, M, n, N):
     """Hypergeometric probability moment function"""
     tot, good = M, n
     bad = tot - good
     return exp(logchoose(good, k) + logchoose(bad, N-k) - logchoose(tot, N))
+
 
 def hypergeom_sf(k, M, n, N):
     """Tail distribution of a hypergeometric distribution. This is
@@ -76,18 +83,20 @@ def hypergeom_sf(k, M, n, N):
     tot, good = M, n
     bad = tot - good
     den = logchoose(tot, N)
-    #result = 0.
-    #for x in xrange(k, N+1):
-    #   a = exp(logchoose(good, x) + logchoose(bad, N-x) - den)
-    #    result += a
-    result = sum([exp(logchoose(good, x) + logchoose(bad, N-x) - den) for x in xrange(k, N+1)])
+    # result = 0.
+    # for x in xrange(k, N+1):
+    #    a = exp(logchoose(good, x) + logchoose(bad, N-x) - den)
+    #     result += a
+    result = sum([exp(logchoose(good, x) + logchoose(bad, N-x) - den)
+                  for x in range(k, N+1)])
     return result
+
 
 def binomial_sf(k, M, n, N):
     """Tail distribution of a binomial distribution, used to compute
     p-value in the overrepresentation analysis test.
 
-        ``k``: frequency of the GO term on the sample 
+        ``k``: frequency of the GO term on the sample
         ``M``: number of objects in the BD
         ``n``: number of objects mapped to that GO term in the BD
         ``N``: sample size
@@ -101,9 +110,10 @@ def binomial_sf(k, M, n, N):
     p = float(n/M)
     logp = log(p)
     log1_min_p = log(1.0-p)
-    for x in xrange(k, N+1):
+    for x in range(k, N+1):
         result += exp(logchoose(N, x) + float(x)*logp + float(N-x)*log1_min_p)
     return result
+
 
 class Correction(object):
     none, off = 0, 0
@@ -111,13 +121,14 @@ class Correction(object):
     bonferroni = 2
     sidak = 3
 
+
 class OverrepresentationAnalyser(object):
     """Performs overrepresentation analysis of Gene Ontology
     terms on sets of entities that are annotated by some
     GO terms."""
 
-    def __init__(self, tree, mapping, confidence=0.05, min_count=5, \
-            correction="fdr", test="hypergeometric"):
+    def __init__(self, tree, mapping, confidence=0.05, min_count=5,
+                 correction="fdr", test="hypergeometric"):
         """Initializes the overrepresentation analysis algorithm by associating
         it to a given Gene Ontology tree and a given mapping from entities to
         their respective GO terms.
@@ -129,13 +140,13 @@ class OverrepresentationAnalyser(object):
         ancestors of that GO term for that entity, this will be taken care of
         by the class itself which always works on the copy of the given
         mapping.
-        
+
         `confidence` is the confidence level of the test.
-        
+
         `min_count` specifies which GO terms are to be excluded from the
         overrepresentation analysis; if a GO term occurs less than `min_count`
         times in `mapping`, it will not be considered.
-        
+
         `correction` specifies the multiple hypothesis testing correction to be
         used and it must be one of the following:
 
@@ -165,7 +176,7 @@ class OverrepresentationAnalyser(object):
         elif test == "binomial":
             self.test_func = binomial_sf
         else:
-            print "Test must be either 'hypergeometric' or 'binomial'"
+            print("Test must be either 'hypergeometric' or 'binomial'")
             sys.exit(-1)
 
     def _propagate_go_term_ancestors(self, mapping):
@@ -186,8 +197,8 @@ class OverrepresentationAnalyser(object):
         """
         term = self.tree.ensure_term(term_or_id)
         objs = self.mapping.right[term]
-        return self.test_func(count, self.mapping.len_left(), \
-                            len(objs), group_size)
+        return self.test_func(count, self.mapping.len_left(),
+                              len(objs), group_size)
 
     def test_counts(self, counts, group_size):
         """Given a dict that maps Gene Ontology terms to their
@@ -200,10 +211,9 @@ class OverrepresentationAnalyser(object):
 
         # Determine how many tests will be performed
         if correction:
-            num_tests = sum(1 \
-                    for term, count in counts.iteritems() \
-                    if len(self.mapping.right[term]) >= min_count
-            )
+            num_tests = sum(1
+                            for term, count in counts.items()
+                            if len(self.mapping.right[term]) >= min_count)
             if num_tests == 0:
                 return []
 
@@ -215,26 +225,21 @@ class OverrepresentationAnalyser(object):
             confidence = 1 - (1. - confidence) ** (1. / num_tests)
 
         # Do the testing
-        result = [(term, self.enrichment_p(term, count, group_size)) 
-                    for term, count in counts.iteritems() if len(self.mapping.right[term]) >= min_count]
-        #result = []
-        #for term, count in counts.iteritems():
-        #    if len(self.mapping.right[term]) < min_count:
-        #        continue
-        #    p = self.enrichment_p(term, count, group_size)
-        #    result.append((term, p))
+        result = [(term, self.enrichment_p(term, count, group_size))
+                  for term, count in counts.items()
+                  if len(self.mapping.right[term]) >= min_count]
 
         # Filter the results
         if correction == Correction.fdr:
-            result.sort(key = itemgetter(1))
+            result.sort(key=itemgetter(1))
             num_tests = float(num_tests)
-            for k in xrange(len(result)):
+            for k in range(len(result)):
                 if result[k][1] > confidence * ((k+1) / num_tests):
                     result = result[0:k]
                     break
         else:
             result = [item for item in result if item[1] <= confidence]
-            result.sort(key = itemgetter(1))
+            result.sort(key=itemgetter(1))
             if correction == Correction.bonferroni:
                 result = [(c, p * num_tests) for c, p in result]
             elif correction == Correction.sidak:
@@ -249,5 +254,6 @@ class OverrepresentationAnalyser(object):
         """
         if not group:
             return []
-        counts = Counter([go_term for item in group for go_term in self.mapping.left.get(item, [])])
+        counts = Counter([go_term for item in group
+                          for go_term in self.mapping.left.get(item, [])])
         return self.test_counts(counts, len(group))

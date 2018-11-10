@@ -15,35 +15,94 @@ Python package as well.
 """
 
 from __future__ import with_statement
+from __future__ import print_function
 
-import gfam.modula as modula
 import logging
 import os
 import shutil
 import sys
 import textwrap
-
-from ConfigParser import ConfigParser
-from cStringIO import StringIO
 from functools import wraps
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+import gfam.modula as modula
 from gfam.modula.hash import sha1
 from gfam.modula.module import CalculationModule
 from gfam.modula.storage import DiskStorageEngine, NotFoundError
-from gfam.scripts import CommandLineApp 
+from gfam.scripts import CommandLineApp
 from gfam.utils import redirected
 from gfam.result_file import ResultFileFilter, ResultFileCombiner
 
-__author__  = "Tamas Nepusz, Alfonso E. Romero"
-__email__   = "aeromero@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz, Alfonso E. Romero"
+__email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2012, Tamas Nepusz, Alfonso E. Romero"
 __license__ = "GPL"
-
 __all__ = ["ConSATMasterScript"]
+
+MODULA_CONFIG = """\
+[@global]
+[@paths]
+[@inputs]
+
+[extract_gene_ids]
+depends=file.input.sequences
+infile=file.input.sequences
+
+[assignment_source_filter]
+depends: file.input.iprscan, file.input.sequences,
+    file.mapping.interpro_parent_child, extract_gene_ids
+infile=file.input.iprscan
+switch.0=-g extract_gene_ids
+
+[find_unassigned]
+depends=assignment_source_filter, file.input.sequences
+infile=assignment_source_filter
+
+[seqslicer]
+depends=find_unassigned, file.input.sequences
+infile=find_unassigned, file.input.sequences
+
+[hmm_scan]
+depends=seqslicer, file.input.hmms
+infile=seqslicer, file.input.hmms
+
+[find_domain_arch_with_hmms]
+depends=assignment_source_filter, hmm_scan
+infile=assignment_source_filter, hmm_scan
+
+[label_assignment]
+depends=file.mapping.gene_ontology, file.mapping.interpro2go, {0}
+infile=file.mapping.gene_ontology, file.mapping.interpro2go, {0}
+
+[overrep]
+depends=file.mapping.gene_ontology, file.mapping.interpro2go, {0}
+infile=file.mapping.gene_ontology, file.mapping.interpro2go, {0}
+
+[function_arch]
+depends=find_domain_arch_with_hmms
+infile=file.mapping.gene_ontology,find_domain_arch_with_hmms,file.function.goa_file
+
+[get_text]
+depends=file.input.sequences
+switch.0=-a find_domain_arch_with_hmms
+""".format("find_domain_arch_with_hmms")
+
 
 class GFamCalculation(CalculationModule):
     """Class representing a GFam calculation step. This is a subclass of
     `modula.CalcuationModule`_ and it assumes that the name of the module
     refers to a valid Python module in `gfam.scripts`_."""
+
+    def __init__(self, *args, **kwds):
+        super(GFamCalculation, self).__init__(*args, **kwds)
+        self.modula = None
+        self.extra_args = None
 
     def add_extra_args(self, args):
         """ Adds the possibility of "hotplugging" extra arguments after
@@ -53,13 +112,13 @@ class GFamCalculation(CalculationModule):
 
     def run(self):
         """Runs the calculation"""
-        self.logger.info("Starting module %s" % self.name)
+        self.logger.info("Starting module %s", self.name)
 
         self.prepare()
 
         # Search for the CommandLineApp object in the module
         app = []
-        for value in self.module.__dict__.itervalues():
+        for value in self.module.__dict__.values():
             if isinstance(value, type) and value != CommandLineApp \
                     and issubclass(value, CommandLineApp):
                 app.append(value)
@@ -73,44 +132,44 @@ class GFamCalculation(CalculationModule):
         # add some extra args, if any
         try:
             self.extra_args
-        except:
+        except NameError:
             self.extra_args = []
         args.extend(self.extra_args)
 
-        for param, value in self.parameters.iteritems():
+        for param, value in self.parameters.items():
             if not param.startswith("switch."):
                 continue
             switch, value = value.split(" ", 1)
-            value = modula.storage_engine.get_filename(value.strip())
+            value = modula.STORAGE_ENGINE.get_filename(value.strip())
             args.extend([switch, value])
 
         if "infile" in self.parameters:
             infiles = self.parameters["infile"].split(",")
             for infile in infiles:
-                infile = modula.storage_engine.get_filename(infile.strip())
+                infile = modula.STORAGE_ENGINE.get_filename(infile.strip())
                 args.append(infile)
 
         if "stdin" in self.parameters:
-            stdin = modula.storage_engine.get_source(self.parameters["stdin"])
+            stdin = modula.STORAGE_ENGINE.get_source(self.parameters["stdin"])
         else:
             stdin = None
 
-        out_fname = modula.storage_engine.get_filename(self.name)
-        stdout = modula.storage_engine.get_result_stream(self, mode="wb")
+        out_fname = modula.STORAGE_ENGINE.get_filename(self.name)
+        stdout = modula.STORAGE_ENGINE.get_result_stream(self, mode="wb")
         try:
             with redirected(stdin=stdin, stdout=stdout):
                 retcode = app.run(args)
             stdout.close()
             if retcode:
                 raise RuntimeError("non-zero return code from child module")
-        except:
+        except RuntimeError:
             # If an error happens, remove the output file and re-raise
             # the exception
             stdout.close()
             os.unlink(out_fname)
             raise
 
-        self.logger.info("Finished module %s" % self.name)
+        self.logger.info("Finished module %s", self.name)
 
 
 class GFamDiskStorageEngine(DiskStorageEngine):
@@ -126,9 +185,8 @@ class GFamDiskStorageEngine(DiskStorageEngine):
             if hasattr(module, "filename"):
                 return module.filename
             return self._get_module_result_filename(module)
-        except Exception, ex:
+        except Exception as ex:
             raise NotFoundError(source_or_module, source_or_module, ex)
-
 
     def store(self, module, result):
         """Empty, does nothing"""
@@ -166,7 +224,7 @@ class ConSATMasterScript(CommandLineApp):
 
     short_name = "consat"
 
-    def __init__(self, *args, **kwds): 
+    def __init__(self, *args, **kwds):
         super(ConSATMasterScript, self).__init__(*args, **kwds)
         self.modula = None
         self.config = None
@@ -175,63 +233,17 @@ class ConSATMasterScript(CommandLineApp):
         """Creates the command line parser for the ConSAT master script"""
         parser = super(ConSATMasterScript, self).create_parser()
         parser.add_option("-f", "--force", dest="force", action="store_true",
-                help="force recalculation of results even when consat thinks "\
-                     "everything is up-to-date")
+                          help="force recalculation of results even "
+                               "when consat thinks everything is up-to-date")
         parser.add_option("-s", "--silent", dest="silent", action="store_true",
-                help="does not print any output to the terminal")
+                          help="does not print any output to the terminal")
         return parser
 
     def get_modula_config(self, config):
         """Based on the given `ConfigParser` instance in `config`, constructs
         another `ConfigParser` that tells Modula which tasks to execute and
         where each of the input files are to be found."""
-        modula_config_str = textwrap.dedent("""\
-        [@global]
-        [@paths]
-        [@inputs]
-
-        [extract_gene_ids]
-        depends=file.input.sequences
-        infile=file.input.sequences
-
-        [assignment_source_filter]
-        depends: file.input.iprscan, file.input.sequences,
-            file.mapping.interpro_parent_child, extract_gene_ids
-        infile=file.input.iprscan
-        switch.0=-g extract_gene_ids
-
-        [find_unassigned]
-        depends=assignment_source_filter, file.input.sequences
-        infile=assignment_source_filter
-
-        [seqslicer]
-        depends=find_unassigned, file.input.sequences
-        infile=find_unassigned, file.input.sequences
-
-        [hmm_scan]
-        depends=seqslicer, file.input.hmms
-        infile=seqslicer, file.input.hmms
-
-        [find_domain_arch_with_hmms]
-        depends=assignment_source_filter, hmm_scan 
-        infile=assignment_source_filter, hmm_scan
-
-        [label_assignment]
-        depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
-        infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
-
-        [overrep]
-        depends=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
-        infile=file.mapping.gene_ontology, file.mapping.interpro2go, find_domain_arch_with_hmms
-
-        [function_arch]
-        depends=find_domain_arch_with_hmms
-        infile=file.mapping.gene_ontology,find_domain_arch_with_hmms,file.function.goa_file
-        
-        [get_text]
-        depends=file.input.sequences
-        switch.0=-a find_domain_arch_with_hmms
-        """)
+        modula_config_str = textwrap.dedent(MODULA_CONFIG)
 
         modula_config = ConfigParser()
         modula_config.readfp(StringIO(modula_config_str))
@@ -243,14 +255,14 @@ class ConSATMasterScript(CommandLineApp):
         # all the algorithms
         config_str = StringIO()
         config.write(config_str)
-        modula_config.set("DEFAULT", "config_file_hash", \
-                sha1(config_str.getvalue()).hexdigest())
+        modula_config.set("DEFAULT", "config_file_hash",
+                          sha1(config_str.getvalue()).hexdigest())
 
         # Set up the module and storage path
-        modula_config.set("@paths", "modules", \
-            os.path.dirname(sys.modules[__name__].__file__))
-        modula_config.set("@paths", "storage", \
-            config.get("DEFAULT", "folder.work"))
+        modula_config.set("@paths", "modules",
+                          os.path.dirname(sys.modules[__name__].__file__))
+        modula_config.set("@paths", "storage",
+                          config.get("DEFAULT", "folder.work"))
 
         # Add the input files
         for name, value in config.items("generated"):
@@ -284,13 +296,13 @@ class ConSATMasterScript(CommandLineApp):
         if self.config:
             # Initialize Modula
             modula_config = self.get_modula_config(self.config)
-            modula.init(modula_config, debug = self.options.debug,
-                        storage_engine_factory = GFamDiskStorageEngine)
-            modula.module_manager.module_factory = GFamCalculation
+            modula.init(modula_config, debug=self.options.debug,
+                        storage_engine_factory=GFamDiskStorageEngine)
+            modula.MODULE_MANAGER.module_factory = GFamCalculation
             self.modula = modula
 
             # Use the logger from Modula
-            self.log = self.modula.logger
+            self.log = self.modula.LOGGER
 
         # Run the commands
         if not self.args:
@@ -299,11 +311,12 @@ class ConSATMasterScript(CommandLineApp):
             try:
                 method = getattr(self, "do_%s" % command)
             except AttributeError:
-                self.log.fatal("No such command: %s" % command)
+                self.log.fatal("No such command: %s", command)
                 return 1
             error_code = method()
             if error_code:
                 return error_code
+        return 0
 
     @needs_config
     def do_clean(self):
@@ -312,7 +325,7 @@ class ConSATMasterScript(CommandLineApp):
         outfolder = self.config.get("DEFAULT", "folder.work")
 
         # Remove the folder
-        self.log.info("Removing temporary folder: %s" % outfolder)
+        self.log.info("Removing temporary folder: %s", outfolder)
         shutil.rmtree(outfolder)
         self.log.info("Temporary folder removed successfully.")
 
@@ -326,15 +339,16 @@ class ConSATMasterScript(CommandLineApp):
                        "generating a new one." % cfgfile)
             return 1
 
-        with open(cfgfile, "w") as fp:
-            fp.write(CONFIGURATION_FILE_TEMPLATE)
+        with open(cfgfile, "w") as config_fh:
+            config_fh.write(CONFIGURATION_FILE_TEMPLATE)
 
         if not self.options.silent:
-            print "Configuration file generated successfully."
-            print
-            print "Please open the configuration file in the text editor and provide"
-            print "the correct values for the following configuration keys:"
-            print
+            print("Configuration file generated successfully.")
+            print()
+            print("Please open the configuration file in the text " +
+                  "editor and provide")
+            print("the correct values for the following configuration keys:")
+            print()
 
             # Check which config keys are empty in the config file, these have
             # to be filled
@@ -344,9 +358,10 @@ class ConSATMasterScript(CommandLineApp):
             for section in ["DEFAULT"] + config.sections():
                 for name, value in config.items(section, raw=True):
                     if not value and name not in seen_keys:
-                        print "  - %s (in section %r)" % (name, section)
+                        print("  - %s (in section %r)" % (name, section))
                         if section == "DEFAULT":
                             seen_keys.add(name)
+        return 0
 
     @needs_config
     def do_run(self):
@@ -358,20 +373,22 @@ class ConSATMasterScript(CommandLineApp):
         outfile = os.path.join(outfolder, "domain_architectures.tab")
         self.modula.run("find_domain_arch_with_hmms", force=self.options.force)
         if not os.path.exists(outfile):
-            shutil.copy(self.modula.storage_engine.get_filename("find_domain_arch_with_hmms"),
-                    outfile)
-            self.log.info("Exported domain architectures to %s." % outfile)
+            shutil.copy(
+                self.modula.STORAGE_ENGINE.get_filename(
+                    "find_domain_arch_with_hmms"), outfile)
+            self.log.info("Exported domain architectures to %s.", outfile)
 
         # Run and export the label assignment
-        outfile = os.path.join(outfolder, "assigned_labels.txt") 
+        outfile = os.path.join(outfolder, "assigned_labels.txt")
         self.modula.run("label_assignment", force=self.options.force)
         if not os.path.exists(outfile):
-            shutil.copy(self.modula.storage_engine.get_filename("label_assignment"),
-                    outfile)
-            self.log.info("Exported label assignment to %s." % outfile)
+            shutil.copy(self.modula.STORAGE_ENGINE.get_filename(
+                "label_assignment"), outfile)
+            self.log.info("Exported label assignment to %s.", outfile)
 
         # Run and export the overrepresentation analysis
-        there_is_combination = self.config.get("DEFAULT", "file.function.goa_file")
+        there_is_combination = self.config.get("DEFAULT",
+                                               "file.function.goa_file")
         overrep_detail = self.config.get("analysis:overrep", "per_protein")
         transfer_detail = self.config.get("analysis:overrep", "per_protein")
         outfile = os.path.join(outfolder, "overrepresentation_analysis.txt")
@@ -379,54 +396,80 @@ class ConSATMasterScript(CommandLineApp):
         if not there_is_combination:
             self.modula.run("overrep", force=self.options.force)
             if not os.path.exists(outfile) and overrep_detail:
-                shutil.copy(self.modula.storage_engine.get_filename("overrep"), outfile)
-                self.log.info("Exported overrepresentation analysis to %s." % outfile)
+                shutil.copy(self.modula.STORAGE_ENGINE.get_filename("overrep"),
+                            outfile)
+                self.log.info("Exported overrepresentation analysis to %s.",
+                              outfile)
         else:
-            self.modula.run("overrep", force=self.options.force, extra_args=["-i"])
+            self.modula.run("overrep", force=self.options.force,
+                            extra_args=["-i"])
             if not os.path.exists(outfile) and overrep_detail:
-                filterer = ResultFileFilter(self.modula.storage_engine.get_filename("overrep"))
+                filterer = ResultFileFilter(
+                    self.modula.STORAGE_ENGINE.get_filename("overrep"))
                 conf = float(self.config.get("analysis:overrep", "confidence"))
-                self.log.info("Obtaining filtered file from %s" % self.modula.storage_engine.get_filename("overrep"))
+                self.log.info("Obtaining filtered file from %s",
+                              self.modula.STORAGE_ENGINE.get_filename(
+                                  "overrep"))
                 filterer.filter(outfile, confidence=conf)
-                self.log.info("Exported overrepresentation analysis to %s." % outfile)
+                self.log.info("Exported overrepresentation analysis to %s.",
+                              outfile)
 
         # Run the functional prediction, if we have to
         if self.config.get("DEFAULT", "file.function.goa_file"):
             if not there_is_combination:
-                self.modula.run("function_arch", force=self.options.force)    
-                outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
+                self.modula.run("function_arch", force=self.options.force)
+                outfile = os.path.join(outfolder,
+                                       "predicted_function_by_transfer.txt")
                 if not os.path.exists(outfile) and transfer_detail:
-                    shutil.copy(self.modula.storage_engine.get_filename("function_arch"), outfile)
-                    self.log.info("Exported predicted function by transfer to %s." % outfile)
+                    shutil.copy(
+                        self.modula.STORAGE_ENGINE.get_filename(
+                            "function_arch"), outfile)
+                    self.log.info("Exported predicted function "
+                                  "by transfer to %s.", outfile)
             else:
-                self.modula.run("function_arch", force=self.options.force, extra_args=["-i"])
-                outfile = os.path.join(outfolder, "predicted_function_by_transfer.txt")
+                self.modula.run("function_arch",
+                                force=self.options.force,
+                                extra_args=["-i"])
+                outfile = os.path.join(outfolder,
+                                       "predicted_function_by_transfer.txt")
                 if not os.path.exists(outfile) and transfer_detail:
-                    filterer = ResultFileFilter(self.modula.storage_engine.get_filename("function_arch"))
-                    conf = float(self.config.get("analysis:function_arch", "max_pvalue"))
+                    filterer = ResultFileFilter(
+                        self.modula.STORAGE_ENGINE.get_filename(
+                            "function_arch"))
+                    conf = float(self.config.get("analysis:function_arch",
+                                                 "max_pvalue"))
                     filterer.filter(outfile, confidence=conf)
-                    self.log.info("Exported predicted function by transfer to %s." % outfile)
+                    self.log.info("Exported predicted function by"
+                                  " transfer to %s.", outfile)
         else:
             self.log.info("No GOA source file was found and therefore")
             self.log.info("no funtion transfer will be performed")
 
         if there_is_combination:
             # we combine the overrep and function_arch results
-            infile1 = self.modula.storage_engine.get_filename("overrep")
-            infile2 = self.modula.storage_engine.get_filename("function_arch")
+            infile1 = self.modula.STORAGE_ENGINE.get_filename("overrep")
+            infile2 = self.modula.STORAGE_ENGINE.get_filename("function_arch")
             outfile = os.path.join(outfolder, "combined_prediction.txt")
             # confidence is 0.05 (default value)
             # TODO: add this as a parameter in the configuration file
-            if not os.path.exists(outfile) and overrep_detail and transfer_detail:
+            if not os.path.exists(outfile) and overrep_detail\
+               and transfer_detail:
                 combiner = ResultFileCombiner(infile1, infile2)
                 combiner.combine(outfile)
             # if there are files by arch, we combine them
-            if self.config.get("generated", "file.overrep.arch_file") and self.config.get("generated", "file.function_arch.general_arch_file"):
-                infile_arch1 = self.config.get("generated", "file.overrep.arch_file") + "_unfiltered"
-                infile_arch2 = self.config.get("generated", "file.function_arch.general_arch_file") + "_unfiltered"
-                outfile_arch = os.path.join(outfolder, "combined_prediction_by_arch.txt")
+            if self.config.get("generated", "file.overrep.arch_file") and\
+               self.config.get("generated",
+                               "file.function_arch.general_arch_file"):
+                infile_arch1 = self.config.get(
+                    "generated", "file.overrep.arch_file") + "_unfiltered"
+                infile_arch2 = self.config.get(
+                    "generated", "file.function_arch.general_arch_file") +\
+                    "_unfiltered"
+                outfile_arch = os.path.join(outfolder,
+                                            "combined_prediction_by_arch.txt")
                 if not os.path.exists(outfile_arch):
-                    combiner_arch = ResultFileCombiner(infile_arch1, infile_arch2)
+                    combiner_arch = ResultFileCombiner(infile_arch1,
+                                                       infile_arch2)
                     combiner_arch.combine(outfile_arch)
         else:
             # the combination is a copy of the overrep file
@@ -435,24 +478,27 @@ class ConSATMasterScript(CommandLineApp):
             if overrep_detail:
                 shutil.copy(infile, outfile)
             # same for the overrep by arch, if it exists
-            infile_arch = self.config.get("generated", "file.overrep.arch_file")
-            outfile_arch = os.path.join(outfolder, "combined_prediction_by_arch.txt")
+            infile_arch = self.config.get("generated",
+                                          "file.overrep.arch_file")
+            outfile_arch = os.path.join(outfolder,
+                                        "combined_prediction_by_arch.txt")
             shutil.copy(infile_arch, outfile_arch)
 
         # Run the words prediction, if we have to
         if self.config.get("DEFAULT", "file.idmapping") and\
            self.config.get("DEFAULT", "file.rdffile"):
-           self.modula.run("get_text", force=self.options.force)
-           self.log.info("Text weighting done!")
-           outfile = os.path.join(outfolder, "weight_file_per_arch")
-           if not os.path.exists(outfile):
-               shutil.copy(self.modula.storage_engine.get_filename("get_text"), outfile)
-               self.log.info("Exported weight vectors per architecture to %s." % outfile)
+            self.modula.run("get_text", force=self.options.force)
+            self.log.info("Text weighting done!")
+            outfile = os.path.join(outfolder, "weight_file_per_arch")
+            if not os.path.exists(outfile):
+                shutil.copy(self.modula.STORAGE_ENGINE.get_filename(
+                    "get_text"), outfile)
+                self.log.info("Exported weight vectors per architecture to %s",
+                              outfile)
         else:
-           self.log.info("Either not idmapping or RDF file were specified")
-           self.log.info("no text weighting will be performed")
+            self.log.info("Either not idmapping or RDF file were specified")
+            self.log.info("no text weighting will be performed")
 
-	###########################################################################
 
 CONFIGURATION_FILE_TEMPLATE = """\
 ###########################################################################
@@ -493,7 +539,7 @@ file.mapping.interpro2name=data/names.dat.gz
 # File containing the parent-child relationships of InterPro terms
 file.mapping.interpro_parent_child=data/ParentChildTreeFile.txt
 
-# Input file containing the HMMs used to tag unnasigned pieces, in 
+# Input file containing the HMMs used to tag unnasigned pieces, in
 # HMMer format
 file.input.hmms=
 
@@ -511,8 +557,8 @@ file.function.goa_file=
 # architecture. If no file is provided, a standard one will be used
 file.stopwords=
 
-# Mapping file 'idmapping_selected.tab' between proteins and PubMed 
-# identifiers. Can be downloaded from 
+# Mapping file 'idmapping_selected.tab' between proteins and PubMed
+# identifiers. Can be downloaded from
 # ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/idmapping/
 # DO NOT USE IF YOU ARE NOT DEALING WITH UNIPROT PROTEINS
 file.idmapping=
@@ -539,7 +585,7 @@ folder.work=work
 folder.output=output
 
 # A folder with a cache of PubMed abstracts. You should
-# use the same among different executions if you want to 
+# use the same among different executions if you want to
 # save a huge amount of time
 folder.pubmed_cache=work/pubmed_cache
 
@@ -553,12 +599,12 @@ folder.pubmed_cache=work/pubmed_cache
 # in the path
 folder.hmmer=
 
-# The path to ``hmmscan``. You may use the name of the folder containing the 
-# hmmer executables or the full path (including the name of the tool). 
+# The path to ``hmmscan``. You may use the name of the folder containing the
+# hmmer executables or the full path (including the name of the tool).
 util.hmmsearch=%(folder.hmmer)s
 
-# The path to ``hmmpress``. You may use the name of the folder containing the 
-# hmmer executables or the full path (including the name of the tool). 
+# The path to ``hmmpress``. You may use the name of the folder containing the
+# hmmer executables or the full path (including the name of the tool).
 util.hmmpress=%(folder.hmmer)s
 
 ###########################################################################
@@ -589,7 +635,7 @@ untrusted_sources=HAMAP PatternScan FPrintScan Seg Coil
 # same data source
 max_overlap=20
 
-# Hint on the number of CPU cores to use during the process of scan with HMMs. 
+# Hint on the number of CPU cores to use during the process of scan with HMMs.
 #
 # The default value is 1 since it is not possible to auto-detect the
 # number of CPU cores in a platform independent way. Feel free to raise this
@@ -690,7 +736,7 @@ correction=fdr
 # Maximum allowed p-value for overrepresented GO terms
 max_pvalue=0.05
 
-# Evidence codes to use: EXP (experimental), ALL_BUT_IEA (all except 
+# Evidence codes to use: EXP (experimental), ALL_BUT_IEA (all except
 # electronic, IEA, NAS and ND), ALL (all evidence codes)
 ev_codes=EXP
 
@@ -700,9 +746,9 @@ ev_codes=EXP
 transfer_from_both=
 
 # Set True to print the results per protein (False by default). Note that
-# the predictions per protein, if set to true, will not consider 
+# the predictions per protein, if set to true, will not consider
 # the function assigned to this protein as a known result, making
-# the final prediction able for evaluation this task in a 
+# the final prediction able for evaluation this task in ass
 # cross-validation form.
 per_protein=
 
@@ -739,10 +785,11 @@ file.domain_architecture_stats=%(folder.output)s/domain_architecture_stats.txt
 # File with an overrepresentation analysis of InterPro terms by architecture
 file.overrep.arch_file=%(folder.output)s/overrep_by_arch.txt
 
-# File with an overrepresentation analysis of GOA transferred terms architecture
+# File with an overrepresentation analysis of GOA
+# transferred terms architecture
 file.function_arch.general_arch_file=%(folder.output)s/transfer_by_arch.txt
 
-# Output file containing the function prediction transfered via the architecture, per protein
+# Output file containing the function prediction
+# transfered via the architecture, per protein
 file.function_arch.arch_file=%(folder.output)s/function_prediction_by_transfer.txt
 """
-

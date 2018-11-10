@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-from gfam.scripts.jaccard import JaccardSimilarityApp
+"""Binary for the 'jaccard' app"""
+
 import sys
+from gfam.scripts.jaccard import JaccardSimilarityApp
 
 if __name__ == "__main__":
     sys.exit(JaccardSimilarityApp().run())

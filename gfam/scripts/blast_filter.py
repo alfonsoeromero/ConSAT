@@ -6,10 +6,11 @@ from gfam.blast import BlastFilter
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class BlastFilterApp(CommandLineApp):
     """\
@@ -24,36 +25,41 @@ class BlastFilterApp(CommandLineApp):
         """Creates the parser that parses the command line options"""
         parser = super(BlastFilterApp, self).create_parser()
         parser.add_option("-s", "--sequence-identity",
-                dest="sequence_identity", metavar="PERCENTAGE",
-                type=float, default=0,
-                config_key="analysis:blast_filter/min_seq_identity",
-                help="drop matches with sequence identity smaller "
-                     "than the given PERCENTAGE")
+                          dest="sequence_identity", metavar="PERCENTAGE",
+                          type=float, default=0,
+                          config_key="analysis:blast_filter/min_seq_identity",
+                          help="drop matches with sequence identity smaller "
+                               "than the given PERCENTAGE")
         parser.add_option("-l", "--alignment-length",
-                dest="alignment_length", metavar="LENGTH",
-                type=float, default=0,
-                config_key="analysis:blast_filter/min_alignment_length",
-                help="drop matches with alignment length less "
-                     "than the given LENGTH")
+                          dest="alignment_length", metavar="LENGTH",
+                          type=float, default=0,
+                          config_key="analysis:blast_filter/min_"
+                                     "alignment_length",
+                          help="drop matches with alignment length less "
+                               "than the given LENGTH")
         parser.add_option("-n", "--normalize",
-                dest="normalize_alignment_length",
-                metavar="METHOD", type="choice",
-                choices=["off", "query", "hit", "smaller", "larger"], 
-                default="off",
-                config_key="analysis:blast_filter/normalization_method",
-                help="normalize the alignment length to between 0 and 1 "
-                     "by dividing it with the length of the sequence given "
-                     "by METHOD (smaller, larger, query or hit)")
+                          dest="normalize_alignment_length",
+                          metavar="METHOD", type="choice",
+                          choices=["off", "query", "hit", "smaller", "larger"],
+                          default="off",
+                          config_key="analysis:blast_filter/"
+                                     "normalization_method",
+                          help="normalize the alignment length to between "
+                               "0 and 1 by dividing it with the length of the"
+                               " sequence given by METHOD (smaller, larger, "
+                               "query or hit)")
         parser.add_option("-e", "--max-e-value", dest="max_e_value",
-                metavar="VALUE", type=float, default=100,
-                config_key="analysis:blast_filter/max_e_value",
-                help="drop matches with an E-value larger than the given VALUE")
+                          metavar="VALUE", type=float, default=100,
+                          config_key="analysis:blast_filter/max_e_value",
+                          help="drop matches with an E-value larger than"
+                                " the given VALUE")
         parser.add_option("-S", "--sequences",
-                dest="sequences_file", metavar="FILE",
-                help="FASTA file containing all the sequences used by BLAST. "
-                     "This is necessary if -n is used.",
-                config_key="generated/file.unassigned_fragments",
-                default=None)
+                          dest="sequences_file", metavar="FILE",
+                          help="FASTA file containing all the sequences"
+                               " used by BLAST. This is necessary if -n"
+                               "is used.",
+                          config_key="generated/file.unassigned_fragments",
+                          default=None)
         return parser
 
     def run_real(self):
@@ -66,7 +72,6 @@ class BlastFilterApp(CommandLineApp):
         filter = self.construct_blast_filter()
         for infile in infiles:
             self.process_file(infile, filter)
-
 
     def construct_blast_filter(self):
         """Constructs an appropriate `BlastFilter` from the command line
@@ -81,7 +86,7 @@ class BlastFilterApp(CommandLineApp):
 
         if options.normalize_alignment_length != "off":
             if not options.sequences_file:
-                self.error("must specify sequences file using "\
+                self.error("must specify sequences file using "
                            "-S when -n is given")
             filter.load_sequences_from_file(options.sequences_file)
 

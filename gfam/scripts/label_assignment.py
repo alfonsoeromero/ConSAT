@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 """Gene Ontology label assignment application"""
 
-import optparse
+from __future__ import print_function
 import sys
-
-from collections import defaultdict
 from gfam.go import Tree as GOTree
 from gfam.interpro import InterPro2GOMapping
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2011, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class LabelAssignmentApp(CommandLineApp):
     """\
@@ -40,6 +39,7 @@ class LabelAssignmentApp(CommandLineApp):
     def __init__(self, *args, **kwds):
         super(LabelAssignmentApp, self).__init__(*args, **kwds)
         self.go_tree = None
+        self.go_mapping = None
 
     def run_real(self):
         """Runs the label assignment application"""
@@ -48,15 +48,16 @@ class LabelAssignmentApp(CommandLineApp):
 
         go_tree_file, go_mapping_file, input_file = self.args
 
-        self.log.info("Loading GO tree from %s..." % go_tree_file)
+        self.log.info("Loading GO tree from %s...", go_tree_file)
         self.go_tree = GOTree.from_obo(go_tree_file)
 
-        self.log.info("Loading InterPro --> GO mapping from %s..." % \
-                go_mapping_file)
-        self.go_mapping = InterPro2GOMapping.from_file(go_mapping_file, self.go_tree)
+        self.log.info("Loading InterPro --> GO mapping from %s...",
+                      go_mapping_file)
+        self.go_mapping = InterPro2GOMapping.from_file(go_mapping_file,
+                                                       self.go_tree)
 
-        self.log.info("Processing domain architectures from %s..." % \
-                input_file)
+        self.log.info("Processing domain architectures from %s...",
+                      input_file)
         return self.process_file(input_file)
 
     def process_file(self, input_file):
@@ -72,7 +73,10 @@ class LabelAssignmentApp(CommandLineApp):
         for line in open_anything(input_file):
             parts = line.strip().split("\t")
             gene_id = parts[0]
-            arch = tuple([x for x in parts[3].replace("{", ";").replace("}", ";").split(";") if x])
+            arch = tuple([x for x in
+                          parts[3].replace("{", ";")
+                          .replace("}", ";")
+                          .split(";") if x])
             total_seqs += 1
 
             if arch == ("NO_ASSIGNMENT", ):
@@ -86,24 +90,26 @@ class LabelAssignmentApp(CommandLineApp):
                     all_terms.update(self.go_mapping.get_left(domain, []))
                 for path in self.go_tree.paths_to_root(*list(all_terms)):
                     all_terms.difference_update(path[1:])
-                all_terms = sorted(all_terms, key =
-                        lambda x: len(self.go_mapping.get_right(x, [])))
+                all_terms = sorted(all_terms,
+                                   key=lambda x:
+                                   len(self.go_mapping.get_right(x, [])))
                 cache[arch] = all_terms
 
-            print gene_id
+            print(gene_id)
             for term in cache[arch]:
-                print "  %s (%s)" % (term.id, term.name)
-            print
+                print("  %s (%s)" % (term.id, term.name))
+            print()
 
-            if len(cache[arch]) == 0:
+            if not cache[arch]:
                 num_no_annotations += 1
 
-        self.log.info("Total number of sequences processed: %d" % total_seqs)
+        self.log.info("Total number of sequences processed: %d", total_seqs)
         if num_no_annotations:
-            self.log.info("Could not assign functional label to %d sequences :("
-                    % num_no_annotations)
+            self.log.info("Could not assign functional label "
+                          "to %d sequences :(", num_no_annotations)
         if num_no_domains:
-            self.log.info("%d sequences have no domains at all :(" % num_no_domains)
+            self.log.info("%d sequences have no domains at all :(",
+                          num_no_domains)
 
 
 if __name__ == "__main__":

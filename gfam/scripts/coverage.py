@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import optparse
+from __future__ import print_function
 import sys
 
 from collections import defaultdict
@@ -10,8 +10,8 @@ from gfam.interpro import AssignmentReader
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
@@ -43,9 +43,14 @@ class SequenceLevelOutputFormatter(object):
     def process_assignments(self, seq):
         for source in seq.data_sources():
             cov = seq.coverage(sources=[source])
-            print "%s\t%d\t%s\t%d\t%.4f" % (seq.name, len(seq), source, round(len(seq)*cov), cov)
+            print("%s\t%d\t%s\t%d\t%.4f" % (seq.name,
+                                            len(seq),
+                                            source,
+                                            round(len(seq)*cov), cov))
         cov = seq.coverage()
-        print "%s\t%d\tALL\t%d\t%.4f" % (seq.name, len(seq), round(len(seq)*cov), cov)
+        print("%s\t%d\tALL\t%d\t%.4f" % (seq.name,
+                                         len(seq),
+                                         round(len(seq)*cov), cov))
 
     def finish(self):
         pass
@@ -54,17 +59,17 @@ class SequenceLevelOutputFormatter(object):
 class GenomeLevelOutputFormatter(object):
     """Output formatter class that prints genome-level statistics for the
     input data file.
-    
+
     The output contains one line for each data source in the input data file.
     The rows contain the following information, separated by tabs:
-        
+
         - The name of the data source
         - The number of sequences annotated by the data source
         - The number of distinct domain architectures obtained from the
           data source
         - The fraction of residues covered by at least one domain from the
           data source
-          
+
     ALL as a data source name denotes the union of all data sources."""
 
     def __init__(self, app):
@@ -79,7 +84,9 @@ class GenomeLevelOutputFormatter(object):
         for source in seq.data_sources():
             family = tuple(seq.domain_architecture(sources=[source]))
             self.num_sequences_by_source[source] += 1
-            self.total_covered_by_source[source] += round(len(seq) * seq.coverage(sources=[source]))
+            self.total_covered_by_source[source] += round(len(seq) *
+                                                          seq.coverage(
+                                                          sources=[source]))
             if family:
                 self.families_by_source[source].add(family)
 
@@ -91,7 +98,7 @@ class GenomeLevelOutputFormatter(object):
             self.families_by_source["ALL"].add(family)
 
     def finish(self):
-        sources = set(self.num_sequences_by_source.iterkeys())
+        sources = set(self.num_sequences_by_source.keys())
         if self.app.options.sequences_file is not None:
             total_seqs = len(self.app.valid_sequence_ids)
             total_seq_length = self.app.total_sequence_length
@@ -102,13 +109,16 @@ class GenomeLevelOutputFormatter(object):
         total_seqs = float(total_seqs)
         total_seq_length = float(total_seq_length)
 
-        print "Source\t#sequences\t#families\tSequence coverage\tResidue coverage"
+        print("Source\t#sequences\t#families\t" +
+              "Sequence coverage\tResidue coverage")
         for source in sorted(sources):
             num_seqs = self.num_sequences_by_source[source]
             num_families = len(self.families_by_source[source])
-            print "%s\t%d\t%d\t%.4f\t%.4f" % (source, num_seqs, num_families,
-                    self.num_sequences_by_source[source] / total_seqs,
-                    self.total_covered_by_source[source] / total_seq_length)
+            tot_covered_by_source = self.total_covered_by_source[source]
+            print("%s\t%d\t%d\t%.4f\t%.4f" % (source, num_seqs, num_families,
+                                              num_seqs / total_seqs,
+                                              tot_covered_by_source /
+                                              total_seq_length))
 
 
 class CoverageApp(CommandLineApp):
@@ -125,27 +135,29 @@ class CoverageApp(CommandLineApp):
     def create_parser(self):
         parser = super(CoverageApp, self).create_parser()
         parser.add_option("-i", "--include", dest="include_sources",
-                metavar="SOURCE", help="use the given assignment source",
-                config_key="analysis:coverage/include_sources",
-                action="append", default=[])
+                          metavar="SOURCE",
+                          help="use the given assignment source",
+                          config_key="analysis:coverage/include_sources",
+                          action="append", default=[])
         parser.add_option("-S", "--sequences",
-                dest="sequences_file", metavar="FILE",
-                help="FASTA file containing all the sequences of the representative gene model",
-                config_key="file.input.sequences", default=None)
+                          dest="sequences_file", metavar="FILE",
+                          help="FASTA file containing all the sequences "
+                               "of the representative gene model",
+                          config_key="file.input.sequences", default=None)
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
-                help="remap sequence IDs using REGEXP",
-                config_key="sequence_id_regexp",
-                dest="sequence_id_regexp")
+                          help="remap sequence IDs using REGEXP",
+                          config_key="sequence_id_regexp",
+                          dest="sequence_id_regexp")
         parser.add_option("-x", "--exclude", dest="exclude_sources",
-                metavar="SOURCE",
-                help="ignore the given assignment source",
-                config_key="analysis:coverage/untrusted_sources",
-                action="append", default=[])
+                          metavar="SOURCE",
+                          help="ignore the given assignment source",
+                          config_key="analysis:coverage/untrusted_sources",
+                          action="append", default=[])
         parser.add_option("--totals", dest="print_totals", action="store_true",
-                help="print genome-level statistics instead of sequence-level "
-                     "statistics",
-                default=False,
-                config_key="analysis:coverage/print_totals")
+                          help="print genome-level statistics instead of"
+                               " sequence-level statistics",
+                          default=False,
+                          config_key="analysis:coverage/print_totals")
         return parser
 
     def run_real(self):
@@ -153,12 +165,13 @@ class CoverageApp(CommandLineApp):
 
         # Load valid sequence IDs (if necessary)
         if self.options.sequences_file:
-            self.log.info("Loading sequences from %s..." % self.options.sequences_file)
-
+            self.log.info("Loading sequences from %s..."
+                          % self.options.sequences_file)
             self.total_sequence_length = 0
             self.valid_sequence_ids = set()
             parser = fasta.Parser(open_anything(self.options.sequences_file))
-            parser = fasta.regexp_remapper(parser, self.options.sequence_id_regexp)
+            parser = fasta.regexp_remapper(parser,
+                                           self.options.sequence_id_regexp)
             for seq in parser:
                 self.valid_sequence_ids.add(seq.id)
                 self.total_sequence_length += len(seq.seq)
@@ -173,7 +186,8 @@ class CoverageApp(CommandLineApp):
             self.sources = set(self.options.include_sources)
         self.sources.difference_update(self.options.exclude_sources)
         if isinstance(self.sources, complementerset):
-            self.log.info("Ignored sources: %s" % ", ".join(self.sources.iterexcluded()))
+            self.log.info("Ignored sources: %s" %
+                          ", ".join(self.sources.iterexcluded()))
         else:
             self.log.info("Accepted sources: %s" % ", ".join(self.sources))
 

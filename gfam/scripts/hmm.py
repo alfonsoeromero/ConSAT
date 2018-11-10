@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 """HMM application"""
 
-import optparse
 import sys
 import os
 import errno
 from subprocess import call
-
-from gfam import fasta
 from collections import defaultdict
+from gfam import fasta
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 from gfam.sequence import SeqRecord
 
 
-__author__  = "Alfonso E. Romero"
-__email__   = "aeromero@cs.rhul.ac.uk"
+__author__ = "Alfonso E. Romero"
+__email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2012, Alfonso E. Romero"
 __license__ = "GPL"
+
 
 class HMM(CommandLineApp):
     """\
@@ -26,8 +25,8 @@ class HMM(CommandLineApp):
     Learn a set of Hidden Markov Models over each set of sequences
     representing a cluster found in previous stages.
 
-    sequences_file is the file with all the sequences involved in the 
-    clustering, in Fasta format
+    sequences_file is the file with all the sequences
+    involved in the clustering, in Fasta format
 
     cluster_table_file is the set of clusters, one by line in a tab-delimited
     file, where the first field is the cluster name, and the rest of fields
@@ -39,15 +38,19 @@ class HMM(CommandLineApp):
 
     def __init__(self, *args, **kwds):
         super(HMM, self).__init__(*args, **kwds)
+        self.sequences_dir = None
+        self.hmms_dir = None
+        self.hmm_files = None
+        self.alignments_dir = None
 
     def create_parser(self):
         """Creates the command line parser for this application"""
         parser = super(HMM, self).create_parser()
         parser.add_option("--dir",
-                dest="directory", metavar="FILE",
-                help="directory where the HMMs will be stored",
-                config_key="generated/file.dir_hmms",
-                default=None)
+                          dest="directory", metavar="FILE",
+                          help="directory where the HMMs will be stored",
+                          config_key="generated/file.dir_hmms",
+                          default=None)
 
         return parser
 
@@ -60,7 +63,7 @@ class HMM(CommandLineApp):
             table[fields[0]] = fields[1:]
         table_file_desc.close()
 
-        return table 
+        return table
 
     def create_directories(self):
         # 1.- we create the output directory
@@ -104,7 +107,7 @@ class HMM(CommandLineApp):
         reader = fasta.Parser(open_anything(sequences_file))
         seqs = dict(((seq.id, seq) for seq in reader))
 
-        for cluster_name,cluster_seqs in table.iteritems():
+        for cluster_name, cluster_seqs in table.items():
             output_file_name = self.sequences_dir + os.path.sep + cluster_name
             output_fd = open(output_file_name + ".faa", "w")
             writer = fasta.Writer(output_fd)
@@ -123,22 +126,24 @@ class HMM(CommandLineApp):
         for cluster in cluster_names:
             seq = seq_dir + cluster + ".faa"
             align = align_dir + cluster + ".sto"
-            #print >> sys.stderr, "CLUSTER: ", cluster
-            call(["clustalo", "--infile=" + seq, "--outfmt=st", "--outfile=" + align])
-	# no errors are checked, in the future the call should be checked
+            # print >> sys.stderr, "CLUSTER: ", cluster
+            call(["clustalo",
+                  "--infile=" + seq,
+                  "--outfmt=st", "--outfile=" + align])
+    # no errors are checked, in the future the call should be checked
 
     def building_hmms(self, cluster_names):
-        """Builds the HMMs, one for each alignment"""             
-        hmm_dir = self.hmms_dir                  
+        """Builds the HMMs, one for each alignment"""
+        hmm_dir = self.hmms_dir
         align_dir = self.alignments_dir
         self.hmm_files = []
-            
+
         for cluster in cluster_names:
             hmm = os.path.join(hmm_dir, cluster) + ".hmm"
             align = os.path.join(align_dir, cluster) + ".sto"
 
-            call(["hmmbuild", hmm, align], \
-                    stdout=open(os.devnull, 'wb')) 
+            call(["hmmbuild", hmm, align],
+                 stdout=open(os.devnull, 'wb'))
             self.hmm_files.append(hmm)
         # TODO: no errors are checked, in the future the call should be checked
 
@@ -162,7 +167,7 @@ class HMM(CommandLineApp):
 
         # TODO: require the presence of hmmbuild and clustalo
 
-        self.log.info("Reading cluster table from %s..." % table_file)
+        self.log.info("Reading cluster table from %s...", table_file)
         table = self.read_table(table_file)
 
         self.log.info("Creating directories...")
@@ -179,6 +184,7 @@ class HMM(CommandLineApp):
 
         self.log.info("Joining HMM files into single one")
         self.join_hmms()
+
 
 if __name__ == "__main__":
     sys.exit(HMM().run())

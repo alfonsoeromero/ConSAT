@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 
 from gfam import fasta
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
+
 
 class ExtractGeneIDsApp(CommandLineApp):
     """\
@@ -22,9 +24,9 @@ class ExtractGeneIDsApp(CommandLineApp):
         """Creates the command line parser for this application"""
         parser = super(ExtractGeneIDsApp, self).create_parser()
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
-                help="remap sequence IDs using REGEXP",
-                config_key="sequence_id_regexp",
-                dest="sequence_id_regexp")
+                          help="remap sequence IDs using REGEXP",
+                          config_key="sequence_id_regexp",
+                          dest="sequence_id_regexp")
         return parser
 
     def run_real(self):
@@ -43,11 +45,10 @@ class ExtractGeneIDsApp(CommandLineApp):
 
         parser = fasta.Parser(open_anything(filename))
         parser = fasta.regexp_remapper(parser,
-                self.options.sequence_id_regexp)
+                                       self.options.sequence_id_regexp)
         for seq in parser:
-            print seq.id
+            print(seq.id)
 
 
 if __name__ == "__main__":
     sys.exit(ExtractGeneIDsApp().run())
-

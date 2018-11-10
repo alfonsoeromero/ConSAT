@@ -5,7 +5,6 @@ __email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
-import itertools
 
 class IndexedReadOnlyFile(object):
     """ We provide a mechanism to easily access a set of blocks from
@@ -34,33 +33,23 @@ class IndexedReadOnlyFile(object):
             If the key is not a valid key an empty line is returned.
         """
         if k in self.key_to_offset:
-            with open(self.file_name, 'r') as input:
-                input.seek(self.key_to_offset[k], 0)
+            with open(self.file_name, 'r') as input_f:
+                input_f.seek(self.key_to_offset[k], 0)
                 output = []
-                for line in input:
-                    l = line.strip()
-                    if l:
-                        output.append(l)
+                for line in input_f:
+                    line_strip = line.strip()
+                    if line_strip:
+                        output.append(line_strip)
                     else:
                         break
-                #l = itertools.takewhile(lambda line : line.strip(), iter(input))
                 return output
-        else: 
+        else:
             return []
 
-    def get_line_for_key(self, key):
-        """ Returns the whole line corresponding to a certain key. 
-            This may be useful if the key is a subset of the line
-            and we want to retrieve extra information from the it.
-        """
-        if key in self.key_to_offset:
-            return line
-        return ""
-
     def __preload_cache(self):
-        with open(self.file_name, 'r') as input:
-            return dict((line.rstrip(), input.tell()) 
-                    for line in iter(input.readline, '') 
+        """ Preloads the internal cache
+        """
+        with open(self.file_name, 'r') as input_f:
+            return dict((line.rstrip(), input_f.tell())
+                        for line in iter(input_f.readline, '')
                         if self.regex.match(line))
-#
-#

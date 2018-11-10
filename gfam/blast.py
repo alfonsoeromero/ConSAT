@@ -1,30 +1,30 @@
 """
 Classes and functions related to BLAST files and utilities
 """
+from gfam import fasta
+from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
-from gfam import fasta
-from gfam.utils import open_anything
 
 class BlastFilter(object):
     """Filters BLAST records, i.e. drops the ones that do not
     satisfy some criteria.
-    
+
     You can tune the filter with the following instance variables:
-        
+
     - ``min_sequence_identity``: the minimum sequence identity
       required by the filter
-          
+
     - ``min_alignment_length``: the minimum alignment length
       required by the filter
-          
+
     - ``max_e_value``: the maximum E-value required by the
       filter
-          
+
     You can also ask the filter to normalize the alignment length to
     between zero and one by calling `set_normalize_func`.
     """
@@ -64,7 +64,7 @@ class BlastFilter(object):
         """Loads the sequences yielded by the sequence generator.
 
         This method iterates over the given sequences and stores their
-        names and lengths in an internal dict. The dict will be used 
+        names and lengths in an internal dict. The dict will be used
         later to normalize sequences by their lengths. It is
         necessary to call this method if you are using any of the
         normalizing functions."""
@@ -80,14 +80,14 @@ class BlastFilter(object):
     def _normalize_smaller(self, query_id, hit_id, length):
         """Calculates a normalized alignment length by dividing the
         unnormalized length with the length of the smaller sequence"""
-        max_length = min(self.seq_ids_to_length[query_id], \
+        max_length = min(self.seq_ids_to_length[query_id],
                          self.seq_ids_to_length[hit_id])
         return length / max_length
 
     def _normalize_larger(self, query_id, hit_id, length):
         """Calculates a normalized alignment length by dividing the
         unnormalized length with the length of the larger sequence"""
-        max_length = max(self.seq_ids_to_length[query_id], \
+        max_length = max(self.seq_ids_to_length[query_id],
                          self.seq_ids_to_length[hit_id])
         return length / max_length
 
@@ -126,17 +126,14 @@ class BlastFilter(object):
         query sequence, the third is the length of the hit sequence,
         the fourth is the unnormalized match length.
         """
-        if hasattr(name, "__call__"):
+        if callable(name):
             self.normalize_func = name
         else:
-            funcs = { \
-                "off": lambda _1, _2, length: length, \
-                "smaller": self._normalize_smaller, \
-                "larger": self._normalize_larger, \
-                "query": self._normalize_query, \
-                "hit": self._normalize_hit \
+            funcs = {
+                "off": lambda _1, _2, length: length,
+                "smaller": self._normalize_smaller,
+                "larger": self._normalize_larger,
+                "query": self._normalize_query,
+                "hit": self._normalize_hit
             }
             self.normalize_func = funcs[name.lower()]
-
-
-

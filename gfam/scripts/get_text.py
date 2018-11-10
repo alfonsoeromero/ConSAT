@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*- 
+# # -*- coding: utf-8 -*-
 """Application that retrieves a set of weighted terms for the sequences
 in order to have clues of what is their function. The sources where the
 text is downloaded from are PubMed abstracts and the text appearing in
@@ -13,18 +13,14 @@ of terms.
 The terms associated to a certain sequence can be easily retrieved with the
 files produced.
 """
-import urllib
-import tempfile
-import shutil
+from __future__ import print_function
 import os
 import io
 import sys
 import math
 import re
-import operator
 import unicodedata
 import string
-from os import listdir
 from collections import Counter, defaultdict
 from gfam.scripts import CommandLineApp
 from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
@@ -39,13 +35,17 @@ __license__ = "GPL"
 try:
     # if Snowball stemmer is installed, we use it
     import Stemmer
-    stemmer = Stemmer.Stemmer('english')
+    STEMMER = Stemmer.Stemmer('english')
+
     def stem(word):
-        return stemmer.stemWord(word)
+        return STEMMER.stemWord(word)
 except ImportError:
     # ...otherwise no stemming is performed
     def stem(word):
         return word
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 
 class GetText(CommandLineApp):
@@ -62,44 +62,56 @@ class GetText(CommandLineApp):
 
     short_name = "get_text"
 
-    my_stopwords = """abundant additional ago analyses analysis analyzed 
+    my_stopwords = """abundant additional ago analyses analysis analyzed
                   approximately assigned based
                   carry causing chromosome chromosomes closely common commonly
                   comparative compared comparison complete comprehensive
-                  comprehensively confirmed correlated data dataset decay derive
-                  derived details detected describe determined differences 
-                  divergence divergences diverse diversity draft early encoding 
-                  estimated evidence evolution evolutionary existence explain 
-                  families family find found fragment full gene genes 
-                  genetic genome genomes genomic group groups high highly 
-                  identification 
+                  comprehensively confirmed correlated data dataset decay
+                  derive derived details detected describe
+                  determined differences
+                  divergence divergences diverse diversity draft early encoding
+                  estimated evidence evolution evolutionary existence explain
+                  families family find found fragment full gene genes
+                  genetic genome genomes genomic group groups high highly
+                  identification
                   identified identifying important infer initial improved
-                  includes 
-                  including independent independently indicating 
-                  interestingly involved isolated isolates laboratory 
-                  large largely larger leading level levels lineage 
+                  includes
+                  including independent independently indicating
+                  interestingly involved isolated isolates laboratory
+                  large largely larger leading level levels lineage
                   lineages located long loss lost low made
-                  maintain major member method methods model molecular modern 
-                  number observed obtain occur occurred orfs perspective 
-                  perspectives phylogenetic predicted present 
-                  previously protein proteins proteome provide putative 
-                  recent reflect related remains remaining remarkable 
-                  remarkably report represents results revealed reveals sequence 
-                  sequenced sequences sequencing set shown similar 
-                  single species specific spite strain strains strongly 
-                  study studies taxa the type uncharacterized unique validated 
-                  wide widely widespread years yields
-                    """.split()
+                  maintain major member method methods model molecular modern
+                  number observed obtain occur occurred orfs perspective
+                  perspectives phylogenetic predicted present
+                  previously protein proteins proteome provide putative
+                  recent reflect related remains remaining remarkable
+                  remarkably report represents results revealed reveals
+                  sequence sequenced sequences sequencing set shown similar
+                  single species specific spite strain strains strongly
+                  study studies taxa the type uncharacterized unique validated
+                  wide widely widespread years yields""".split()
 
     def __init__(self, *args, **kwds):
         super(GetText, self).__init__(*args, **kwds)
+        self.cachepubmed = None
+        self.stopwords = None
+        self.lexicon_file = ""
+        self.freq_file = ""
+        self.weight_file = ""
+        self.ids_file = ""
+        self.text_file = ""
+        self.N = -1
+        self.old_lexicon = None
+        self._numeral = None
+        self._digits = None
+        self.punctuation = None
 
     def create_parser(self):
         """Creates the command line parser for this application"""
         parser = super(GetText, self).create_parser()
         parser.add_option("-s", "--stopwords", dest="stopwords_file",
                           metavar="FILE", config_key="file.stopwords",
-                          help="Stopwords file. If none is provided," +
+                          help="Stopwords file. If none is provided,"
                                "a standard one will be used")
         parser.add_option("-S", "--sequences",
                           dest="sequences_file", metavar="FILE",
@@ -108,52 +120,59 @@ class GetText(CommandLineApp):
                                "sequences to analyze")
         parser.add_option("-m", "--mapping", dest="mapping", metavar="FILE",
                           config_key="file.idmapping",
-                          help="'idmapping_selected.tab' file, which can " +
-                               "be downloaded from " +
-                               "ftp://ftp.uniprot.org/pub/databases/uniprot" +
+                          help="'idmapping_selected.tab' file, which can "
+                               "be downloaded from "
+                               "ftp://ftp.uniprot.org/pub/databases/uniprot"
                                "/current_release/knowledgebase/idmapping/")
         parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
                           config_key="sequence_id_regexp",
-                          help="remap sequence IDs using REGEXP (only " +
+                          help="remap sequence IDs using REGEXP (only "
                                "used in the FASTA file)")
-        parser.add_option("-a", "--arch-file", metavar="FILE", dest="arch_file",
-                          help="table with architectures produced by GFam" +
-                               " to give final results per architecture")                          
+        parser.add_option("-a", "--arch-file", metavar="FILE",
+                          dest="arch_file",
+                          help="table with architectures produced by GFam"
+                               " to give final results per architecture")
         parser.add_option("-f", "--rdf-file", dest="rdf_file", metavar="FILE",
                           config_key="file.rdffile",
-                          help="RDF file containing publication abstract " +
-                               "which can be downloaded from http://www." +
-                               "uniprot.org/citations/?query=citedin%3a(*) " +
+                          help="RDF file containing publication abstract "
+                               "which can be downloaded from http://www."
+                               "uniprot.org/citations/?query=citedin%3a(*) "
                                "&format=*&compress=yes")
         parser.add_option("-o", "--output-dir", dest="output", metavar="DIR",
                           config_key="folder.output",
-                          help="directory where the output files are to be " +
+                          help="directory where the output files are to be "
                                "written.")
-        parser.add_option("-l", "--lexicon", dest="lexicon_file", metavar="FILE",
-                          config_key="file.lexicon", help="file with a previously " +
-                          "generated lexicon used to maintain compatibility")
-        parser.add_option("-p", "--pubmed-cache", dest="pubmed_cache", metavar="DIR",
-                         config_key="folder.pubmed_cache",
-                         help="A directory where a cache of PubMed downloaded abstacts " +
-                         "will be stored")
+        parser.add_option("-l", "--lexicon", dest="lexicon_file",
+                          metavar="FILE",
+                          config_key="file.lexicon",
+                          help="file with a previously "
+                               "generated lexicon used to "
+                               "maintain compatibility")
+        parser.add_option("-p", "--pubmed-cache", dest="pubmed_cache",
+                          metavar="DIR",
+                          config_key="folder.pubmed_cache",
+                          help="A directory where a cache of PubMed "
+                               "downloaded abstacts will be stored")
         return parser
 
-    def read_stopwords(self, fileName):
+    def read_stopwords(self, stopwords_file_name):
         """Reads the stopwords file to a set and returns it.
         If no file is provided, the standard SMART stopword
         list is donwnloaded"""
-        if not fileName or not os.path.exists(fileName):
+        if not stopwords_file_name or not os.path.exists(stopwords_file_name):
             # we download the SMART list
-            fileName = os.path.join(gfam.scripts.__path__[0], '', 'stopwords.txt')
+            stopwords_file_name = os.path.join(gfam.scripts.__path__[0],
+                                               '', 'stopwords.txt')
 
-        self.stopwords = set([line.strip() for line in open(fileName)])
+        self.stopwords = set([line.strip() for line in
+                              open(stopwords_file_name)])
         self.stopwords = self.stopwords | set(GetText.my_stopwords)
 
-    def check_not_exists(self, fileName):
+    def check_not_exists(self, file_name):
         """Checks that a file does not exists. If it does, exists and
         shows an error message"""
-        if os.path.exists(fileName):
-            self.error("The file " + fileName +
+        if os.path.exists(file_name):
+            self.error("The file " + file_name +
                        " already exists. Cannot overwrite")
 
     def read_lexicon_file(self, file_name):
@@ -161,7 +180,8 @@ class GetText(CommandLineApp):
             with its identifiers. The document frequency, however, is discarded
         """
         if not os.path.exists(file_name):
-            self.error("The given lexicon file " + file_name + " does not exist")
+            self.error("The given lexicon file " + file_name +
+                       " does not exist")
         for line in open(file_name, "r"):
             word, word_id, _ = line.split()
             self.old_lexicon[word] = int(word_id)
@@ -196,22 +216,16 @@ class GetText(CommandLineApp):
                        " exists, but it is not a directory")
 
         # we setup the output file names
-        output_dir = os.path.join(os.path.normpath(self.options.output), "text")
+        output_dir = os.path.join(os.path.normpath(self.options.output),
+                                  "text")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         self.lexicon_file = os.path.join(output_dir, "lexicon")
-        #self.check_not_exists(self.lexicon_file)
         self.freq_file = os.path.join(output_dir, "freq_file_per_sequence")
-        #self.check_not_exists(self.freq_file)
         self.weight_file = os.path.join(output_dir, "weight_file_per_sequence")
-        #self.check_not_exists(self.weight_file)
         self.ids_file = os.path.join(output_dir, "seq_ids_file")
-        #self.check_not_exists(self.ids_file)
         self.text_file = os.path.join(output_dir, "text_file_per_sequence")
-        #self.check_not_exists(self.text_file)
-        #self.weight_file_arch = os.path.join(output_dir, "weight_file_per_arch")
-        #self.check_not_exists(self.weight_file_arch)
 
         # 4.- we process the rdf file to a cache directory
         if not self.options.pubmed_cache:
@@ -224,19 +238,15 @@ class GetText(CommandLineApp):
         self.process_rdf_file()
 
         # 5.- we call the main function to extract text of the protein
-        #self.cacheuniprot = os.path.join(output_dir, "cache_uniprot")
-        #self.log.info("Extracting protein descriptions")
-
-        #if not os.path.exists(self.cacheuniprot):
-        #     os.makedirs(self.cacheuniprot)
-        #self.process_fasta_file()
 
         # 5.1.- the text file is created
         self.log.info("Creating file with all text pieces for each protein")
-        self._digits = re.compile('\d')
+        self._digits = re.compile(r'\d')
         self.punctuation = set(string.punctuation) - set(['-'])
-        #self._numeral = re.compile(u"^[\+\<\>\~\~\≥\*\=\-\±]*\d+(\.\d*)?([\+\<\>\~\~\≥\*\=\-\±]+(\d+(\.\d*))?)?([nmcμ]m|%|μgml|[mtc]|[kmκ]b|[x×]|umg|mua|fold)*$")
-        self._numeral = re.compile(u"^([\+\<\>\~\~\≥\*\=\-\±]*\d+)(\.\d*)?([\+\<\>\~\~\≥\*\=\-\±·]+\d*(\.\d*)?)?([nmcμ]m|%|μgml|[mtc]|[kmκ]b|[x×]|umg|mua|fold)*$")
+        self._numeral = re.compile(r"^([\+\<\>\~\~\≥\*\=\-\±]*\d+)(\.\d*)?"
+                                   r"([\+\<\>\~\~\≥\*\=\-\±·]+\d*(\.\d*)?)?"
+                                   r"([nmcμ]m|%|μgml|[mtc]|[kmκ]b|[x×]|umg|"
+                                   r"mua|fold)*$")
         self.create_text_file()
 
         # 6.- once the text has been extracted, the file is preprocessed
@@ -254,24 +264,27 @@ class GetText(CommandLineApp):
     def create_text_file(self):
         seq2pmid = defaultdict(set)
         self.log.info("Reading mapping file")
-        pattern = re.compile(";\s*")
-        with open(self.options.mapping, "r") as f:
-            for line in f:
+        pattern = re.compile(r";\s*")
+        with open(self.options.mapping, "r") as mapping_file:
+            for line in mapping_file:
                 fields = line.split("\t")
                 if fields[16].strip():
                     seq_id, pmids = fields[0], fields[16]
                     seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
 
         self.log.info("Writing text file")
-        with io.open(self.text_file, "w", encoding='utf8') as out, open(self.options.sequences_file, 'r') as f:
+        file_in = open(self.options.sequences_file, 'r')
+        with io.open(self.text_file, "w", encoding='utf8') as out:
             cache_pmid = dict()
-            for line in f:
+            for line in file_in:
                 if line.startswith(">"):
                     id_prot = line.split()[0].replace(">", "")
                     if "|" in id_prot:
                         id_prot = id_prot.split("|")[1]
-                    text_prot = self.normalize(line.split(" ", 1)[1].split("OS=")[0].strip())
-                    
+                    text_prot = self.normalize(line.split(" ", 1)[1]
+                                               .split("OS=")[0]
+                                               .strip())
+
                     text_pubmed = []
                     if id_prot in seq2pmid:
                         for pmid in seq2pmid[id_prot]:
@@ -280,12 +293,16 @@ class GetText(CommandLineApp):
                                 continue
                             pmid_fi = os.path.join(self.cachepubmed, str(pmid))
                             try:
-                                text_pmid = self.normalize(open(pmid_fi, 'r').read())
+                                text_pmid = self.normalize(open(pmid_fi, 'r')
+                                                           .read())
                                 text_pubmed.append(text_pmid)
                                 cache_pmid[pmid] = text_pmid
                             except IOError:
                                 pass
-                    out.write(u"{0} {1} {2}\n".format(id_prot, text_prot, " ".join(text_pubmed)))
+                    out.write(u"{0} {1} {2}\n".format(id_prot,
+                                                      text_prot,
+                                                      " ".join(text_pubmed)))
+        file_in.close()
 
     def process_rdf_file(self):
         """Process the rdf file, extracting the relevant fields into
@@ -294,12 +311,12 @@ class GetText(CommandLineApp):
         (this might change in the future and some error tolerance has
         been added)
         """
-        with open(self.options.rdf_file, "r") as f:
+        with open(self.options.rdf_file, "r") as rdf_fh:
             opentitle = False
             openabstract = False
             pubmedid, title, abstract = "", "", []
 
-            for line in f:
+            for line in rdf_fh:
                 if "<title>" in line:
                     opentitle = "</title>" not in line
                     if not opentitle:
@@ -334,61 +351,51 @@ class GetText(CommandLineApp):
                         abstract.append(line.split("</rdfs:comment>")[0])
                         openabstract = False
 
-    def process_fasta_file(self):
-        with open(self.options.sequences_file, 'r') as f:
-            for line in f:
-                if line.startswith(">"):
-                    id_prot = line.split()[0].replace(">", "")
-                    txt_protein = line.split(" ", 1)[1].split("OS=")[0].strip()
-                    filename = os.path.join(self.cacheuniprot, id_prot)
-                    with open(filename, "w") as out:
-                        out.write("{}".format(txt_protein))
-
-    def normalize(self, s):
+    def normalize(self, input_s):
         """This is a pre-processing which is made to any text
         before it is written to the disk (and prior to be
         indexed). Unicode data is normalized, the stopwords
-        (and small tokens) are removed as well as numbers and URLs, 
+        (and small tokens) are removed as well as numbers and URLs,
         and it is set to lowercase. Text is stemmed, as well, if
         Snowball stemmers are available.
         """
-        u_s = ''.join((c for c in unicodedata.normalize('NFD', unicode(s.lower(), "UTF-8"))
-            if unicodedata.category(c) != 'Mn'))
-        u_s = ''.join([c if not c in self.punctuation else ' ' for c in u_s])
-        u_s = [stem(x.strip('-')) for x in u_s.split() 
-                if len(x) > 2 and len(x) < 30 
-                    and x not in self.stopwords
-                    and not self.is_number(x)
-                    and not self.is_numeral(x)
-                    and not x.startswith('http')
-              ]
-        return ' '.join([x for x in u_s if not x in self.stopwords])
+        s_lower = unicode(input_s.lower(), "UTF-8")
+        u_s = ''.join((c for c in unicodedata.normalize("NFD", s_lower)
+                       if unicodedata.category(c) != 'Mn'))
+        u_s = ''.join([c if c not in self.punctuation else ' ' for c in u_s])
+        u_s = [stem(x.strip('-')) for x in u_s.split()
+               if len(x) > 2 and len(x) < 30
+               and x not in self.stopwords
+               and not self.is_number(x)
+               and not self.is_numeral(x)
+               and not x.startswith('http')]
+        return ' '.join([x for x in u_s if x not in self.stopwords])
 
-    def tokenize(self, s):
+    def tokenize(self, orig_string):
         """Tokenizes and preprocesses a certain string into
         a list of strings. Yes, it can (should be) improved"""
-        u_s = unicode(s, "UTF-8")
+        u_s = unicode(orig_string, "UTF-8")
         return u_s.split()
 
-    def is_numeral(self, s):
+    def is_numeral(self, string_to_check):
         """Checks if the string is sort of a number (i.e. an interval, or a percentage)
         """
-        if not self._digits.search(s):
+        if not self._digits.search(string_to_check):
             return False
 
-        return bool(self._numeral.match(s))
+        return bool(self._numeral.match(string_to_check))
 
-    def is_number(self, s):
+    def is_number(self, string_to_check):
         """Checks if a string is a number"""
         try:
-            float(s)
+            float(string_to_check)
             return True
         except ValueError:
             return False
 
     def index_text_file(self):
         freq = defaultdict(int)
-        if len(self.old_lexicon) == 0:
+        if not self.old_lexicon:
             word_id = dict()
         else:
             word_id = self.old_lexicon
@@ -400,7 +407,8 @@ class GetText(CommandLineApp):
                 seq_ids.append(seq_id)
 
                 line = [seq_id]
-                for token, frequency in Counter(self.tokenize(rest)).iteritems():
+                cnt = Counter(self.tokenize(rest))
+                for token, frequency in cnt.items():
                     tok_id = 0
                     if token not in word_id:
                         tok_id = len(word_id)
@@ -415,9 +423,11 @@ class GetText(CommandLineApp):
 
         # write lexicon
         with io.open(self.lexicon_file, 'w', encoding='utf8') as lexicon:
-            for word, id_word in word_id.iteritems():
+            for word, id_word in word_id.items():
                 if id_word in freq:
-                    lexicon.write(u"{0} {1} {2}\n".format(word, id_word, freq[id_word]))
+                    lexicon.write(u"{0} {1} {2}\n".format(word,
+                                                          id_word,
+                                                          freq[id_word]))
 
         # write seq ids file
         with open(self.ids_file, 'w') as proteins_file:
@@ -428,39 +438,45 @@ class GetText(CommandLineApp):
         # 1.- read architectures to a dictionary of sets (key=architecture,
         # value set of sequences
         self.log.info("Inverting dict")
-        seqs_per_arch = dict((arch, set(prots)) for (arch, prots) in ArchReader(self.options.arch_file))
+        seqs_per_arch = dict((arch, set(prots)) for (arch, prots)
+                             in ArchReader(self.options.arch_file))
         arch_per_seq = dict()
-        for arch, prots in seqs_per_arch.iteritems():
+        for arch, prots in seqs_per_arch.items():
             arch_per_seq.update([(prot, arch) for prot in prots])
 
         # 2.- main loop
         self.log.info("Creating weight arch file")
-        vec_per_arch = dict((arch, defaultdict(float)) for arch in seqs_per_arch.keys())
+        vec_per_arch = dict((arch, defaultdict(float))
+                            for arch in seqs_per_arch.keys())
         for line in open(self.weight_file, 'r'):
             fields = line.split()
-            if not fields[0] in arch_per_seq or len(fields) == 0:
+            if not fields[0] in arch_per_seq or not fields:
                 continue
             arch = arch_per_seq[fields[0]]
-            vec = vec_per_arch[arch] 
-                
+            vec = vec_per_arch[arch]
+
             for field in fields[1:]:
                 term, weight = field.split(':')
                 vec[int(term)] += float(weight)
 
-        # 3.- for each arch, we trim its vector to the best 500 terms (sorted via weight)
-        LIMIT = 500
+        # 3.- for each arch, we trim its vector to the
+        # best 500 terms (sorted via weight)
+        limit = 500
         vec_per_arch2 = {}
         for arch, vec in vec_per_arch.items():
             val = vec
-            if len(vec) > 500:
-                val = dict(sorted(vec.items(), key=lambda x:x[1], reverse=True)[:500])
+            if len(vec) > limit:
+                val = dict(sorted(vec.items(), key=lambda x: x[1],
+                                  reverse=True)[:limit])
             vec_per_arch2[arch] = val
         vec_per_arch = vec_per_arch2
 
         # we print the file
         self.log.info("Printing weight arch file")
-        for arch in seqs_per_arch: 
-            print arch, " ", " ".join(["{0}:{1:.5f}".format(t,w) for t,w in vec_per_arch[arch].iteritems()])
+        for arch in seqs_per_arch:
+            print(arch + " " + " ".join(["{0}:{1:.5f}".format(t, w)
+                                         for t, w in
+                                         vec_per_arch[arch].items()]))
 
     def weight_freq_file(self):
         """Reads the frequency file and produces the frequency file"""
@@ -472,22 +488,22 @@ class GetText(CommandLineApp):
 
         # we read the frequency file and write it
         with open(self.weight_file, 'w') as output_file:
-            idf = dict([(numid, math.log(float(self.N)/float(df))) for numid, df in freq.iteritems()])
+            idf = dict([(nid, math.log(float(self.N)/float(df)))
+                        for nid, df in freq.items()])
             for line in open(self.freq_file, 'r'):
                 if " " in line.strip():
                     seq_id, rest = line.split(" ", 1)
-                    features = [(int(f[0]), float(f[1])) for f in [i.split(":") for i in rest.split()]]
-                    output_file.write("{} {}\n".format(seq_id, " ".join(["{}:{:.5f}".format(feat[0], feat[1]*idf[feat[0]]) for feat in features])))
+                    features = [(int(f[0]), float(f[1]))
+                                for f in [i.split(":") for i in rest.split()]]
+                    output_file.write(
+                        "{} {}\n".format(seq_id,
+                                         " ".join(["{}:{:.5f}".format(feat[0],
+                                                   feat[1]*idf[feat[0]])
+                                                   for feat in features])))
                 else:
                     output_file.write("{}\n".format(seq_id))
         self.log.info("Weight file done!")
 
-    def check_not_exists(self, filename):
-        try:
-            with open(filename):
-                self.error("The file " + filename + " already exists")
-        except IOError:
-            pass
 
 if __name__ == "__main__":
     sys.exit(GetText().run())

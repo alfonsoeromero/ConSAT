@@ -2,34 +2,29 @@
 """
 A higher level Gene Ontology representation in Python
 """
+from __future__ import print_function
+from collections import deque
+from gfam.go.utils import ParseError
+from gfam.utils import open_anything
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+import gfam.go.obo
+
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2009, Tamas Nepusz"
 __license__ = "MIT"
 __version__ = "0.1"
 
 __all__ = ["Annotation", "AnnotationFile", "Tree", "Term"]
 
-from collections import deque
-
-try:
-    from collections import namedtuple
-except ImportError:
-    from gfam.compat import namedtuple
-
-from gfam.go.utils import ParseError
-from gfam.utils import open_anything
-
-import gfam.go.obo
 
 class Annotation(object):
     """Class representing a GO annotation (possibly parsed from an
     annotation file).
-    
+
     The class has the following attributes (corresponding to the
     columns of a GO annotation file):
-        
+
     - ``db``: refers to the database from which the identifier
       in the next column (``db_object_id``) is drawn
     - ``db_object_id``: a unique identifier in ``db`` for the
@@ -62,26 +57,27 @@ class Annotation(object):
     - ``assigned_by``: the database which made the annotation.
     """
 
-    __slots__ = ["db", "db_object_id", "db_object_symbol", \
-            "qualifiers", "go_id", "db_references", \
-            "evidence_code", "with", "aspect", \
-            "db_object_name", "db_object_synonyms", \
-            "db_object_type", "taxons", "date", \
-            "assigned_by"]
+    __slots__ = ["db", "db_object_id", "db_object_symbol",
+                 "qualifiers", "go_id", "db_references",
+                 "evidence_code", "with", "aspect",
+                 "db_object_name", "db_object_synonyms",
+                 "db_object_type", "taxons", "date",
+                 "assigned_by"]
 
     def __init__(self, *args, **kwds):
         """Constructs an annotation. Use keyword arguments to specify the values
         of the different attributes. If you use positional arguments, the order
-        of the arguments must be the same as they are in the GO annotation file.
-        No syntax checking is done on the values entered, but attributes with a
-        maximum cardinality more than one are converted to lists automatically.
-        (If you specify a string with vertical bar separators as they are in the
-        input file, the string will be splitted appropriately)."""
+        of the arguments must be the same as they are in the GO annotation
+        file. No syntax checking is done on the values entered, but attributes
+        with a maximum cardinality more than one are converted to lists
+        automatically. (If you specify a string with vertical bar separators
+        as they are in the input file, the string will be splitted
+        appropriately)."""
         if len(args) == 1 and not kwds:
             args = args[0].strip().split("\t")
         for (name, value) in zip(self.__slots__, args):
             setattr(self, name, value)
-        for name, value in kwds.iteritems():
+        for name, value in kwds.items():
             setattr(self, name, kwds[value])
         for name in self.__slots__:
             if not hasattr(self, name):
@@ -106,8 +102,8 @@ class Annotation(object):
                 setattr(self, attr, value.split("|"))
 
     def __repr__(self):
-        params = ",".join("%s=%r" % (name, getattr(self, name)) \
-                for name in self.__slots__)
+        params = ",".join("%s=%r" % (name, getattr(self, name))
+                          for name in self.__slots__)
         return "%s(%s)" % (self.__class__.__name__, params)
 
 
@@ -116,7 +112,7 @@ class AnnotationFile(object):
 
     def __init__(self, file_handle):
         """Creates an annotation file parser that reads the given file-like
-        object. You can also specify filenames. If the filename ends in ``.gz``,
+        object. You can also specify filenames. If it ends in ``.gz``,
         the file is assumed to contain gzipped data and it will be unzipped
         on the fly. Example::
 
@@ -182,8 +178,8 @@ class Tree(object):
         """Returns all the ancestors of a given `Term`
         (or multiple terms) in this tree. The result is a
         list of `Term` instances."""
-        unprocessed_terms = deque(self.ensure_term(term_or_id) \
-                for term_or_id in args)
+        unprocessed_terms = deque(self.ensure_term(term_or_id)
+                                  for term_or_id in args)
         result = set()
         while unprocessed_terms:
             term = unprocessed_terms.popleft()
@@ -224,9 +220,9 @@ class Tree(object):
         graph.vs["name"] = [term.name for term in self.terms.values()]
 
         term_id_to_idx = dict(zip(self.terms.keys(),
-            range(len(self.terms))))
+                                  range(len(self.terms))))
         edgelist = []
-        for identifier, term in self.terms.iteritems():
+        for identifier, term in self.terms.items():
             source = term_id_to_idx[identifier]
             for parent_id in term.tags.get(rel, []):
                 target = term_id_to_idx.get(parent_id.value, None)
@@ -238,10 +234,10 @@ class Tree(object):
         return graph
 
     @classmethod
-    def from_obo(cls, fp):
-        """Constructs a GO tree from an OBO file. `fp` is a file pointer
+    def from_obo(cls, f_pointer):
+        """Constructs a GO tree from an OBO file. `f_pointer` is a file pointer
         to the OBO file we want to use"""
-        parser = gfam.go.obo.Parser(fp)
+        parser = gfam.go.obo.Parser(f_pointer)
         tree = cls()
         for stanza in parser:
             term = Term.from_stanza(stanza)
@@ -249,7 +245,6 @@ class Tree(object):
             for alt_id in stanza.tags.get("alt_id", []):
                 tree.add_alias(term.id, alt_id.value)
         return tree
-
 
     def __len__(self):
         return len(self.terms)
@@ -260,10 +255,10 @@ class Term(object):
 
     __slots__ = ("id", "name", "tags")
 
-    def __init__(self, id, name="", tags=None):
-        """Constructs a GO term with the given ID, the given human-
+    def __init__(self, go_id, name="", tags=None):
+        """Constructs a GO term with the given go_id, the given human-
         readable name and the given tags."""
-        self.id = str(id)
+        self.id = str(go_id)
         self.name = str(name)
         if tags:
             self.tags = dict(tags)
@@ -273,7 +268,7 @@ class Term(object):
     def __repr__(self):
         """String representation of a GO term"""
         return "%s(%r, %r, %r)" % (self.__class__.__name__,
-                self.id, self.name, self.tags)
+                                   self.id, self.name, self.tags)
 
     def __str__(self):
         """Returns just the ID of the GO term"""
@@ -288,31 +283,25 @@ class Term(object):
         name = stanza.tags.get("name", [id])[0]
         return cls(identifier, name, stanza.tags)
 
+
 def test():
     from time import time
-    from gzip import GzipFile
 
     start = time()
-    tree = Tree.from_obo(file("gene_ontology.obo"))
+    tree = Tree.from_obo(open("gene_ontology.obo"))
     end = time()
 
-    print len(tree), "terms in GO tree parsed in %.2f seconds" % (end-start)
-    print
+    print("{} terms in GO tree parsed in {:.2f} seconds\n".format(
+        len(tree), end-start))
 
-    print "All paths from GO:0009651 to root:"
+    print("All paths from GO:0009651 to root:")
     for path in tree.paths_to_root("GO:0009651"):
-        print " -> ".join(node.name for node in path)
-    print
+        print(" -> ".join(node.name for node in path))
+    print()
 
-    print "Ancestors of GO:0009651:"
-    print "\n".join(str(term) for term in tree.ancestors("GO:0009651"))
-    print
-
-    start = time()
-    ann_file = AnnotationFile(GzipFile("gene_association.sgd.gz"))
-    l = sum(1 for _ in ann_file)
-    end = time()
-    print l, "annotations for yeast parsed in %.2f seconds" % (end-start)
+    print("Ancestors of GO:0009651:")
+    print("\n".join(str(term) for term in tree.ancestors("GO:0009651")))
+    print()
 
 
 if __name__ == "__main__":

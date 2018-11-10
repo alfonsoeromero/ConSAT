@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Binary for the 'download_names' app"""
 import sys
 
 try:
@@ -12,4 +13,3 @@ except ImportError:
 
 if __name__ == "__main__":
     sys.exit(DownloadNamesApp().run())
-

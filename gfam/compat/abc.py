@@ -20,13 +20,16 @@ class Sized(object):
     def __len__(self):
         raise NotImplementedError
 
+
 class Iterable(object):
     def __iter__(self):
         raise NotImplementedError
 
+
 class Container(object):
-    def __contains__(self, x):
+    def __contains__(self, element):
         raise NotImplementedError
+
 
 class Mapping(Sized, Iterable, Container):
     """An abstract base class similar to `collections.Mapping` in Python 2.6.
@@ -78,5 +81,3 @@ class Mapping(Sized, Iterable, Container):
     def __ne__(self, other):
         return not isinstance(other, Mapping) or \
                dict(self.items()) != dict(other.items())
-
-

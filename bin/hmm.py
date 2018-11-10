@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-from gfam.scripts.hmm import HMM
+"""Binary for the 'hmm' app"""
+
 import sys
+from gfam.scripts.hmm import HMM
 
 if __name__ == "__main__":
     sys.exit(HMM().run())

@@ -18,8 +18,19 @@ Usage example::
         gene_ontology[stanza.tags["id"][0]] = stanza.tags
 """
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+from __future__ import print_function
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+import re
+import tokenize
+from gfam.utils import open_anything
+from gfam.go.utils import ParseError
+
+
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2009, Tamas Nepusz"
 __license__ = "MIT"
 __version__ = "0.1"
@@ -27,13 +38,6 @@ __version__ = "0.1"
 
 __all__ = ["ParseError", "Stanza", "Parser", "Value"]
 
-
-from cStringIO import StringIO
-import re
-import tokenize
-
-from gfam.utils import open_anything
-from gfam.go.utils import ParseError
 
 # pylint:disable-msg=R0903
 # R0903: too few public methods
@@ -61,8 +65,8 @@ class Value(object):
 
     def __repr__(self):
         """Returns a Python representation of this object"""
-        return "%s(%r, %r)" % (self.__class__.__name__, \
-                self.value, self.modifiers)
+        return "%s(%r, %r)" % (self.__class__.__name__,
+                               self.value, self.modifiers)
 
 
 # pylint:disable-msg=R0903
@@ -106,8 +110,8 @@ class Stanza(object):
 
     def __repr__(self):
         """Returns a Python representation of this object"""
-        return "%s(%r, %r)" % (self.__class__.__name__, \
-                self.name, self.tags)
+        return "%s(%r, %r)" % (self.__class__.__name__,
+                               self.name, self.tags)
 
 
 # pylint:disable-msg=R0903
@@ -177,15 +181,15 @@ class Parser(object):
                     # Search for a trailing comment
                     comment_char = line.rindex("!")
                     if "\"" in line:
-                        # a hack to tackle nasty situations where a  "!" appears
-                        # in the middle of a quoted string and therefore it does
-                        # not mean a trailing comment
+                        # a hack to tackle nasty situations where a  "!"
+                        # appears in the middle of a quoted string and
+                        # therefore it does not mean a trailing comment
                         positions = [m.start() for m in re.finditer('"', line)]
                         if len(positions) != 2 or comment_char >= positions[1]:
                             line = line[0:comment_char].strip()
                     else:
                         line = line[0:comment_char].strip()
-                    
+
                 except ValueError:
                     # No comment, fine
                     pass
@@ -262,15 +266,14 @@ def test():
     for stanza in parser:
         count += 1
         try:
-            print stanza.tags["namespace"][0]
+            print(stanza.tags["namespace"][0])
         except KeyError:
-            print stanza.tags["id"][0] 
+            print(stanza.tags["id"][0])
 #        if count % 1000 == 0:
 #            print "%d stanzas processed" % count
-    print "Parsing successful, %d stanzas" % count
+    print("Parsing successful, %d stanzas" % count)
 
 
 if __name__ == "__main__":
     import sys
     sys.exit(test())
-

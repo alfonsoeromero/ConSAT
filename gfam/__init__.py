@@ -2,14 +2,14 @@
 
 On its own, this module contains nothing, all the functionality is implemented
 in one of the following submodules:
-    
+
 :mod:`gfam.assignment`
-  Contains routines related to assignments, i.e. the objects describing the fact
-  that a given section of a sequence is assigned to a given domain.
+  Contains routines related to assignments, i.e. the objects describing the
+  fact that a given section of a sequence is assigned to a given domain.
 
 :mod:`gfam.blast`
-  Classes and functions related to handling BLAST output files and external BLAST
-  utilities.
+  Classes and functions related to handling BLAST output files and external
+  BLAST utilities.
 
 :mod:`gfam.compat`
   Classes and functions to maintain compatibility with Python 2.5.
@@ -63,11 +63,9 @@ General comments that apply for the whole GFam API:
   a function.
 """
 
-__author__  = "Tamas Nepusz"
-__email__   = "tamas@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz"
+__email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 __version__ = "1.0"
-
-import gfam.fasta as fasta

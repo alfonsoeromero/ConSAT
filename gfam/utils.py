@@ -1,7 +1,8 @@
 """Common routines and utility classes for GFam that fit nowhere else."""
+from __future__ import print_function
 
-__author__  = "Tamas Nepusz, Alfonso E. Romero"
-__email__   = "tamas@cs.rhul.ac.uk, aeromero@cs.rhul.ac.uk"
+__author__ = "Tamas Nepusz, Alfonso E. Romero"
+__email__ = "tamas@cs.rhul.ac.uk, aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2014, Tamas Nepusz"
 __license__ = "GPL"
 
@@ -19,6 +20,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
+
 import os
 import platform
 import sys
@@ -27,6 +33,10 @@ from contextlib import contextmanager
 from math import ceil
 from shutil import rmtree
 from tempfile import mkdtemp
+if sys.version_info[0] >= 3:
+    from io import IOBase
+    file = IOBase
+
 
 def goid_to_num(identifier):
     """ Takes a GO `identifier` (e.g. "GO:0001308") and
@@ -35,23 +45,25 @@ def goid_to_num(identifier):
     """
     return int(identifier.split(":")[1])
 
+
 def num_to_goid(num):
-    """ Takes an integer `num` (e.g. 1308) and returns a 
+    """ Takes an integer `num` (e.g. 1308) and returns a
         valid GO identifier by prepending "GO:" and filling
         with zeros in the left up to seven figures (resulting
         in "GO:0001308" in the above mentioned example).
     """
     return "GO:{0:0>7}".format(num)
 
+
 class bidict(object):
     """Bidirectional many-to-many mapping.
-    
+
     This class models many-to-many mappings that are used in some places in
     GFam. For instance, the mapping of GO term identifiers to InterPro
     domain identifiers is typically a many-to-many mapping (domains are
     annotated by multiple GO terms, and GO terms may belong to multiple
     domains).
-    
+
     Being a general many-to-many mapping class, instances contain two
     member dictionaries: `left` (which maps items from one side of the
     relationship to *sets* of items from the other side of the relationship)
@@ -94,10 +106,10 @@ class bidict(object):
         elif isinstance(items, dict):
             # items assigns an element from the left dict to a
             # set of elements from the right dict
-            for key, values in items.iteritems():
+            for key, values in items.items():
                 self.add_left_multi(key, values)
         else:
-            raise TypeError("items must be dict or bidict, got %r" % \
+            raise TypeError("items must be dict or bidict, got %r" %
                             type(items))
 
     def add_left(self, v1, v2):
@@ -124,7 +136,7 @@ class bidict(object):
             self.left[v1].update(v2s)
         except KeyError:
             self.left[v1] = set(v2s)
-        for v2 in v2s: 
+        for v2 in v2s:
             try:
                 self.right[v2].add(v1)
             except KeyError:
@@ -137,7 +149,7 @@ class bidict(object):
         for v1 in v1s:
             self.left[v1].add(v2)
 
-    def get_left(self, v1, default = None):
+    def get_left(self, v1, default=None):
         """Returns the items associated to `v1` when `v1` is looked up from the
         left dictionary. `default` will be returned if `v1` is not in the left
         dictionary."""
@@ -145,8 +157,8 @@ class bidict(object):
 
     def get_right(self, v1, default=None):
         """Returns the items associated to `v1` when `v1` is looked up from the
-        right dictionary. `default` will be returned if `v2` is not in the right
-        dictionary."""
+        right dictionary. `default` will be returned if `v2` is not in the
+        right dictionary."""
         return self.right.get(v1, default)
 
     def len_left(self):
@@ -159,18 +171,18 @@ class bidict(object):
 
     def iteritems_left(self):
         """Iterates over the left dictionary"""
-        return self.left.iteritems()
+        return self.left.items()
 
     def iteritems_right(self):
         """Iterates over the right dictionary"""
-        return self.right.iteritems()
+        return self.right.items()
 
 
 class Histogram(object):
     """Generic histogram class for real numbers
-    
+
     Example:
-        
+
         >>> h = Histogram(5)     # Initializing, bin width = 5
         >>> h << [2,3,2,7,8,5,5,0,7,9]     # Adding more items
         >>> print h
@@ -179,7 +191,7 @@ class Histogram(object):
         [ 5, 10): ****** (6)
     """
 
-    def __init__(self, bin_width = 1, data = None):
+    def __init__(self, bin_width=1, data=None):
         """Initializes the histogram with the given data set.
 
         :param bin_width: the bin width of the histogram.
@@ -194,7 +206,7 @@ class Histogram(object):
         if data:
             self.add_many(data)
 
-    def _get_bin(self, num, create = False):
+    def _get_bin(self, num, create=False):
         """Returns the bin index corresponding to the given number.
 
         :param num: the number for which the bin is being sought
@@ -206,7 +218,7 @@ class Histogram(object):
         if len(self._bins) == 0:
             if not create:
                 result = None
-            else: 
+            else:
                 self._min = int(num/self._bin_width)*self._bin_width
                 self._max = self._min+self._bin_width
                 self._bins = [0]
@@ -262,13 +274,13 @@ class Histogram(object):
 
     def add(self, num, repeat=1):
         """Adds a single number to the histogram.
-        
+
         :param num: the number to be added
         :param repeat: number of repeated additions
         """
         num = float(num)
         binidx = self._get_bin(num, True)
-        self._bins[binidx] += repeat 
+        self._bins[binidx] += repeat
         self._running_mean.add(num, repeat)
 
     def add_many(self, data):
@@ -294,7 +306,7 @@ class Histogram(object):
     def bins(self):
         """Generator returning the bins of the histogram in increasing
         order
-        
+
         Returns a tuple with the following elements: left bound, right
         bound, number of elements in the bin"""
         x = self._min
@@ -311,7 +323,7 @@ class Histogram(object):
         should be shown. If both are `False`, only a general descriptive
         statistics (number of elements, mean and standard deviation) is
         shown.
-        
+
         `max_width` may not be obeyed if it is too small.
         """
 
@@ -319,11 +331,12 @@ class Histogram(object):
             return "N = 0"
 
         # Determine how many decimal digits should we use
-        if int(self._min) == self._min and int(self._bin_width) == self._bin_width:
+        if int(self._min) == self._min and\
+           int(self._bin_width) == self._bin_width:
             number_format = "%d"
         else:
             number_format = "%.3f"
-        num_length = max(len(number_format % self._min), \
+        num_length = max(len(number_format % self._min),
                          len(number_format % self._max))
         number_format = "%" + str(num_length) + number_format[1:]
         format_string = "[%s, %s): %%s" % (number_format, number_format)
@@ -338,8 +351,8 @@ class Histogram(object):
                 scale = maxval // (max_width-2*num_length-6)
             scale = max(scale, 1)
 
-        result = ["N = %d, mean +- sd: %.4f +- %.4f" % \
-            (self.n, self.mean, self.sd)]
+        result = ["N = %d, mean +- sd: %.4f +- %.4f" %
+                  (self.n, self.mean, self.sd)]
 
         if show_bars:
             # Print the bars
@@ -348,10 +361,12 @@ class Histogram(object):
             if show_counts:
                 format_string += " (%d)"
                 for left, right, cnt in self.bins():
-                    result.append(format_string % (left, right, '*'*(cnt//scale), cnt))
+                    result.append(format_string % (left, right,
+                                                   '*'*(cnt//scale), cnt))
             else:
                 for left, right, cnt in self.bins():
-                    result.append(format_string % (left, right, '*'*(cnt//scale)))
+                    result.append(format_string % (left, right,
+                                                   '*'*(cnt//scale)))
         elif show_counts:
             # Print the counts only
             for left, right, cnt in self.bins():
@@ -361,6 +376,7 @@ class Histogram(object):
 
     def __str__(self):
         return self.to_string()
+
 
 def open_anything(fname, *args, **kwds):
     """Opens the given file. The file may be given as a file object
@@ -374,10 +390,9 @@ def open_anything(fname, *args, **kwds):
         infile = fname
     elif fname == "-":
         infile = sys.stdin
-    elif (fname.startswith("http://") or fname.startswith("ftp://") or \
-         fname.startswith("https://")) and not kwds and not args:
-        import urllib2
-        infile = urllib2.urlopen(fname)
+    elif (fname.startswith("http://") or fname.startswith("ftp://") or
+          fname.startswith("https://")) and not kwds and not args:
+        infile = urlopen(fname)
     elif fname[-4:] == ".bz2":
         infile = bz2.BZ2File(fname, *args, **kwds)
     elif fname[-3:] == ".gz":
@@ -397,9 +412,9 @@ def redirected(stdin=None, stdout=None, stderr=None):
     `stdin` is the new standard input, `stdout` is the new standard output,
     `stderr` is the new standard error. ``None`` means to leave the
     corresponding stream unchanged.
-    
+
     Example::
-    
+
         with redirected(stdout=open("test.txt", "w")):
             print "Yay, redirected to a file!"
     """
@@ -414,13 +429,13 @@ def redirected(stdin=None, stdout=None, stderr=None):
                 setattr(sys, sname, loc.get(sname, None))
         yield
     finally:
-        for sname, stream in old_streams.iteritems():
+        for sname, stream in old_streams.items():
             setattr(sys, sname, stream)
 
 
 class RunningMean(object):
     """Running mean calculator.
-    
+
     This class can be used to calculate the mean of elements from a
     list, tuple, iterable or any other data source. The mean is
     calculated on the fly without explicitly summing the values,
@@ -430,9 +445,9 @@ class RunningMean(object):
     """
 
     # pylint: disable-msg=C0103
-    def __init__(self, n = 0.0, mean = 0.0, sd = 0.0):
+    def __init__(self, n=0.0, mean=0.0, sd=0.0):
         """RunningMean(n=0.0, mean=0.0, sd=0.0)
-        
+
         Initializes the running mean calculator. Optionally the
         number of already processed elements and an initial mean
         can be supplied if we want to continue an interrupted
@@ -449,10 +464,10 @@ class RunningMean(object):
         else:
             self._sqdiff = 0.0
             self._sd = 0.0
-        
+
     def add(self, value, repeat=1):
         """RunningMean.add(value, repeat=1)
-        
+
         Adds the given value to the elements from which we calculate
         the mean and the standard deviation.
 
@@ -470,16 +485,16 @@ class RunningMean(object):
 
     def add_many(self, values):
         """RunningMean.add(values)
-        
+
         Adds the values in the given iterable to the elements from
         which we calculate the mean. Can also accept a single number.
         The left shift (C{<<}) operator is aliased to this function,
         so you can use it to add elements as well:
-            
+
           >>> rm=RunningMean()
           >>> rm << [1,2,3,4]           # doctest:+ELLIPSIS
           (2.5, 1.290994...)
-        
+
         @param values: the element(s) to be added
         @type values: iterable
         @return: the new mean"""
@@ -514,9 +529,9 @@ class RunningMean(object):
     def __str__(self):
         return "Running mean (N=%d, %f +- %f)" % \
             (self._nitems, self._mean, self._sd)
-    
+
     __lshift__ = add_many
-    
+
     def __float__(self):
         return float(self._mean)
 
@@ -524,7 +539,7 @@ class RunningMean(object):
         return int(self._mean)
 
     def __long__(self):
-        return long(self._mean)
+        return int(self._mean)
 
     def __complex__(self):
         return complex(self._mean)
@@ -559,7 +574,7 @@ def search_file(filename, search_path=None, executable=True):
 def temporary_dir(*args, **kwds):
     """Context manager that creates a temporary directory when entering the
     context and removes it when exiting.
-    
+
     Every argument is passed on to `tempfile.mkdtemp` except a keyword argument
     named `change` which tells whether we should change to the newly created
     temporary directory or not. The current directory will be restored when
@@ -585,7 +600,7 @@ class UniqueIdGenerator(object):
     names.
 
     Usage:
-    
+
     >>> gen = UniqueIdGenerator()
     >>> gen["A"]
     0
@@ -603,7 +618,8 @@ class UniqueIdGenerator(object):
         """Creates a new unique ID generator. `id_generator` specifies how do we
         assign new IDs to elements that do not have an ID yet. If it is `None`,
         elements will be assigned integer identifiers starting from 0. If it is
-        an integer, elements will be assigned identifiers starting from the given
+        an integer, elements will be assigned identifiers starting from the
+        given
         integer. If it is an iterator or generator, its `next` method will be
         called every time a new ID is needed."""
         if id_generator is None:
@@ -621,17 +637,18 @@ class UniqueIdGenerator(object):
         try:
             return self._ids[item]
         except KeyError:
-            self._ids[item] = self._generator.next()
+            self._ids[item] = next(self._generator)
             return self._ids[item]
 
     def __len__(self):
-        """Retrieves the number of added elements in this `UniqueIDGenerator`"""
+        """Retrieves the number of added elements
+        in this `UniqueIDGenerator`"""
         return len(self._ids)
 
     def reverse_dict(self):
         """Returns the reversed mapping, i.e., the one that maps generated IDs
         to their corresponding items"""
-        return dict((v, k) for k, v in self._ids.iteritems())
+        return dict((v, k) for k, v in self._ids.items())
 
     def values(self):
         """Returns the list of items added so far. Items are ordered according
@@ -639,7 +656,7 @@ class UniqueIdGenerator(object):
         exactly in the same order they were added if the ID generator generates
         IDs in ascending order. This hold, for instance, to numeric ID
         generators that assign integers starting from a given number."""
-        return sorted(self._ids.keys(), key = self._ids.__getitem__)
+        return sorted(self._ids.keys(), key=self._ids.__getitem__)
 
 
 class complementerset(object):
@@ -702,9 +719,9 @@ class complementerset(object):
 
     def iterexcluded(self):
         """Iterates over the items excluded from the complementer set.
-        
+
         Example::
-            
+
             >>> s = complementerset([5, 7, 4])
             >>> print sorted(list(s.iterexcluded()))
             [4, 5, 7]
@@ -714,9 +731,9 @@ class complementerset(object):
     def remove(self, member):
         """Removes an element from the complementer set; it must be a member.
         If the element is not a member, raises a ``KeyError``.
-        
+
         Example::
-            
+
             >>> s = complementerset()
             >>> s.remove(2)
             >>> print s
@@ -776,8 +793,8 @@ class complementerset(object):
             >>> s == 1
             False
         """
-        return isinstance(other, self.__class__) and \
-               self._set == other._set
+        return isinstance(other, self.__class__)\
+            and self._set == other._set
 
     def __ge__(self, other):
         """Example::
@@ -969,7 +986,7 @@ class complementerset(object):
 
     def __ne__(self, other):
         return not self == other
-    
+
     def __or__(self, other):
         """Example::
 
@@ -1049,7 +1066,7 @@ class complementerset(object):
             set([4])
             >>> complementerset([3,4]) - set([1,2,3])
             complementerset([1, 2, 3, 4])
-            >>> complementerset() - 2 
+            >>> complementerset() - 2
             Traceback (most recent call last):
               File "<stdin>", line 1, in ?
             NotImplementedError
