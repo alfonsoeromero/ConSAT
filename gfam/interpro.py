@@ -71,17 +71,21 @@ class AssignmentReader(object):
         if parts[11] == 'NULL' or not parts[11]:
             parts[11] = None
 
-        assignment = Assignment(
-            id=parts[0],
-            length=int(parts[2]),
-            source=parts[3],
-            domain=parts[4],
-            start=int(parts[6]),
-            end=int(parts[7]),
-            evalue=evalue,
-            interpro_id=parts[11],
-            comment=parts[14]
-        )
+        try:
+            assignment = Assignment(
+                id=parts[0],
+                length=int(parts[2]),
+                source=parts[3],
+                domain=parts[4],
+                start=int(parts[6]),
+                end=int(parts[7]),
+                evalue=evalue,
+                interpro_id=parts[11],
+                comment=parts[14]
+            )
+        except:
+            return None
+
 
         return assignment
 

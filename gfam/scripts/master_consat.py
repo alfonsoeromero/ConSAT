@@ -134,7 +134,8 @@ class GFamCalculation(CalculationModule):
             self.extra_args
         except NameError:
             self.extra_args = []
-        args.extend(self.extra_args)
+        if self.extra_args is not None:
+            args.extend(self.extra_args)
 
         for param, value in self.parameters.items():
             if not param.startswith("switch."):

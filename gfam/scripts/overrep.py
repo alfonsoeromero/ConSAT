@@ -83,7 +83,14 @@ class OverrepresentationAnalysisApp(CommandLineApp):
         return parser
 
     def __parse_bool(self, _string):
-        return _string.strip().lower() in ("true", "t", "1")
+        if not isinstance(_string,bool):
+            string = _string.strip()
+        else:
+            string = _string
+        if not string:
+            return False
+        else:
+            return string.lower() in ("true", "t", "1")
 
     def run_real(self):
         """Runs the overrepresentation analysis application"""

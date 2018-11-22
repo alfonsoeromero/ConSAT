@@ -428,7 +428,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                     primary_source.add(assignment.source)
                 domains.append(new_assignment.domain)
                 new_assignments.append(new_assignment)
-            tree_arch = TreeRepresentation(new_assignments)
+            tree_arch = TreeRepresentation(new_assignments,self.interpro)
             seq.architecture = tree_arch.get_string()
             seq.architecture_pos = tree_arch.get_string_positions()
 

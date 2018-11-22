@@ -171,7 +171,7 @@ class FindUnassignedApp(CommandLineApp):
                                                         assignment.length))
             if interpro is not None:
                 assignment = assignment.resolve_interpro_ids(interpro)
-            seq.assign(assignment, interpro)
+        seq.assign(assignment, interpro= interpro)
 
     def get_unassigned(self):
         self.regions = []
