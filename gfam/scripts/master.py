@@ -151,6 +151,8 @@ class GFamCalculation(CalculationModule):
         # add some extra args, if any
         try:
             self.extra_args
+            if self.extra_args is None:
+                self.extra_args =[]
         except NameError:
             self.extra_args = []
         args.extend(self.extra_args)

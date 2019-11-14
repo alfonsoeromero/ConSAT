@@ -173,7 +173,7 @@ class AutomatedConSAT(CommandLineApp):
             "http://www.geneontology.org/external2go/interpro2go",
             "file.mapping.interpro_parent_child":
             "ftp://ftp.ebi.ac.uk/pub/databases/" +
-            "interpro/ParentChildTreeFile.txt"}
+            "interpro/76.0/ParentChildTreeFile.txt"}
 
     params = dict()
 
@@ -423,7 +423,7 @@ class AutomatedConSAT(CommandLineApp):
 
             # we download the InterPro data and prepare it
             url_interpro = "ftp://ftp.ebi.ac.uk/pub/databases/" +\
-                           "interpro/match_complete.xml.gz"
+                           "interpro/76.0/match_complete.xml.gz"
             file_interpro = os.path.join(self.program_dir["data"],
                                          "match_complete.xml.gz")
             self._download_file(url_interpro, file_interpro)
@@ -458,7 +458,7 @@ class AutomatedConSAT(CommandLineApp):
 
             # GOA
             url_goa = "ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/" +\
-                      "UNIPROT/gene_association.goa_uniprot.gz"
+                      "UNIPROT/goa_uniprot_all.gaf.gz"
             file_goa = os.path.join(self.program_dir["data"],
                                     "gene_association.goa_uniprot.gz")
             self._download_file(url_goa, file_goa)
@@ -573,7 +573,7 @@ class AutomatedConSAT(CommandLineApp):
 
             # we download the InterPro data and prepare it
             url_interpro = "ftp://ftp.ebi.ac.uk/pub/databases" +\
-                           "/interpro/match_complete.xml.gz"
+                           "/interpro/76.0/match_complete.xml.gz"
             file_interpro = os.path.join(self.program_dir["data"],
                                          "match_complete.xml.gz")
             self._download_file(url_interpro, file_interpro)
@@ -618,9 +618,9 @@ class AutomatedConSAT(CommandLineApp):
 
             # GOA
             url_goa = "ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/UNIPROT/" +\
-                      "gene_association.goa_uniprot.gz"
+                      "goa_uniprot_all.gaf.gz"
             file_goa = os.path.join(self.program_dir["data"],
-                                    "gene_association.goa_uniprot.gz")
+                                    "goa_uniprot_all.gaf.gz")
             self._download_file(url_goa, file_goa)
             self._gunzip(file_goa)
             file_goa = file_goa.replace(".gz", "")

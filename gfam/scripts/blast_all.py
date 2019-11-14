@@ -87,7 +87,7 @@ class AllAgainstAllBLASTApp(CommandLineApp):
         """
         if not args:
             args = []
-
+        print(args)
         tool_path = getattr(self.options, tool_name + "_path")
         if not tool_path:
             tool_path = os.getcwd()
@@ -156,13 +156,15 @@ class AllAgainstAllBLASTApp(CommandLineApp):
         """
         self.log.info("Invoking formatdb...")
 
-        args = ["-n", "database", "-i", sequence_file, "-o", "F"]
+        args = ["-n","database", "-i", sequence_file,"-p"]
+        #args = ["-out","database", "-in", sequence_file,"-input_type","fasta","-dbtype","prot"]
         args = self.get_blast_cmdline("formatdb", args)
+        
         if not args:
             self.log.fatal("cannot find formatdb in %s"
                            % self.options.formatdb_path)
             return False
-
+        self.log.info(args)
         formatdb = subprocess.Popen(args, stdin=open(os.devnull),
                                     stdout=sys.stderr)
         retcode = formatdb.wait()

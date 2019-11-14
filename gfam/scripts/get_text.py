@@ -269,8 +269,9 @@ class GetText(CommandLineApp):
             for line in mapping_file:
                 fields = line.split("\t")
                 if fields[16].strip():
-                    seq_id, pmids = fields[0], fields[16]
-                    seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
+                    seq_id, pmids = fields[0], fields[15]
+                    if pmids is not '':
+                        seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
 
         self.log.info("Writing text file")
         file_in = open(self.options.sequences_file, 'r')
@@ -327,11 +328,12 @@ class GetText(CommandLineApp):
                     pubmedid = line.split("pubmed/")[1].split("\"")[0]
                 elif "</rdf:Description>" in line:
                     # we process here the record
-                    filename = os.path.join(self.cachepubmed, pubmedid)
-                    with open(filename, "w") as out:
-                        out.write("{} {}".format(title, " ".join(abstract)))
-                    pubmedid, title, abstract = "", "", []
-                    opentitle, openabstract = False, False
+                    if pubmedid is not "":
+                        filename = os.path.join(self.cachepubmed, pubmedid)
+                        with open(filename, "w") as out:
+                            out.write("{} {}".format(title, " ".join(abstract)))
+                        pubmedid, title, abstract = "", "", []
+                        opentitle, openabstract = False, False
                 elif "<rdfs:comment>" in line:
                     if "</rdfs:comment>" in line:
                         abstract.append(line.split("<rdfs:comment>")[1].

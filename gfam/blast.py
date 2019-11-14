@@ -47,15 +47,18 @@ class BlastFilter(object):
         if not line or line[0] == "#":
             return True
 
-        parts = line.split("\t")
-        if float(parts[2]) < self.min_sequence_identity:
-            return False
+        try:
+            parts = line.split("\t")
+            if float(parts[2]) < self.min_sequence_identity:
+                return False
 
-        if float(parts[10]) > self.max_e_value:
-            return False
+            if float(parts[10]) > self.max_e_value:
+                return False
 
-        norm = self.normalize_func(parts[0], parts[1], int(parts[3]))
-        if norm < self.min_alignment_length:
+            norm = self.normalize_func(parts[0], parts[1], int(parts[3]))
+            if norm < self.min_alignment_length:
+                return False
+        except:
             return False
 
         return True

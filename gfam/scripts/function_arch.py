@@ -140,11 +140,13 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         return goa_mapping
 
     def __parse_bool(self, _string):
-        string = _string.strip()
-        if not string:
-            return False
-        return string.lower() in ("true", "t", "1")
-
+        try:
+            string = _string.strip()
+            if not string:
+                return False
+            return string.lower() in ("true", "t", "1")
+        except:
+            return _string
     def _transfer_from_same_file(self, goa, arch_file):
         """ Transfer function from same architecture file
         """

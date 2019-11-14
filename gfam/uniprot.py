@@ -81,6 +81,8 @@ class XMLIprscanToTxt(object):
             line.append(", ".join(self.ipr2go[self.match_data["ipr_id"]]))
         line.append("\n")
         # print to a file
+        if "mobidb" in self.match_data["protein_id"].strip():
+            return
         if self.match_data["protein_id"].strip() in self.swissprot:
             self.sp_file.write(''.join(line))
         else:
@@ -106,7 +108,7 @@ class XMLIprscanToTxt(object):
                                        .replace("\"", "")\
                                        .split("=")
                     key, val = result_set
-                    value_set = val.split()
+                    value_set = val
                     self.match_data[tag_name + "_" + key.strip()] = value_set
 
                 if tag_name == "lcn":
