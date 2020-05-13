@@ -173,7 +173,7 @@ class AutomatedConSAT(CommandLineApp):
             "http://www.geneontology.org/external2go/interpro2go",
             "file.mapping.interpro_parent_child":
             "ftp://ftp.ebi.ac.uk/pub/databases/" +
-            "interpro/76.0/ParentChildTreeFile.txt"}
+            "interpro/78.0/ParentChildTreeFile.txt"}
 
     params = dict()
 
@@ -423,7 +423,7 @@ class AutomatedConSAT(CommandLineApp):
 
             # we download the InterPro data and prepare it
             url_interpro = "ftp://ftp.ebi.ac.uk/pub/databases/" +\
-                           "interpro/76.0/match_complete.xml.gz"
+                           "interpro/78.0/match_complete.xml.gz"
             file_interpro = os.path.join(self.program_dir["data"],
                                          "match_complete.xml.gz")
             self._download_file(url_interpro, file_interpro)
@@ -573,7 +573,7 @@ class AutomatedConSAT(CommandLineApp):
 
             # we download the InterPro data and prepare it
             url_interpro = "ftp://ftp.ebi.ac.uk/pub/databases" +\
-                           "/interpro/76.0/match_complete.xml.gz"
+                           "/interpro/78.0/match_complete.xml.gz"
             file_interpro = os.path.join(self.program_dir["data"],
                                          "match_complete.xml.gz")
             self._download_file(url_interpro, file_interpro)

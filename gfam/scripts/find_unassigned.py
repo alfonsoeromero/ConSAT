@@ -131,7 +131,6 @@ class FindUnassignedApp(CommandLineApp):
         self.filename_shelve = os.path.join(tempfile.gettempdir(),
                                             "shelve_file")
         self.seq_ids_to_length = shelve.open(self.filename_shelve)
-
         for i, seq in enumerate(parser):
             self.seq_ids_to_length[seq.id] = len(seq.seq)
             if i % 1000000 == 0:
@@ -171,7 +170,7 @@ class FindUnassignedApp(CommandLineApp):
                                                         assignment.length))
             if interpro is not None:
                 assignment = assignment.resolve_interpro_ids(interpro)
-        seq.assign(assignment, interpro= interpro)
+            seq.assign(assignment,False, interpro= interpro)
 
     def get_unassigned(self):
         self.regions = []

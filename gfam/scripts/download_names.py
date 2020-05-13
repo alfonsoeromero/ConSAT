@@ -29,13 +29,13 @@ class DownloadNamesApp(CommandLineApp):
         """Runs the application"""
 
         urls = {"interpro":
-                "ftp://ftp.ebi.ac.uk/pub/databases/interpro/names.dat",
+                "ftp://ftp.ebi.ac.uk/pub/databases/interpro/78.0/names.dat",
                 "pfam":
                     "http://pfam.xfam.org/families?output=text",
                 "smart":
                 "http://smart.embl-heidelberg.de/smart/descriptions.pl",
                 "superfamily":
-                "http://scop.mrc-lmb.cam.ac.uk/scop/parse/"}
+                "http://ymir.mrc-lmb.cam.ac.uk/scop/parse/"}
 
         for method_name in dir(self):
             if method_name.startswith("download_"):
