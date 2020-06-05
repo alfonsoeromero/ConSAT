@@ -18,4 +18,4 @@ etc/logo/png/*
 etc/logo/pdf/*
 
 __pycache__*
-
+venv
