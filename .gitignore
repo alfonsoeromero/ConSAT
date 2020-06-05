@@ -16,3 +16,6 @@ doc/build
 *.cfg
 etc/logo/png/*
 etc/logo/pdf/*
+
+__pycache__*
+
