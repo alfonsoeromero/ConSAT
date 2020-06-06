@@ -5,6 +5,6 @@ install:
   - pip install -r requirements.txt
 script:
   # python tests
-  - python -m coverage run --branch -m unittest discover -s test -v
+  - python -m coverage run --branch --source gfam -m unittest discover -s test -v
   # coverage reports
   - python -m coverage report -m
