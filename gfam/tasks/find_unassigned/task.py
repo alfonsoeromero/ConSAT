@@ -28,19 +28,23 @@ class FindUnassignedTask:
             self.log = logger
         self.sequence_id_regexp = sequence_id_regexp
 
+        # these are moved here from get_unassigned
+        self.regions = []
+        self.maximum = None
         # to move somewhere else
         self.seqcat = {}
-        self.seq_ids_to_length = None
 
     def run(self, assignment_file: str, fasta_file: str,
             seg_file: str = None) -> None:
-        self._process_sequences_file_old(fasta_file)
 
         self.log.info("Processing assignments file...")
         self._process_infile(assignment_file)
 
         self.log.info("Getting unassigned pieces")
         self._get_unassigned()
+
+        self.log.info("Processing FASTA file...")
+        self._process_sequences(fasta_file)
 
         # if there is a file with low complexity regions, process it
         # and remove low complexity regions from unassigned fragments
@@ -53,22 +57,24 @@ class FindUnassignedTask:
         self.log.info("Getting unassigned pieces")
         self._print_unassigned()
 
-    def _process_sequences_file_old(self, fname: str) -> None:
-        """ Old version, all the entries loaded into memory
+    def _process_sequences(self, fname: str) -> None:
+        """Reads and processes a fasta file
+
+        Parameters
+        ----------
+        fname : str
+            path to a fasta file
         """
         self.log.info(f"Loading sequences from {fname}...")
         parser = fasta.Parser(open_anything(fname))
         parser = fasta.regexp_remapper(parser,
                                        self.sequence_id_regexp)
-        seqs, lens = [], []
         for i, seq in enumerate(parser):
-            seqs.append(seq.id)
-            lens.append(len(seq.seq))
+            if seq.id not in self.seqcat and len(seq.seq) >= self.maximum:
+                self.regions.append((seq.id, 1, len(seq.seq)))
             if i % 1000000 == 0:
                 self.log.info("Read {} seqs".format(i))
-        self.log.info("...loaded")
-        self.seq_ids_to_length = dict(zip(seqs, lens))
-        self.log.info(f"Read a total of {len(seqs)} seqs")
+        self.log.info(f"Read a total of {i+1} seqs")
 
     def _process_infile(self, fname: str, interpro=None) -> None:
         self.log.info("Processing input file: %s" % fname)
@@ -97,13 +103,8 @@ class FindUnassignedTask:
                 if end-start+1 < self.min_fragment_length:
                     continue
                 self.regions.append((seq_id, start, end))
-        maximum = max(self.min_length,
-                      self.min_fragment_length)
-        seqcat_keys = set(self.seqcat.keys())
-        for seq_id in set(self.seq_ids_to_length.keys()) - seqcat_keys:
-            if self.seq_ids_to_length[seq_id] >= maximum:
-                self.regions.append((seq_id, 1,
-                                     self.seq_ids_to_length[seq_id]))
+        self.maximum = max(self.min_length,
+                           self.min_fragment_length)
 
     def _remove_low_complexity_regions(self,
                                        low_complexity_regions: Dict) -> None:
