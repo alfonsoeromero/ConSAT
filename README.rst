@@ -4,7 +4,10 @@ ConSAT
 
 .. image:: https://travis-ci.org/paccanarolab/ConSAT.svg?branch=hackaton
     :target: https://travis-ci.org/paccanarolab/ConSAT
-    
+
+.. image:: https://coveralls.io/repos/github/paccanarolab/ConSAT/badge.svg?branch=hackaton
+:target: https://coveralls.io/github/paccanarolab/ConSAT?branch=hackaton
+
 -----------------------------------------
 The Consensus Signature Architecture Tool
 -----------------------------------------
