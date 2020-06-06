@@ -2,8 +2,9 @@
 ConSAT
 ======
 
-[![Build Status](https://travis-ci.org/paccanarolab/ConSAT.svg?branch=hackaton)](https://travis-ci.org/paccanarolab/ConSAT)
-
+.. image:: https://travis-ci.org/paccanarolab/ConSAT.svg?branch=hackaton
+    :target: https://travis-ci.org/paccanarolab/ConSAT
+    
 -----------------------------------------
 The Consensus Signature Architecture Tool
 -----------------------------------------
