@@ -1,6 +1,9 @@
 ======
 ConSAT
 ======
+
+[![Build Status](https://travis-ci.org/paccanarolab/ConSAT.svg?branch=hackaton)](https://travis-ci.org/paccanarolab/ConSAT)
+
 -----------------------------------------
 The Consensus Signature Architecture Tool
 -----------------------------------------
@@ -28,13 +31,13 @@ Requirements
 
 You will need the following tools to run ``consat``:
 
-* `Python 2.7`_ (2.6 should work, but this is not 100% guaranteed). 
+* `Python 3.6`_. 
 
 * `HMMer 3.0`_ (or newer versions).
 
 * `NCBI BLAST`_; if you are using ``gfam`` from this software package. 
 
-.. _`Python 2.7`: http://www.python.org
+.. _`Python 3.6`: http://www.python.org
 .. _`HMMer 3.0`: http://hmmer.janelia.org
 .. _`NCBI BLAST`: ftp://ftp.ncbi.nlm.nih.gov/blast/executables/release/LATEST
 
