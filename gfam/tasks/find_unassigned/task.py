@@ -69,9 +69,8 @@ class FindUnassignedTask:
         parser = fasta.Parser(open_anything(fname))
         parser = fasta.regexp_remapper(parser,
                                        self.sequence_id_regexp)
-        seqcat_keys = set(self.seqcat.keys())
         for i, seq in enumerate(parser):
-            if seq.id not in seqcat_keys and len(seq.seq) >= self.maximum:
+            if seq.id not in self.seqcat and len(seq.seq) >= self.maximum:
                 self.regions.append((seq.id, 1, len(seq.seq)))
             if i % 1000000 == 0:
                 self.log.info("Read {} seqs".format(i))
