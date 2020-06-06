@@ -5,8 +5,13 @@ ConSAT
 .. image:: https://travis-ci.org/paccanarolab/ConSAT.svg?branch=hackaton
     :target: https://travis-ci.org/paccanarolab/ConSAT
 
-.. image:: https://coveralls.io/repos/github/paccanarolab/ConSAT/badge.svg?branch=hackaton
-    :target: https://coveralls.io/github/paccanarolab/ConSAT?branch=hackaton
+.. image:: https://api.codeclimate.com/v1/badges/46c5df805d70f2dec2f8/maintainability
+   :target: https://codeclimate.com/github/paccanarolab/ConSAT/maintainability
+   :alt: Maintainability
+
+.. image:: https://api.codeclimate.com/v1/badges/46c5df805d70f2dec2f8/test_coverage
+   :target: https://codeclimate.com/github/paccanarolab/ConSAT/test_coverage
+   :alt: Test Coverage
 
 -----------------------------------------
 The Consensus Signature Architecture Tool
