@@ -16,6 +16,7 @@ doc/build
 *.cfg
 etc/logo/png/*
 etc/logo/pdf/*
+.ipynb_checkpoints/
 
 __pycache__*
 venv

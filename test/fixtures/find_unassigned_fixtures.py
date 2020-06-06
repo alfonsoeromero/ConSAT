@@ -13,7 +13,7 @@ class FindUnassignedFixture:
         self.data_dir = os.path.join(current_dir, os.pardir, "data")
         self.columns = ["sequence", "start", "end"]
 
-    def _get_assignment_file(self) -> str:
+    def get_assignment_file(self) -> str:
         return os.path.join(self.data_dir, "assignment_source_filter100.txt")
 
     def _get_low_complexity_regions_file(self) -> str:
@@ -34,7 +34,7 @@ class FindUnassignedFixture:
         return df
 
     def get_default_args_for_app(self) -> List[str]:
-        assignments_file = self._get_assignment_file()
+        assignments_file = self.get_assignment_file()
         fasta_file = self._get_fasta_file()
         seg_file = self._get_low_complexity_regions_file()
 
