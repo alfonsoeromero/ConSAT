@@ -1,6 +1,6 @@
 from gfam.interpro import AssignmentReader
-from gfam.tasks.find_unassigned.indexed_readers.indexed_assignment_reader\
-    import IndexedAssignmentReader
+from gfam.tasks.find_unassigned.readers.indexed_assignment_reader import \
+    IndexedAssignmentReader
 
 
 class RandomAccessAssignmentReader(AssignmentReader):

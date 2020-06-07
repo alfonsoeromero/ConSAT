@@ -3,9 +3,8 @@ from test.fixtures.find_unassigned_fixtures import FindUnassignedFixture
 from typing import Dict, List
 
 from gfam.interpro import Assignment, AssignmentReader
-from gfam.tasks.find_unassigned.indexed_readers\
-         .random_access_assignment_reader import \
-    RandomAccessAssignmentReader
+from gfam.tasks.find_unassigned.readers\
+    .random_access_assignment_reader import RandomAccessAssignmentReader
 
 
 class TestRandomAccessAssignmentReader(unittest.TestCase):

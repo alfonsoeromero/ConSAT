@@ -22,7 +22,9 @@ class IndexedAssignmentReader:
             full path to the underlying InterPro file
         """
         self.interpro_filename = interpro_filename
-        self.temp_file = tempfile.NamedTemporaryFile()
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                     prefix="assignment_reader",
+                                                     suffix='.h5')
         self._build_index()
         self.table = self._open_table()
 

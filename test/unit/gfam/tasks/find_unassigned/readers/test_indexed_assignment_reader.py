@@ -2,7 +2,7 @@ import unittest
 from test.fixtures.find_unassigned_fixtures import FindUnassignedFixture
 from typing import Dict, List, Set
 
-from gfam.tasks.find_unassigned.indexed_readers.\
+from gfam.tasks.find_unassigned.readers.\
     indexed_assignment_reader import IndexedAssignmentReader
 
 
