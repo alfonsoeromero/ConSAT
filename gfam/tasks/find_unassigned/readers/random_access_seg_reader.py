@@ -67,13 +67,19 @@ class RandomAccessSEGReader:
         current_prot_id = line.split()[0][1:]
         return self.regexp.sub(r'\g<id>', current_prot_id)
 
+    def _get_num_lines_file(self, fname: str) -> int:
+        return sum(1 for line in open(fname) if not line.startswith(">"))
+
     def _build_index(self) -> None:
         """Builds an inverted index, mapping protein ids
         to list of file positions where the corresponding lines start"""
         inverted_index = tables.open_file(self.temp_file.name, "w")
         grp = inverted_index.create_group("/", "index")
-        positions_table = inverted_index.create_table(grp, "index_table",
-                                                      AssignmentPosition)
+        num_expected_rows = self._get_num_lines_file(self.seg_filename)
+
+        positions_table = inverted_index.create_table(
+            grp, "index_table", AssignmentPosition,
+            expectedrows=num_expected_rows)
 
         with open(self.seg_filename, 'r') as in_file:
             prev_offset = -1
