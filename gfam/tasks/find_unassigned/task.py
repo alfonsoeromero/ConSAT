@@ -31,13 +31,8 @@ class FindUnassignedTask:
         self.assignment_reader = None
         self.seg_reader = None
 
-        # these are moved here from get_unassigned
-        self.regions = []
         self.maximum = max(self.min_length,
                            self.min_fragment_length)
-
-        # to move somewhere else
-        self.seqcat = {}
 
     def _preload_readers(self, assignment_file: str, seg_file: str) -> None:
         self.assignment_reader = RandomAccessAssignmentReader(assignment_file)
