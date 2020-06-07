@@ -5,8 +5,12 @@ from typing import List
 
 import tables
 
-from gfam.tasks.find_unassigned.readers.indexed_assignment_reader import \
-    AssignmentPosition
+
+class AssignmentPosition(tables.IsDescription):
+    """Pytables registry containing protein_id and assignment
+    file offset"""
+    protein_id = tables.StringCol(itemsize=255, pos=0)
+    file_position = tables.Int64Col(pos=1)
 
 
 class RandomAccessSEGReader:
