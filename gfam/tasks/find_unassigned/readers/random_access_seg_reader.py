@@ -62,7 +62,7 @@ class RandomAccessSEGReader:
 
                 if len(cache) > MAX_CACHE_SIZE:
                     c.executemany(
-                        "insert into lcr lcr (?, ?, ?);", cache)
+                        "insert into lcr values (?, ?, ?);", cache)
                     cache = []
 
         if cache:
