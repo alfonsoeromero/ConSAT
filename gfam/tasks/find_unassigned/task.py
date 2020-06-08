@@ -2,31 +2,28 @@ import logging
 
 from gfam import fasta
 from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
+
 from gfam.interpro import Assignment
 from gfam.sequence import SeqRecord
 from gfam.tasks.find_unassigned.readers.random_access_assignment_reader import\
     RandomAccessAssignmentReader
 from gfam.tasks.find_unassigned.readers.random_access_seg_reader import \
     RandomAccessSEGReader
+from gfam.tasks.base import LoggedTask
 from gfam.utils import open_anything
 
 
-class FindUnassignedTask:
+class FindUnassignedTask(LoggedTask):
     def __init__(self,
                  max_overlap: int,
                  min_fragment_length: int,
                  min_length: int,
                  sequence_id_regexp: str = None,
                  logger: logging.Logger = None):
+        super().__init__(logger)
         AssignmentOverlapChecker.max_overlap = max_overlap
         self.min_fragment_length = min_fragment_length
         self.min_length = min_length
-        if logger is None:
-            self.log = logging.getLogger(__file__)
-            self.log.setLevel(logging.DEBUG)
-            logging.basicConfig(level=logging.DEBUG, format="%(message)s")
-        else:
-            self.log = logger
         self.sequence_id_regexp = sequence_id_regexp
         self.assignment_reader = None
         self.seg_reader = None

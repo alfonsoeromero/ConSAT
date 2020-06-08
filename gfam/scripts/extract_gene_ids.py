@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 import sys
 
-from gfam import fasta
 from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything
+from gfam.tasks.extract_gene_ids.task import ExtractGeneIDsTask
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -19,6 +17,9 @@ class ExtractGeneIDsApp(CommandLineApp):
 
     Extracts the gene IDs from a FASTA file.
     """
+
+    def __init__(self):
+        self.task = ExtractGeneIDsTask()
 
     def create_parser(self):
         """Creates the command line parser for this application"""
@@ -37,17 +38,8 @@ class ExtractGeneIDsApp(CommandLineApp):
             infiles = self.args
 
         for infile in infiles:
-            self.process_file(infile)
-
-    def process_file(self, filename):
-        """Processes the given input file"""
-        self.log.info("Processing %s..." % filename)
-
-        parser = fasta.Parser(open_anything(filename))
-        parser = fasta.regexp_remapper(parser,
-                                       self.options.sequence_id_regexp)
-        for seq in parser:
-            print(seq.id)
+            self.task.process_file(infile,
+                                   self.options.sequence_id_regexp)
 
 
 if __name__ == "__main__":
