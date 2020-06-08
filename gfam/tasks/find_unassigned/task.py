@@ -4,28 +4,24 @@ from typing import Dict
 from gfam import fasta
 from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
 from gfam.interpro import AssignmentReader
+from gfam.tasks.base import LoggedTask
 from gfam.tasks.find_unassigned.intervals import substract
 from gfam.tasks.find_unassigned.low_complexity_regions import \
     read_low_complexity_regions
 from gfam.utils import open_anything
 
 
-class FindUnassignedTask:
+class FindUnassignedTask(LoggedTask):
     def __init__(self,
                  max_overlap: int,
                  min_fragment_length: int,
                  min_length: int,
                  sequence_id_regexp: str = None,
                  logger: logging.Logger = None):
+        super().__init__(logger)
         AssignmentOverlapChecker.max_overlap = max_overlap
         self.min_fragment_length = min_fragment_length
         self.min_length = min_length
-        if logger is None:
-            self.log = logging.getLogger(__file__)
-            self.log.setLevel(logging.DEBUG)
-            logging.basicConfig(level=logging.DEBUG, format="%(message)s")
-        else:
-            self.log = logger
         self.sequence_id_regexp = sequence_id_regexp
 
         # these are moved here from get_unassigned
