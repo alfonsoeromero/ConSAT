@@ -19,7 +19,7 @@ class FindUnassignedFixture:
     def get_low_complexity_regions_file(self) -> str:
         return os.path.join(self.data_dir, "uniprot_sprot100.mask")
 
-    def _get_fasta_file(self) -> str:
+    def get_fasta_file(self) -> str:
         return os.path.join(self.data_dir, "uniprot_sprot100.fasta")
 
     def _get_expected_output_file(self) -> str:
@@ -35,7 +35,7 @@ class FindUnassignedFixture:
 
     def get_default_args_for_app(self) -> List[str]:
         assignments_file = self.get_assignment_file()
-        fasta_file = self._get_fasta_file()
+        fasta_file = self.get_fasta_file()
         seg_file = self.get_low_complexity_regions_file()
 
         args = [assignments_file,
