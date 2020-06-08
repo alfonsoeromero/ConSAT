@@ -37,6 +37,8 @@ class RandomAccessAssignmentReader:
         conn = sqlite3.connect(db_name.name, isolation_level="DEFERRED")
         c = conn.cursor()
         c.execute('''PRAGMA journal_mode = OFF''')
+        c.execute("PRAGMA synchronous = OFF")
+        c.execute("BEGIN TRANSACTION")
 
         create_sql = """CREATE TABLE assignments (
            protein_id TEXT,
