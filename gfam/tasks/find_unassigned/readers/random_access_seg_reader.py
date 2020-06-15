@@ -1,12 +1,7 @@
 import os
 import re
+import sqlite3
 import tempfile
-from typing import List
-
-import tables
-
-from gfam.tasks.find_unassigned.readers.indexed_assignment_reader import \
-    AssignmentPosition
 
 
 class RandomAccessSEGReader:
@@ -23,9 +18,6 @@ class RandomAccessSEGReader:
             (should contain the <ID> field), default ""
         """
         self.seg_filename = seg_filename
-        self.temp_file = tempfile.NamedTemporaryFile(delete=False,
-                                                     prefix="seg_reader",
-                                                     suffix='.h5')
         if sequence_id_regexp:
             self.regexp = re.compile(sequence_id_regexp)
             self._process_protein_id = self._process_protein_id_with_regex
@@ -33,8 +25,58 @@ class RandomAccessSEGReader:
             self.regexp = None
             self._process_protein_id = self._process_protein_id_without_regex
 
-        self._build_index()
-        self.table = self._open_table()
+        self.db_file = self._create_db()
+        self.db_handle = self._open_db()
+
+    def _open_db(self):
+        conn = sqlite3.connect(self.db_file)
+        return conn.cursor()
+
+    def _create_db(self) -> None:
+        db_name = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
+        conn = sqlite3.connect(db_name.name, isolation_level="DEFERRED")
+        c = conn.cursor()
+        c.execute('''PRAGMA journal_mode = OFF''')
+        c.execute("PRAGMA synchronous = OFF")
+        c.execute("BEGIN TRANSACTION")
+
+        create_sql = """CREATE TABLE lcr (
+           protein_id TEXT,
+           left INTEGER,
+           right INTEGER
+        );"""
+        c.execute(create_sql)
+
+        cache = []
+        MAX_CACHE_SIZE: int = 100000
+        current_prot_id = ""
+        for line in open(self.seg_filename):
+            if line.startswith(">"):
+                current_prot_id = self._process_protein_id(line)
+            else:
+                fields = line.strip().split()
+                left = int(fields[0])
+                right = int(fields[2])
+
+                cache.append((current_prot_id, left, right))
+
+                if len(cache) > MAX_CACHE_SIZE:
+                    c.executemany(
+                        "insert into lcr values (?, ?, ?);", cache)
+                    cache = []
+
+        if cache:
+            c.executemany("insert into lcr values (?, ?, ?)", cache)
+
+        sql = ("CREATE INDEX index_on_protein ON lcr (protein_id);")
+        c.execute(sql)
+
+        # commit the changes to db
+        conn.commit()
+
+        # close the connection
+        conn.close()
+        return db_name.name
 
     def _process_protein_id_without_regex(self, line: str) -> str:
         """Extract the protein ID from a line (get first field and remove >)
@@ -67,47 +109,6 @@ class RandomAccessSEGReader:
         current_prot_id = line.split()[0][1:]
         return self.regexp.sub(r'\g<id>', current_prot_id)
 
-    def _build_index(self) -> None:
-        """Builds an inverted index, mapping protein ids
-        to list of file positions where the corresponding lines start"""
-        inverted_index = tables.open_file(self.temp_file.name, "w")
-        grp = inverted_index.create_group("/", "index")
-        positions_table = inverted_index.create_table(grp, "index_table",
-                                                      AssignmentPosition)
-
-        with open(self.seg_filename, 'r') as in_file:
-            prev_offset = -1
-            while True:
-                line: str = in_file.readline()
-                if line:
-                    offset: int = in_file.tell()
-                    if line.startswith(">"):
-                        protein_id = self._process_protein_id(line)
-                    else:
-                        newrow = positions_table.row
-
-                        newrow["protein_id"] = protein_id
-                        newrow["file_position"] = prev_offset
-                        newrow.append()
-                else:
-                    break
-                prev_offset = offset
-
-        positions_table.cols.protein_id.create_index()
-
-        inverted_index.flush()
-        inverted_index.close()
-
-    def _open_table(self) -> tables.table.Table:
-        table = tables.open_file(self.temp_file.name, 'r')
-        return table.root.index.index_table
-
-    def _get_postings_list_for_protein(self, protein_id: str) -> List[int]:
-        postings = []
-        for record in self.table.where(f"protein_id == b'{protein_id}'"):
-            postings.append(record["file_position"])
-        return postings
-
     def get_intervals_for_protein(self, protein_id: str):
         """Get the set of intervals (begin, end) from an SEG file
             corresponding to a given protein id.
@@ -123,18 +124,11 @@ class RandomAccessSEGReader:
             Interval (begin, end) of the SEG file associated to the
             `protein_id`
         """
-        # 1.- get posting list for that particular protein
-        postings = self._get_postings_list_for_protein(protein_id)
-
-        # 2.- generator
-        with open(self.seg_filename, "r") as in_file:
-            for posting in postings:
-                in_file.seek(posting)
-                line = in_file.readline()
-                fields = line.strip().split()
-                yield tuple(map(int, [fields[0], fields[2]]))
+        self.db_handle.execute(
+            "SELECT left, right FROM lcr" +
+            f" WHERE protein_id='{protein_id}'")
+        return [(int(x[0]), int(x[1])) for x in self.db_handle.fetchall()]
 
     def delete_temp_file(self) -> None:
         """Delete the associated temporary file"""
-        self.table.close()
-        os.unlink(self.temp_file.name)
+        os.unlink(self.db_file)
