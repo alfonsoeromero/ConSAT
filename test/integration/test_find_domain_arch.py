@@ -10,7 +10,7 @@ from pandas.testing import assert_frame_equal
 from gfam.scripts.find_domain_arch import FindDomainArchitectureApp
 
 
-class TestFindUnassigned(unittest.TestCase):
+class TestFindDomainArch(unittest.TestCase):
     def setUp(self):
         self.fixture = FindDomainArchFixture()
 

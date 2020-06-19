@@ -239,7 +239,7 @@ class InterProNames(object):
         """Loads ID-name assignments from a simple tab-separated flat file.
 
         Lines not containins any tab characters are silently ignored."""
-        for line in open_anything(filename):
+        for line in open_anything(filename, "rt"):
             parts = line.strip().split("\t", 1)
             if len(parts) > 1:
                 self.names[parts[0]] = parts[1]

@@ -396,7 +396,7 @@ def open_anything(fname, *args, **kwds):
     elif fname[-4:] == ".bz2":
         infile = bz2.BZ2File(fname, *args, **kwds)
     elif fname[-3:] == ".gz":
-        infile = gzip.GzipFile(fname, *args, **kwds)
+        infile = gzip.open(fname, *args, **kwds)
     else:
         infile = open(fname, *args, **kwds)
     return infile
