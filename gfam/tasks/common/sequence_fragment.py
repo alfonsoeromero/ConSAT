@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -58,3 +60,49 @@ class SequenceFragment:
             return (self.sequence_id == other.sequence_id) and\
                 (self.start_pos == other.start_pos) and\
                 (self.end_pos == other.end_pos)
+
+    def overlaps(self, other: SequenceFragment) -> bool:
+        """Returns if two `SequenceFragment` correspond to the
+        same sequence and there is at least one position in common.
+
+        Parameters
+        ----------
+        other : SequenceFragment
+            Sequence fragment to check overlap with.
+
+        Returns
+        -------
+        bool
+            True if this fragment overlaps with `other`.
+        """
+        return (self.sequence_id == other.sequence_id) and (
+            (other.start_pos <= self.start_pos <= other.end_pos) or
+            (self.start_pos <= other.start_pos <= self.end_pos))
+
+    def overlap_proportion(self, other: SequenceFragment) -> float:
+        """Returns the overlap proportion, i.e.:
+        (length of overalapping residues)/(combined length)
+
+        Parameters
+        ----------
+        other : SequenceFragment
+            Sequence fragment to check overlap proportion with.
+
+        Returns
+        -------
+        float
+            a number in [0, 1] measuring the proportion of the overlap.
+            If the residues do not overlap the results will be zero.
+        """
+        if self.overlaps(other):
+            min_start = min(self.start_pos, other.start_pos)
+            max_end = max(self.end_pos, other.end_pos)
+            combined_length = max_end - min_start + 1
+
+            max_start = max(self.start_pos, other.start_pos)
+            min_end = min(self.end_pos, other.end_pos)
+            common_residues = min_end - max_start + 1
+
+            return common_residues / combined_length
+        else:
+            return 0.0

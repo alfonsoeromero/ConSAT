@@ -35,3 +35,34 @@ class TestSequenceFragment(unittest.TestCase):
 
         # assert
         self.assertEqual(self._sut, other_fragment)
+
+    def test_overlaps_should_work(self):
+        # arrange
+        other_different_id = SequenceFragment.from_str("AAAA:1-10")
+        other_one_residue_overlap = SequenceFragment.from_str("ABCDEF:23-50")
+        other_next_but_no_overlap = SequenceFragment.from_str("ABCDEF:24-50")
+
+        # act
+
+        # assert
+        self.assertFalse(self._sut.overlaps(other_different_id))
+        self.assertTrue(self._sut.overlaps(other_one_residue_overlap))
+        self.assertFalse(self._sut.overlaps(other_next_but_no_overlap))
+
+    def test_overlap_proportion_should_work(self):
+        # arrange
+        other_different_id = SequenceFragment.from_str("AAAA:1-10")
+        other_one_residue_overlap = SequenceFragment.from_str("ABCDEF:23-50")
+        other_next_but_no_overlap = SequenceFragment.from_str("ABCDEF:24-50")
+
+        # act
+
+        # assert
+        self.assertEqual(self._sut.overlap_proportion(other_different_id), 0.0)
+        self.assertEqual(self._sut.overlap_proportion(
+            other_next_but_no_overlap), 0.0)
+        self.assertEqual(self._sut.overlap_proportion(
+            other_one_residue_overlap), 1/50)
+        self.assertEqual(
+            other_one_residue_overlap.overlap_proportion(self._sut), 1/50)
+        self.assertEqual(self._sut.overlap_proportion(self._sut), 1)
