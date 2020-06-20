@@ -1,4 +1,5 @@
-from typing import List
+from typing import Iterator, List
+
 from gfam.tasks.common.sequence_fragment import SequenceFragment
 
 
@@ -11,6 +12,16 @@ class SequenceFragmentSet:
         fragments = [SequenceFragment.from_str(x)
                      for x in line.strip().split()]
         return cls(fragments)
+
+    def __iter__(self) -> Iterator[SequenceFragment]:
+        """Iterator: iterates over the list of fragments
+
+        Returns
+        -------
+        Iterator[SequenceFragment]
+            Iterator over `self.clusters`
+        """
+        return iter(self.clusters)
 
     def __str__(self) -> str:
         """Returns a string representation of the set

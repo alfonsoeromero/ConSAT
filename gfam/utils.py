@@ -1,6 +1,15 @@
 """Common routines and utility classes for GFam that fit nowhere else."""
 from __future__ import print_function
 
+import os
+import platform
+import sys
+from contextlib import contextmanager
+from math import ceil
+from shutil import rmtree
+from tempfile import mkdtemp
+from urllib.request import urlopen
+
 __author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "tamas@cs.rhul.ac.uk, aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2014, Tamas Nepusz"
@@ -20,19 +29,7 @@ try:
 except ImportError:
     pass
 
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen
 
-import os
-import platform
-import sys
-
-from contextlib import contextmanager
-from math import ceil
-from shutil import rmtree
-from tempfile import mkdtemp
 if sys.version_info[0] >= 3:
     from io import IOBase
     file = IOBase

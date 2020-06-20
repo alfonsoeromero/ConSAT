@@ -18,7 +18,7 @@ class FindUnassignedTask(LoggedTask):
                  max_overlap: int,
                  min_fragment_length: int,
                  min_length: int,
-                 sequence_id_regexp: str = None,
+                 sequence_id_regexp: str = "",
                  logger: logging.Logger = None):
         super().__init__(logger)
         AssignmentOverlapChecker.max_overlap = max_overlap

@@ -20,12 +20,12 @@ class RandomAccessSEGReader:
             (should contain the <ID> field), default ""
         """
         self.seg_filename = seg_filename
+        self.regexp: Pattern[str] = re.compile(
+            sequence_id_regexp)
+
         if sequence_id_regexp:
-            self.regexp: Union[Pattern[str], None] = re.compile(
-                sequence_id_regexp)
             self._process_protein_id = self._process_protein_id_with_regex
         else:
-            self.regexp = None
             self._process_protein_id = self._process_protein_id_without_regex
 
         self.db_file = self._create_db()

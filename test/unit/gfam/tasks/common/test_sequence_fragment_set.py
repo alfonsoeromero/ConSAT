@@ -29,3 +29,14 @@ class TestSequenceFragmentSet(unittest.TestCase):
         # assert
         self.assertEqual(sut.size(), 0)
         self.assertEqual(sut.num_different_sequences(), 0)
+        self.assertEqual([x for x in sut], [])
+
+    def test_iterator_should_give_same_list(self):
+        # arrange
+        original_list = list(self._sut.clusters)
+
+        # act
+        built_list = [x for x in self._sut]
+
+        # assert
+        self.assertListEqual(original_list, built_list)
