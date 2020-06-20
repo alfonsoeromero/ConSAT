@@ -1,10 +1,12 @@
 """Classes corresponding to domain assignments (`Assignment`) and
 sequences with corresponding domain assignments (`SequenceWithAssignments`).
 """
-from collections import defaultdict
-from collections import namedtuple
-from itertools import combinations
 import operator
+from collections import defaultdict
+from dataclasses import dataclass
+from itertools import combinations
+from typing import Union
+
 from gfam.enum import Enum
 
 __author__ = "Tamas Nepusz"
@@ -27,9 +29,8 @@ except NameError:
 # trickery.
 
 
-class Assignment(namedtuple("Assignment",
-                            "id length start end source " +
-                            "domain evalue interpro_id comment")):
+@dataclass
+class Assignment:
     """Class representing a record in an InterPro ``iprscan`` output.
 
     An InterPro domain assignment has the following fields:
@@ -48,8 +49,15 @@ class Assignment(namedtuple("Assignment",
       ``source``.
     - ``comment``: an arbitrary comment
     """
-
-    __slots__ = ()
+    id: str
+    length: int
+    start: int
+    end: int
+    source: str
+    domain: str
+    evalue: float
+    interpro_id: Union[None, str]
+    comment: str
 
     def get_assigned_length(self):
         """Returns the number of amino acids covered by the assignment
@@ -97,6 +105,7 @@ class TreeRepresentation(object):
     and the second one, b, is a list (possibly empty) containing the
     "descendants" of that tree node
     """
+
     def __init__(self, assignments, interpro=None):
         self.interpro = interpro
         self.assignments = assignments
@@ -238,7 +247,7 @@ class AssignmentOverlapChecker(object):
             return True
         else:
             return interpro.tree.get_most_remote_ancestor(ipr1) ==\
-                   interpro.tree.get_most_remote_ancestor(ipr2)
+                interpro.tree.get_most_remote_ancestor(ipr2)
 
     @classmethod
     def check_single(cls, assignment, other_assignment, interpro=None):
@@ -275,7 +284,7 @@ class AssignmentOverlapChecker(object):
         other_start, other_end = other_assignment.start, other_assignment.end
 
         if ((other_start <= start and other_end >= end)
-           or (other_start >= start and other_end <= end)):
+                or (other_start >= start and other_end <= end)):
             # Domains are one inside the other: could be INSERTION,
             # INSERTION_DIFFERENT,
             # SYNONYM_INSERTION or OVERLAP

@@ -145,8 +145,9 @@ class TransferFunctionFromDomainArch(CommandLineApp):
             if not string:
                 return False
             return string.lower() in ("true", "t", "1")
-        except:
+        except AttributeError:
             return _string
+
     def _transfer_from_same_file(self, goa, arch_file):
         """ Transfer function from same architecture file
         """

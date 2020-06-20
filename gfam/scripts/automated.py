@@ -466,7 +466,7 @@ class AutomatedConSAT(CommandLineApp):
             file_goa = file_goa.replace(".gz", "")
             self.params["file.function.goa_file"] = file_goa
 
-            self.params["sequence_id_regexp"] = "(\w+\|)(?P<id>\w+)(\|\w+)+"
+            self.params["sequence_id_regexp"] = r"(\w+\|)(?P<id>\w+)(\|\w+)+"
             self.params["num_cpu_cores"] = "12"
 
             if self.options.models:
@@ -613,7 +613,7 @@ class AutomatedConSAT(CommandLineApp):
             out = self._create_mask_fasta_file(
                 self.params["file.input.sequences"])
             self.params["low_complexity_regions_file"] = out
-            self.params["sequence_id_regexp"] = "(\w+\|)(?P<id>\w+)(\|\w+)+"
+            self.params["sequence_id_regexp"] = r"(\w+\|)(?P<id>\w+)(\|\w+)+"
             self.params["num_cpu_cores"] = "12"
 
             # GOA
@@ -807,7 +807,7 @@ class AutomatedConSAT(CommandLineApp):
 
         archs = dict()
         archs_sp = set()
-        pattern = re.compile('\s+')
+        pattern = re.compile(r'\s+')
         for _line in open(text_file_sp):
             line = _line.strip()
             if pattern.findall(line):

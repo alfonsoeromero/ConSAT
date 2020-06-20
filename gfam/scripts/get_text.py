@@ -270,7 +270,7 @@ class GetText(CommandLineApp):
                 fields = line.split("\t")
                 if fields[16].strip():
                     seq_id, pmids = fields[0], fields[15]
-                    if pmids is not '':
+                    if not pmids:
                         seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
 
         self.log.info("Writing text file")
@@ -328,10 +328,11 @@ class GetText(CommandLineApp):
                     pubmedid = line.split("pubmed/")[1].split("\"")[0]
                 elif "</rdf:Description>" in line:
                     # we process here the record
-                    if pubmedid is not "":
+                    if not pubmedid:
                         filename = os.path.join(self.cachepubmed, pubmedid)
                         with open(filename, "w") as out:
-                            out.write("{} {}".format(title, " ".join(abstract)))
+                            joined_abs = " ".join(abstract)
+                            out.write(f"{title} {joined_abs}")
                         pubmedid, title, abstract = "", "", []
                         opentitle, openabstract = False, False
                 elif "<rdfs:comment>" in line:

@@ -315,7 +315,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
                 spec.append(cfg.get(section, "stages.%d" % idx))
                 idx += 1
 
-        regexp = re.compile("([-+])?\s*([^-+]+)")
+        regexp = re.compile(r"([-+])?\s*([^-+]+)")
         result = []
         for item in spec:
             sources = set()

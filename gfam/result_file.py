@@ -48,6 +48,7 @@ class ResultFileFilter(object):
     """Filters a result file by p-value, keeping only
         those entries under a certain significance value
     """
+
     def __init__(self, input_file):
         self.input_file = input_file
 
@@ -66,6 +67,7 @@ class ResultFileFilter(object):
 class ResultFileCombiner(object):
     """Combines two result files using Fisher's method
     """
+
     def __init__(self, file_name1, file_name2):
         self.file_name1 = file_name1
         self.file_name2 = file_name2
@@ -127,6 +129,7 @@ class ResultFileWriter(object):
         ...
 
     """
+
     def __init__(self, file_name):
         self.file_name = file_name
         self.out = open(self.file_name, "w")
@@ -199,6 +202,7 @@ class ResultFileReader(object):
         p-value: ...
         ...
     """
+
     def __init__(self, file_name, significance=None):
         """ Prepares a ResultFileReader to read such from a `file_name`.
             If we specify a certain `significance`, we will only consider
@@ -233,7 +237,7 @@ class ResultFileReader(object):
             the file).
         """
         list_go_terms = []
-        for line in [l for l in self.file[key] if self.pval_regex.match(l)]:
+        for line in [li for li in self.file[key] if self.pval_regex.match(li)]:
             pvalue, goterm = line.split(' ', 2)[0:2]
             pvalue = float(pvalue[0:-1])
             if pvalue < self.alpha:

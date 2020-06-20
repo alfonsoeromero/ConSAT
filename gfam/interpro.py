@@ -5,10 +5,7 @@ import re
 from gfam.assignment import Assignment
 from gfam.utils import bidict, open_anything
 
-try:
-    from collections import Mapping
-except ImportError:
-    from gfam.compat import Mapping
+from collections import Mapping
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -83,9 +80,8 @@ class AssignmentReader(object):
                 interpro_id=parts[11],
                 comment=parts[14]
             )
-        except:
+        except IndexError:
             return None
-
 
         return assignment
 

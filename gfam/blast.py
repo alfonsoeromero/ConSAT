@@ -58,7 +58,7 @@ class BlastFilter(object):
             norm = self.normalize_func(parts[0], parts[1], int(parts[3]))
             if norm < self.min_alignment_length:
                 return False
-        except:
+        except IndexError:
             return False
 
         return True

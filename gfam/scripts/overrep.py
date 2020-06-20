@@ -83,7 +83,7 @@ class OverrepresentationAnalysisApp(CommandLineApp):
         return parser
 
     def __parse_bool(self, _string):
-        if not isinstance(_string,bool):
+        if not isinstance(_string, bool):
             string = _string.strip()
         else:
             string = _string
