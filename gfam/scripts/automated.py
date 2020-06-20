@@ -69,10 +69,7 @@ from __future__ import print_function
 
 from gfam.scripts import CommandLineApp
 from gfam.uniprot import XMLIprscanToTxt
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 import os
 import gzip
 import shutil
