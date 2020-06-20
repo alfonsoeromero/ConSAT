@@ -4,10 +4,11 @@ Modula -- a modular calculation framework for Python
 Especially for scientific calculations and stuff
 """
 from __future__ import print_function
-from collections import deque
-import optparse
+
 import os
 import sys
+from collections import deque
+
 from gfam.modula.configuration import Configuration
 from gfam.modula.log import init_master_logger
 from gfam.modula.module import DefaultModuleManager
@@ -74,29 +75,6 @@ def init_project(rootdir):
 # ...
 """, file=modules_fh)
         modules_fh.close()
-
-
-def main():
-    """Main entry point when Modula is run from the command line"""
-    parser = optparse.OptionParser(usage="%prog [options] [command]")
-    parser.add_option("-f", "--force", dest="force", action="store_true",
-                      help="force the execution of the given command")
-
-    # Parse command line
-    options, args = parser.parse_args()
-    # Initialize the Modula engine
-    init()
-    # Extend the Python path
-    sys.path.insert(0, os.path.join(os.getcwd(), 'lib'))
-
-    # Start the shell
-    from modula.shell import Shell
-    if args:
-        if options.force:
-            args.append("--force")
-        Shell().onecmd(" ".join(args))
-    else:
-        Shell().cmdloop()
 
 
 def run(module_name, force=False, extra_args=None):

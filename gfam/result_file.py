@@ -6,42 +6,18 @@
 """
 
 from __future__ import print_function
-import re
+
 import math
+import re
+
+from scipy.stats import chisqprob
+
 from gfam.indexed_file import IndexedReadOnlyFile
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
-
-try:
-    from scipy.stats import chisqprob
-except ImportError:
-    def chisqprob(chi, deg):
-        """Return prob(chisq >= chi, with deg degrees of
-            freedom).
-            deg must be even.
-            copypasted from
-            http://www.linuxjournal.com/files/linuxjournal.com/
-                   linuxjournal/articles/064/6467/6467s2.html
-        """
-        assert deg & 1 == 0
-        # XXX If chi is very large, exp(-m) will underflow to 0.
-        half_chi = chi / 2.0
-        summation = term = math.exp(-half_chi)
-        for i in range(1, deg//2):
-            term *= half_chi / i
-            summation += term
-        # With small chi and large deg, accumulated
-        # roundoff error, plus error in
-        # the platform exp(), can cause this to spill
-        # a few ULP above 1.0. For
-        # example, chi2P(100, 300) on my box
-        # has summation == 1.0 + 2.0**-52 at this
-        # point.  Returning a value even a teensy
-        # bit over 1.0 is no good.
-        return min(summation, 1.0)
 
 
 class ResultFileFilter(object):

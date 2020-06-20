@@ -6,8 +6,8 @@ from gfam.tasks.common.sequence_fragment_set import SequenceFragmentSet
 class TestSequenceFragmentSet(unittest.TestCase):
 
     def setUp(self):
-        fragments_line = "ABCDEF:1-23  BAADD:40-58   PROTEIN:1-117 PROTEIN:4-24"
-        self._sut = SequenceFragmentSet.from_str(fragments_line)
+        frag_line = "ABCDEF:1-23  BAADD:40-58   PROTEIN:1-117 PROTEIN:4-24"
+        self._sut = SequenceFragmentSet.from_str(frag_line)
 
     def test_sizes_should_be_correct_with_repeated_ids(self):
         # arrange

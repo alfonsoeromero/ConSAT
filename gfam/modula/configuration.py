@@ -3,12 +3,8 @@ Configuration file reader for modula
 """
 
 import os
-try:
-    from configparser import NoOptionError
-    from configparser import SafeConfigParser as Parser
-except ImportError:
-    from ConfigParser import NoOptionError
-    from ConfigParser import SafeConfigParser as Parser
+from configparser import NoOptionError
+from configparser import SafeConfigParser as Parser
 
 
 class Configuration(object):

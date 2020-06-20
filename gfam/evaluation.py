@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import sys
+
 import os.path
+import sys
 from collections import defaultdict
+from typing import Dict
+
 from gfam.go import Tree as GOTree
+from gfam.result_file import ResultFileReader
 from gfam.utils import open_anything
-from result_file import ResultFileReader
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -32,7 +35,7 @@ class Evaluation(object):
 
     valid_ev_codes = ["EXP", "IDA", "IPI", "IMP", "IGI", "IEP", "TAS", "IC"]
     significance_levels = [1.0, 0.1, 0.05, 0.01, 0.001]
-    cache_file = dict()
+    cache_file: Dict = dict()
 
     def __init__(self, go_file, goa_file, output_directory, proteins):
         self.go_tree = GOTree.from_obo(go_file)
@@ -80,8 +83,8 @@ class Evaluation(object):
         annotation
         """
         li = self._read_result_file(assoc, name)
-        return [prot for prot in li if len([p
-                for p in li[prot] if p[1] <= significance]) == 0]
+        return [prot for prot in li
+                if len([p for p in li[prot] if p[1] <= significance]) == 0]
 
     def _evaluate_orphans(self, overrep_file, transfer_file):
         orphan_file = os.path.join(self.output_dir, "01_orphans")

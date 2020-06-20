@@ -14,17 +14,21 @@ The terms associated to a certain sequence can be easily retrieved with the
 files produced.
 """
 from __future__ import print_function
-import os
+
 import io
-import sys
 import math
+import os
 import re
-import unicodedata
 import string
+import sys
+import unicodedata
 from collections import Counter, defaultdict
-from gfam.scripts import CommandLineApp
-from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+
+import Stemmer
+
 import gfam.scripts
+from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+from gfam.scripts import CommandLineApp
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -32,17 +36,10 @@ __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
 
-try:
-    # if Snowball stemmer is installed, we use it
-    import Stemmer
-    STEMMER = Stemmer.Stemmer('english')
+def stem(word):
+    s = Stemmer.Stemmer('english')
+    return s.stemWord(word)
 
-    def stem(word):
-        return STEMMER.stemWord(word)
-except ImportError:
-    # ...otherwise no stemming is performed
-    def stem(word):
-        return word
 
 if sys.version_info[0] >= 3:
     unicode = str
@@ -498,11 +495,12 @@ class GetText(CommandLineApp):
                     seq_id, rest = line.split(" ", 1)
                     features = [(int(f[0]), float(f[1]))
                                 for f in [i.split(":") for i in rest.split()]]
+                    feats = ["{}:{:.5f}".format(feat[0],
+                                                feat[1]*idf[feat[0]])
+                             for feat in features]
                     output_file.write(
                         "{} {}\n".format(seq_id,
-                                         " ".join(["{}:{:.5f}".format(feat[0],
-                                                   feat[1]*idf[feat[0]])
-                                                   for feat in features])))
+                                         " ".join(feats)))
                 else:
                     output_file.write("{}\n".format(seq_id))
         self.log.info("Weight file done!")

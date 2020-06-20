@@ -7,22 +7,17 @@ The GO terms transferred are printed, for each protein id, in a text
 readable format
 """
 from __future__ import print_function
-import sys
+
 import os
+import sys
 from itertools import combinations
+
+from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
 from gfam.go import Tree as GOTree
 from gfam.go.overrepresentation import OverrepresentationAnalyser
-from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything
-from gfam.utils import bidict
-from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
 from gfam.result_file import ResultFileFilter
-
-try:
-    from itertools import izip as i_zip
-except ImportError:  # will be 3.x series
-    i_zip = zip
-
+from gfam.scripts import CommandLineApp
+from gfam.utils import bidict, open_anything
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -192,8 +187,8 @@ class TransferFunctionFromDomainArch(CommandLineApp):
                 out.write("{}{}{}{}".format(arch, carriage_return,
                                             lines, twocr))
             if self.options.results_by_protein:
-                for rest, prot in i_zip(combinations(prots, len(prots)-1),
-                                        reversed(prots)):
+                for rest, prot in zip(combinations(prots, len(prots)-1),
+                                      reversed(prots)):
                     print(prot)
                     if prot in annotated_prots:
                         for term, p_value in ora.test_group(rest):

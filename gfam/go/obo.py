@@ -19,15 +19,13 @@ Usage example::
 """
 
 from __future__ import print_function
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+
 import re
 import tokenize
-from gfam.utils import open_anything
-from gfam.go.utils import ParseError
+from io import StringIO
 
+from gfam.go.utils import ParseError
+from gfam.utils import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"

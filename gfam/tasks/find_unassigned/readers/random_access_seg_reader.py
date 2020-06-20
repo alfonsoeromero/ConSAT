@@ -3,7 +3,6 @@ import re
 import sqlite3
 import tempfile
 from re import Pattern
-from typing import Union
 
 
 class RandomAccessSEGReader:
