@@ -248,7 +248,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         unassigned_app = FindUnassignedApp()
         unassigned_app.set_sequence_id_regexp(self.options.sequence_id_regexp)
         unassigned_app.process_sequences_file(self.options.sequences_file)
-        unassigned_app.process_infile(interpro_file,self.interpro)
+        unassigned_app.process_infile(interpro_file, self.interpro)
         self.seqcat = unassigned_app.seqcat
         unassigned_ids = set(unassigned_app.seq_ids_to_length.keys())
         seqcat_ids = set(self.seqcat.keys())
