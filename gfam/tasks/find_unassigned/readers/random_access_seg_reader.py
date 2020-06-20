@@ -2,6 +2,8 @@ import os
 import re
 import sqlite3
 import tempfile
+from re import Pattern
+from typing import Union
 
 
 class RandomAccessSEGReader:
@@ -19,7 +21,8 @@ class RandomAccessSEGReader:
         """
         self.seg_filename = seg_filename
         if sequence_id_regexp:
-            self.regexp = re.compile(sequence_id_regexp)
+            self.regexp: Union[Pattern[str], None] = re.compile(
+                sequence_id_regexp)
             self._process_protein_id = self._process_protein_id_with_regex
         else:
             self.regexp = None
@@ -28,11 +31,11 @@ class RandomAccessSEGReader:
         self.db_file = self._create_db()
         self.db_handle = self._open_db()
 
-    def _open_db(self):
+    def _open_db(self) -> sqlite3.Cursor:
         conn = sqlite3.connect(self.db_file)
         return conn.cursor()
 
-    def _create_db(self) -> None:
+    def _create_db(self) -> str:
         db_name = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
         conn = sqlite3.connect(db_name.name, isolation_level="DEFERRED")
         c = conn.cursor()

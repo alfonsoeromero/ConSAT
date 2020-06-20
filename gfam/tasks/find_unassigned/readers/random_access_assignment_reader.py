@@ -3,16 +3,17 @@ import os
 import sqlite3
 import tempfile
 from typing import List
+from dataclasses import asdict
 
 from gfam.interpro import Assignment, AssignmentReader
 
 
 def _assignment_from_string(s: str) -> Assignment:
-    return Assignment(*json.loads(s))
+    return Assignment(**json.loads(s))
 
 
 def _assignment_to_string(assignment: Assignment) -> str:
-    return json.dumps(assignment)
+    return json.dumps(asdict(assignment))
 
 
 class RandomAccessAssignmentReader:
@@ -28,11 +29,11 @@ class RandomAccessAssignmentReader:
         self.db_file = self._create_db()
         self.db_handle = self._open_db()
 
-    def _open_db(self):
+    def _open_db(self) -> sqlite3.Cursor:
         conn = sqlite3.connect(self.db_file)
         return conn.cursor()
 
-    def _create_db(self) -> None:
+    def _create_db(self) -> str:
         db_name = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
         conn = sqlite3.connect(db_name.name, isolation_level="DEFERRED")
         c = conn.cursor()
@@ -68,7 +69,7 @@ class RandomAccessAssignmentReader:
         conn.close()
         return db_name.name
 
-    def assignments_for_protein(self, protein_id: str) -> List[str]:
+    def assignments_for_protein(self, protein_id: str) -> List[Assignment]:
         """Get the list of proteins associated to a given protein
             identifier
 
@@ -77,9 +78,9 @@ class RandomAccessAssignmentReader:
         protein_id : str
             protein identifier that we query for
 
-        Yields
+        Returns
         -------
-        Assignment
+        List[Assignment]
             assignments associated to that protein identifier
         """
         self.db_handle.execute(

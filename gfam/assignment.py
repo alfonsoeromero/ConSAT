@@ -29,7 +29,7 @@ except NameError:
 # trickery.
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class Assignment:
     """Class representing a record in an InterPro ``iprscan`` output.
 
@@ -82,7 +82,7 @@ class Assignment:
 
     def short_repr(self):
         """Short representation of this assignment, used in error messages"""
-        return "%s(%d-%d)" % (self.domain, self.start, self.end)
+        return f"{self.domain}({self.start}-{self.end})"
 
 
 class OverlapType(Enum):

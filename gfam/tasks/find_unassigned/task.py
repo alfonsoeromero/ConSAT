@@ -25,8 +25,6 @@ class FindUnassignedTask(LoggedTask):
         self.min_fragment_length = min_fragment_length
         self.min_length = min_length
         self.sequence_id_regexp = sequence_id_regexp
-        self.assignment_reader = None
-        self.seg_reader = None
 
         self.maximum = max(self.min_length,
                            self.min_fragment_length)
@@ -73,7 +71,7 @@ class FindUnassignedTask(LoggedTask):
                 print(f"{protein_id}\t{start}\t{end}")
 
     def run(self, assignment_file: str, fasta_file: str,
-            seg_file: str = None) -> None:
+            seg_file: str = "") -> None:
         # preloads the reader
         self._preload_readers(assignment_file, seg_file)
 
