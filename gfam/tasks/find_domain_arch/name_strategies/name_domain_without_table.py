@@ -1,5 +1,5 @@
 from gfam.tasks.common.sequence_fragment_set import SequenceFragmentSet
-from gfam.tasks.find_domain_arch.domain_name_strategies.abstract_name_domain\
+from gfam.tasks.find_domain_arch.name_strategies.abstract_name_domain\
     import AbstractNameDomainStrategy
 
 
@@ -14,6 +14,7 @@ class NameDomainWithoutTable(AbstractNameDomainStrategy):
         prefix : str
             Prefix for new domains
         """
+        self.current_cluster_id = 0
         self.prefix = prefix
 
     def get_domain_name(self, fragments: SequenceFragmentSet) -> str:
@@ -31,6 +32,7 @@ class NameDomainWithoutTable(AbstractNameDomainStrategy):
             name of the new domain, usually prefix followed by 5 digits
             starting from 0
         """
-        domain_name = f"{self.prefix}{self.current_cluster_id:05}"
+        cluster_id: int = self.current_cluster_id
+        domain_name = f"{self.prefix}{cluster_id:05}"
         self.current_cluster_id += 1
         return domain_name

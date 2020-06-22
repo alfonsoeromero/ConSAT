@@ -25,7 +25,6 @@ class FindUnassignedTask(LoggedTask):
         self.min_fragment_length = min_fragment_length
         self.min_length = min_length
         self.sequence_id_regexp = sequence_id_regexp
-
         self.maximum = max(self.min_length,
                            self.min_fragment_length)
 

@@ -5,7 +5,7 @@ from typing import Dict
 from gfam.tasks.common.labelled_sequence_fragment_set import \
     LabelledSequenceFragmentSet
 from gfam.tasks.common.sequence_fragment_set import SequenceFragmentSet
-from gfam.tasks.find_domain_arch.domain_name_strategies.abstract_name_domain import \
+from gfam.tasks.find_domain_arch.name_strategies.abstract_name_domain import \
     AbstractNameDomainStrategy
 
 

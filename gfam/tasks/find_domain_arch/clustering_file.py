@@ -28,8 +28,9 @@ class ClusteringFile:
         Parameters
         ----------
         min_size : int
-            Minimum size (fragments) of a cluster to be considered. Clusters
-            with less than this size will be ignored
+            Minimum size (unique protein ids within the set of fragment)
+            of a cluster to be considered. Clusters formed with less than
+            `min_size` different proteins will be ignored
         old_table : str
             Existing cluster table, if any, to provide names coherent with the previous
             file, by default ''
@@ -70,7 +71,7 @@ class ClusteringFile:
         Parameters
         ----------
         cluster_file : str
-            [description]
+            output of `cca.txt`, one list of sequence fragments per line
 
         Returns
         -------
