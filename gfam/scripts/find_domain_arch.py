@@ -3,13 +3,13 @@
 outputs them in a simple text-based format.
 """
 from __future__ import print_function
-from collections import defaultdict
+
 import operator
 import sys
-import re
+from collections import defaultdict
 
-from gfam.assignment import AssignmentOverlapChecker
-from gfam.assignment import SequenceWithAssignments, TreeRepresentation
+from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
+                             TreeRepresentation)
 from gfam.interpro import InterPro, InterProNames
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, redirected
@@ -118,15 +118,6 @@ class FindDomainArchitectureApp(CommandLineApp):
                           default='NOVEL')
         return parser
 
-    def print_new_domains_table(self, table):
-        """Prints the new domain table"""
-        self.log.info("Printing the new domains table")
-        table_file = open(self.options.new_domains_table, "w")
-        with redirected(stdout=table_file):
-            for cluster_name in sorted(table.keys()):
-                print(cluster_name + "\t" + "\t".join(table[cluster_name]))
-        table_file.close()
-
     def run_real(self):
         """Runs the applications"""
         if len(self.args) != 2:
@@ -135,6 +126,8 @@ class FindDomainArchitectureApp(CommandLineApp):
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
         AssignmentOverlapChecker.log = self.log
 
+        # I. Load files
+        # I.I Load interpro parent/child file, if any
         if self.options.interpro_parent_child_file:
             self.log.info("Loading InterPro parent-child"
                           " assignments from %s..." %
@@ -143,7 +136,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                 self.options.interpro_parent_child_file)
         else:
             self.interpro = InterPro()
-
+        # I.II Load interpro names
         self.interpro_names = InterProNames.FromFile(
             self.options.interpro_names_file)
 
@@ -152,6 +145,7 @@ class FindDomainArchitectureApp(CommandLineApp):
         else:
             self.details_file = None
 
+        # II. Setup clustering table
         if self.options.old_table:
             self.process_old_table(self.options.old_table)
             self.using_old_table = True
@@ -159,20 +153,26 @@ class FindDomainArchitectureApp(CommandLineApp):
             self.using_old_table = False
             self.current_cluster_id = 1
 
+        # III. do the assignment of interpro domains, including interpro
         interpro_file, clustering_file = self.args
         self.process_interpro_file(interpro_file)
         table = self.process_clustering_file(clustering_file)
+        # IV. print outputs: 
+        
+        # (A) details file
         self.sort_by_domain_architecture()
 
+        # (B) new domains table
         if self.options.new_domains_table:
-            self.print_new_domains_table(table)
+            self.print_new_domains_table(table, self.options.new_domains_table)
 
         for seqs in self.domain_archs.values():
             seqs.sort()
 
         self.domain_archs = self.domain_archs.items()
         self.domain_archs.sort(key=lambda x: len(x[1]), reverse=True)
-
+        
+        # (C) proper program output
         for domain_arch, members in self.domain_archs:
             if domain_arch:
                 arch_str = domain_arch
@@ -198,6 +198,7 @@ class FindDomainArchitectureApp(CommandLineApp):
 
         self.details_file.close()
 
+        # (D) stats file
         if self.options.stats:
             stats_file = open(self.options.stats, "w")
             total_residues = 0.0
@@ -289,29 +290,6 @@ class FindDomainArchitectureApp(CommandLineApp):
                     100.0 * covered_residues_nonnovel / total_residues))
             stats_file.close()
 
-    def process_old_table(self, old_table_file):
-        # we build 3 structures: a dict mapping
-        # each fragment to its cluster id, and
-        # a dict mapping each sequence id to the
-        # list of proteins it belongs to.
-        # For each cluster we store the set of sequences too.
-        self.fragments_per_cluster = defaultdict(list)
-        self.cluster_per_fragment = dict()
-        self.fragments_per_seq = defaultdict(list)
-        self.current_cluster_id = 1
-
-        for line in open(old_table_file, 'r'):
-            fields = line.split()
-            cluster_name, fragments = fields[0], fields[1:]
-            cluster_num = int(re.findall(r'\d+', cluster_name)[0])
-            self.current_cluster_id = max(self.current_cluster_id, cluster_num)
-
-            self.fragments_per_cluster[cluster_name] = fragments
-            for fragment in fragments:
-                sequence = fragment.split(':')[0]
-                self.cluster_per_fragment[fragment] = cluster_name
-                self.fragments_per_seq[sequence].append(fragment)
-
     def process_interpro_file(self, interpro_file):
         from gfam.scripts.find_unassigned import FindUnassignedApp
         unassigned_app = FindUnassignedApp()
@@ -324,55 +302,8 @@ class FindDomainArchitectureApp(CommandLineApp):
             self.seqcat[seq_id] = SequenceWithAssignments(
                 seq_id, unassigned_app.seq_ids_to_length[seq_id])
 
-    def find_domain_id(self, fragments):
-        """Maps a set of fragments to the most likely
-        cluster from the old_cluster_trable, if this is possible.
-        The identifier (number) of this cluster is returned, if
-        anyone is found, or -1 if no matching cluster is found.
-        """
-        # 1.- we vote each possible cluster
-        votes_per_cluster = defaultdict(int)
-        for fragment in fragments:
-            if fragment in self.cluster_per_fragment:
-                # 1.1- if the fragment has a previously assigned cluster,
-                # we vote on them
-                votes_per_cluster[self.cluster_per_fragment[fragment]] += 1
-            else:
-                # 1.2.- if not, we check for fragments near this one in the
-                # same sequence
-                fields = fragment.split(':')
-                sequence = fields[0]
-                if sequence in self.fragments_per_seq:
-                    # If there are other fragments in the same sequence...
-                    matching_seq = defaultdict(float)
-                    seq_from, seq_to = map(int, fields[1].split('-'))
-                    for other_fragment in self.fragments_per_seq[sequence]:
-                        oseq_from, oseq_to = map(
-                            int, other_fragment.split(':')[1].split('-'))
-                        if oseq_from <= seq_to:
-                            # there is overlap
-                            matching_seq[other_fragment] = \
-                                float(seq_to - oseq_from + 1) / float(
-                                    oseq_to - seq_from + 1)
-                        elif seq_from <= oseq_to:
-                            matching_seq[other_fragment] = float(
-                                oseq_to - seq_from + 1) /\
-                                float(seq_to - oseq_from + 1)
-                    if matching_seq:
-                        matched = max(matching_seq.items(),
-                                      key=lambda x: x[1])[0]
-                        clu = self.cluster_per_fragment[matched]
-                        votes_per_cluster[clu] += 1
-
-        # 2.- we count the votes and take a decision
-        if not votes_per_cluster:
-            return -1
-        elif len(votes_per_cluster) == 1:
-            return votes_per_cluster.items()[0][0]
-        return max(matching_seq.items(), key=lambda x: x[1])[0]
-
     def process_clustering_file(self, fname):
-        table = defaultdict()
+        table = {}
         cluster_file = open(fname)
         if self.options.prefix:
             prefix = self.options.prefix
@@ -428,7 +359,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                     primary_source.add(assignment.source)
                 domains.append(new_assignment.domain)
                 new_assignments.append(new_assignment)
-            tree_arch = TreeRepresentation(new_assignments,self.interpro)
+            tree_arch = TreeRepresentation(new_assignments, self.interpro)
             seq.architecture = tree_arch.get_string()
             seq.architecture_pos = tree_arch.get_string_positions()
 
@@ -480,12 +411,13 @@ class FindDomainArchitectureApp(CommandLineApp):
                                   % (interpro_id, anc), file=self.details_file)
                         if anc in self.interpro_names:
                             print("{}{}".format(" " * (row.index(":") + 1),
-                                  self.interpro_names[anc]),
+                                                self.interpro_names[anc]),
                                   file=self.details_file)
                     else:
                         print("", file=self.details_file)
                         if assignment.domain in self.interpro_names:
-                            print("{}{}".format(" " * (row.index(":") + 1),
+                            print("{}{}".format(
+                                  " " * (row.index(":") + 1),
                                   self.interpro_names[assignment.domain]),
                                   file=self.details_file)
                 print("", file=self.details_file)
