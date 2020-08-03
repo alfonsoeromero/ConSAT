@@ -24,6 +24,12 @@ class SeqslicerFixture:
             file_content = f_in.read()
         return file_content
 
+    def get_number_of_slices(self) -> int:
+        return sum([1 for line in open(self.get_slice_file())])
+
+    def get_number_of_proteins(self) -> int:
+        return len(set([f.split()[0] for f in open(self.get_slice_file())]))
+
     def get_default_args_for_app(self) -> List[str]:
         slice_file = self.get_slice_file()
         fasta_file = self.get_fasta_file()
