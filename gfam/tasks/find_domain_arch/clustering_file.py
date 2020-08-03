@@ -1,18 +1,14 @@
-import abc
-import re
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from gfam.assignment import SequenceWithAssignments
-from gfam.tasks.common.labelled_sequence_fragment_set import \
-    LabelledSequenceFragmentSet
 from gfam.tasks.common.sequence_fragment_set import SequenceFragmentSet
-from gfam.tasks.find_domain_arch.name_strategies.abstract_name_domain import \
-    AbstractNameDomainStrategy
-from gfam.tasks.find_domain_arch.name_strategies.name_domain_with_table import \
-    NameDomainWithTable
-from gfam.tasks.find_domain_arch.name_strategies.name_domain_without_table import \
-    NameDomainWithoutTable
+from gfam.tasks.find_domain_arch.name_strategies.abstract_name_domain\
+    import AbstractNameDomainStrategy
+from gfam.tasks.find_domain_arch.name_strategies.name_domain_with_table\
+    import NameDomainWithTable
+from gfam.tasks.find_domain_arch.name_strategies.name_domain_without_table\
+    import NameDomainWithoutTable
 
 
 class ClusteringFile:
@@ -32,8 +28,8 @@ class ClusteringFile:
             of a cluster to be considered. Clusters formed with less than
             `min_size` different proteins will be ignored
         old_table : str
-            Existing cluster table, if any, to provide names coherent with the previous
-            file, by default ''
+            Existing cluster table, if any, to provide names coherent with
+            the previous file, by default ''
         prefix : str
             Prefix of the new domain names, by default "NOVEL"
         """
@@ -50,8 +46,8 @@ class ClusteringFile:
             self._name_domain_strategy = NameDomainWithoutTable(
                 self.prefix)
 
-    def add_new_cluster_assignment_to_sequence(self,
-                                               seq: SequenceWithAssignments) -> None:
+    def add_new_cluster_assignment_to_sequence(
+            self, seq: SequenceWithAssignments) -> None:
         """Given a `SequenceWithAssignment` `seq` add all the assignments that
         have new found domains to it, if any
 
@@ -65,7 +61,8 @@ class ClusteringFile:
             for start, end, new_domain_id in self.new_domain_assignments[id]:
                 seq.assign_(start, end, new_domain_id)
 
-    def process_clustering_file(self, cluster_file: str) -> Dict[str, List[str]]:
+    def process_clustering_file(self, cluster_file: str) ->\
+            Dict[str, List[str]]:
         """Given a clustering file
 
         Parameters
@@ -88,8 +85,8 @@ class ClusteringFile:
             domain_name: str = self._name_domain_strategy.get_domain_name(
                 fragments)
 
-            domain_assignment_table[domain_name] = [str(fragment) for fragment in
-                                                    fragments]
+            domain_assignment_table[domain_name] = [str(fragment) for
+                                                    fragment in fragments]
 
             for fragment in fragments:
                 seq_id = fragment.sequence_id

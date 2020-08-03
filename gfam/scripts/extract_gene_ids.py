@@ -5,9 +5,9 @@ import sys
 from gfam.scripts import CommandLineApp
 from gfam.tasks.extract_gene_ids.task import ExtractGeneIDsTask
 
-__author__ = "Tamas Nepusz"
+__author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "tamas@cs.rhul.ac.uk"
-__copyright__ = "Copyright (c) 2010, Tamas Nepusz"
+__copyright__ = "Copyright (c) 2020, Tamas Nepusz, Alfonso E. Romero"
 __license__ = "GPL"
 
 
