@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, call, patch
 
 from gfam.tasks.assignment_source_filter.exclusion_logger.file_logger import \
     FileLogger
@@ -7,7 +7,7 @@ from gfam.tasks.assignment_source_filter.exclusion_logger.file_logger import \
 
 class TestFileLogger(unittest.TestCase):
 
-    @patch("builtins.open", new_callable=mock_open, read_data="data")
+    @patch("builtins.open", new_callable=MagicMock())
     def test_file_logger_should_open_file_and_write(self,
                                                     mock_file):
         # arrange
@@ -19,8 +19,9 @@ class TestFileLogger(unittest.TestCase):
         # act
         _sut = FileLogger(file_name)
         _sut.log_exclusion(name, reason)
+        _sut.close()
 
         # assert
         mock_file.assert_called_with(file_name, "a+")
-        mock_file.return_value.__enter__().write.assert_called_once_with(
-            expected_message)
+        self.assertIn(call().write(expected_message), mock_file.mock_calls)
+        self.assertIn(call().close(), mock_file.mock_calls)
