@@ -165,7 +165,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
         # Determine the length of the sequence (and check that the length is
         # the same across all assignments; if not, then the input file is
         # inconsistent and the sequence will be skipped).
-        source = assignments_by_source.keys()[0]
+        source = list(assignments_by_source.keys())[0]
         seq_length = assignments_by_source[source][0][0].length
         for _source, assignments in assignments_by_source.items():
             if any(assignment.length != seq_length
@@ -315,7 +315,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
                 spec.append(cfg.get(section, "stages.%d" % idx))
                 idx += 1
 
-        regexp = re.compile("([-+])?\s*([^-+]+)")
+        regexp = re.compile(r"([-+])?\s*([^-+]+)")
         result = []
         for item in spec:
             sources = set()
