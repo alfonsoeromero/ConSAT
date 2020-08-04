@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from gfam.utils import complementerset, open_anything
+from gfam.tasks.assignment_source_filter.interpro_file_factory import \
+    InterproFileFactory
+
 import re
 import sys
-
 from collections import defaultdict
-from gfam.assignment import AssignmentOverlapChecker, EValueFilter
-from gfam.assignment import SequenceWithAssignments
-from gfam.interpro import AssignmentReader, InterPro
+
+from gfam.assignment import (AssignmentOverlapChecker, EValueFilter,
+                             SequenceWithAssignments)
+from gfam.interpro import AssignmentReader
 from gfam.scripts import CommandLineApp
-from gfam.utils import complementerset, open_anything
+from gfam.tasks.assignment_source_filter.exclusion_logger.exclusion_logger\
+    import ExclusionLogger
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -90,14 +95,13 @@ class AssignmentSourceFilterApp(CommandLineApp):
 
     def run_real(self):
         """Runs the application"""
+        # sets the algorithm main parameters
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
+        self.interpro = InterproFileFactory.get_from_file(
+            self.options.interpro_file)
 
-        if self.options.interpro_file:
-            self.log.info("Loading known InterPro IDs from %s..." %
-                          self.options.interpro_file)
-            self.interpro = InterPro.FromFile(self.options.interpro_file)
-        else:
-            self.interpro = InterPro()
+        self.exclusion_logger = ExclusionLogger(
+            self.options.exclusions_log_file)
 
         if self.options.gene_id_file:
             self.log.info("Loading sequence IDs from %s..." %
@@ -107,13 +111,6 @@ class AssignmentSourceFilterApp(CommandLineApp):
                 self.valid_sequence_ids.add(line.strip())
         else:
             self.valid_sequence_ids = complementerset()
-
-        if self.options.exclusions_log_file:
-            self.log.info("Logging excluded sequences to %s." %
-                          self.options.exclusions_log_file)
-            self.exclusion_log = open(self.options.exclusions_log_file, "a+")
-        else:
-            self.exclusion_log = None
 
         self.ignored = set()
         for ignored_source in self.options.ignored:
@@ -126,6 +123,7 @@ class AssignmentSourceFilterApp(CommandLineApp):
             self.error("Only one input file may be given")
 
         self.process_infile(self.args[0])
+        self.exclusion_logger.close()
 
     def process_infile(self, fname):
         self.log.info("Processing %s..." % fname)
@@ -158,8 +156,9 @@ class AssignmentSourceFilterApp(CommandLineApp):
         """
 
         if not assignments_by_source:
-            self.log_exclusion(name, "no assignments in the input data file " +
-                                     "passed the filters")
+            self.exclusion_logger.log_exclusion(
+                name, "no assignments in the input data file " +
+                "passed the filters")
             return []
 
         # Determine the length of the sequence (and check that the length is
@@ -173,8 +172,8 @@ class AssignmentSourceFilterApp(CommandLineApp):
                 self.log.warning("Sequence %s has multiple assignments with "
                                  "different sequence lengths in the "
                                  "input file, skipping" % name)
-                self.log_exclusion(name, "ambiguous sequence " +
-                                         "length in input file")
+                self.exclusion_logger.log_exclusion(
+                    name, "ambiguous sequence length in input file")
                 return []
 
         # Initially, the result is empty
@@ -261,8 +260,9 @@ class AssignmentSourceFilterApp(CommandLineApp):
             result.append("%s\t%s" % (row, idx_to_stage[idx]))
 
         if not result:
-            self.log_exclusion(name, "no assignments were selected after "
-                                     "executing all the stages")
+            self.exclusion_logger.log_exclusion(
+                name, "no assignments were selected after "
+                "executing all the stages")
 
         return result
 
@@ -273,7 +273,8 @@ class AssignmentSourceFilterApp(CommandLineApp):
         if name is None:
             return
         if name not in self.valid_sequence_ids:
-            self.log_exclusion(name, "not in the list of valid gene IDs")
+            self.exclusion_logger.log_exclusion(
+                name, "not in the list of valid gene IDs")
             return
         for row in self.filter_assignments(name, assignments_by_source):
             print(row)
@@ -332,18 +333,6 @@ class AssignmentSourceFilterApp(CommandLineApp):
             result.append(sources)
 
         return result
-
-    def log_exclusion(self, name, reason):
-        """Adds an entry to the exclusions log file, noting that the
-        sequence with the given `name` was excluded from further consideration
-        because of the given `reason`.
-
-        This method works only if an exclusion log file was specified when
-        calling the application.
-        """
-        if self.exclusion_log is None:
-            return
-        self.exclusion_log.write("%s: %s\n" % (name, reason))
 
 
 if __name__ == "__main__":
