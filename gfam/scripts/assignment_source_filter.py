@@ -1,24 +1,26 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from gfam.utils import complementerset, open_anything
-from gfam.tasks.assignment_source_filter.interpro_file_factory import \
-    InterproFileFactory
 
-import re
 import sys
-from collections import defaultdict
+from typing import List, Set
 
-from gfam.assignment import (AssignmentOverlapChecker, EValueFilter,
-                             SequenceWithAssignments)
-from gfam.interpro import AssignmentReader
+from gfam.assignment import AssignmentOverlapChecker
 from gfam.scripts import CommandLineApp
+from gfam.tasks.assignment_source_filter.assignment_source_filter_task import \
+    AssignmentSourceFilterTask
 from gfam.tasks.assignment_source_filter.exclusion_logger.exclusion_logger\
     import ExclusionLogger
+from gfam.tasks.assignment_source_filter.interpro_file_factory import \
+    InterproFileFactory
+from gfam.tasks.assignment_source_filter.stages_from_config_reader import \
+    StagesFromConfigReader
+from gfam.tasks.assignment_source_filter.valid_sequence_ids_factory import \
+    ValidSequenceIdsFactory
 
-__author__ = "Tamas Nepusz"
+__author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "tamas@cs.rhul.ac.uk"
-__copyright__ = "Copyright (c) 2010, Tamas Nepusz"
+__copyright__ = "Copyright (c) 2020, Tamas Nepusz, Alfonso E. Romero"
 __license__ = "GPL"
 
 
@@ -93,246 +95,44 @@ class AssignmentSourceFilterApp(CommandLineApp):
                           dest="max_overlap", type=int, default=20)
         return parser
 
+    def _read_ignored_sources(self, sources: List[str]) -> Set[str]:
+        ignored = set()
+        for ignored_source in sources:
+            parts = ignored_source.split()
+            ignored.update(parts)
+        return ignored
+
+    def _check_args(self) -> None:
+        if not self.args:
+            self.args = ["-"]
+        elif len(self.args) > 1:
+            self.error("Only one input file may be given")
+
     def run_real(self):
         """Runs the application"""
         # sets the algorithm main parameters
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
-        self.interpro = InterproFileFactory.get_from_file(
+        interpro = InterproFileFactory.get_from_file(
             self.options.interpro_file)
 
-        self.exclusion_logger = ExclusionLogger(
+        exclusion_logger = ExclusionLogger(
             self.options.exclusions_log_file)
+        valid_sequence_ids = ValidSequenceIdsFactory(
+            self.log, self.options.gene_id_file).get()
+        ignored = self._read_ignored_sources(self.options.ignored)
 
-        if self.options.gene_id_file:
-            self.log.info("Loading sequence IDs from %s..." %
-                          self.options.gene_id_file)
-            self.valid_sequence_ids = set()
-            for line in open_anything(self.options.gene_id_file):
-                self.valid_sequence_ids.add(line.strip())
-        else:
-            self.valid_sequence_ids = complementerset()
-
-        self.ignored = set()
-        for ignored_source in self.options.ignored:
-            parts = ignored_source.split()
-            self.ignored.update(parts)
-
-        if not self.args:
-            self.args = ["-"]
-        if len(self.args) > 1:
-            self.error("Only one input file may be given")
-
-        self.process_infile(self.args[0])
-        self.exclusion_logger.close()
-
-    def process_infile(self, fname):
-        self.log.info("Processing %s..." % fname)
-
-        current_id, assignments_by_source = None, defaultdict(list)
-        evalue_filter = EValueFilter.FromString(self.options.max_e)
-
-        reader = AssignmentReader(fname)
-        for assignment, line in reader.assignments_and_lines():
-            if assignment.id != current_id:
-                self.filter_and_print_assignments(current_id,
-                                                  assignments_by_source)
-                current_id = assignment.id
-                assignments_by_source = defaultdict(list)
-
-            if assignment.source in self.ignored:
-                continue
-            if assignment.evalue is not None and \
-                    not evalue_filter.is_acceptable(assignment):
-                continue
-            assignments_by_source[assignment.source].append((assignment, line))
-
-        # ...and the last batch
-        self.filter_and_print_assignments(current_id, assignments_by_source)
-
-    def filter_assignments(self, name, assignments_by_source):
-        """Given a sequence name and its assignments ordered in a dict by
-        their sources, selects a representative assignment set based on the
-        rules outlined in the documentation of `FindUnassignedApp`.
-        """
-
-        if not assignments_by_source:
-            self.exclusion_logger.log_exclusion(
-                name, "no assignments in the input data file " +
-                "passed the filters")
-            return []
-
-        # Determine the length of the sequence (and check that the length is
-        # the same across all assignments; if not, then the input file is
-        # inconsistent and the sequence will be skipped).
-        source = list(assignments_by_source.keys())[0]
-        seq_length = assignments_by_source[source][0][0].length
-        for _source, assignments in assignments_by_source.items():
-            if any(assignment.length != seq_length
-                   for assignment, _ in assignments):
-                self.log.warning("Sequence %s has multiple assignments with "
-                                 "different sequence lengths in the "
-                                 "input file, skipping" % name)
-                self.exclusion_logger.log_exclusion(
-                    name, "ambiguous sequence length in input file")
-                return []
-
-        # Initially, the result is empty
-        result = []
-
-        # Set up the stages
-        stages = self.get_stages_from_config()
-        """
-        stages = [complementerset(["HMMPanther", "Gene3D"]),
-                  complementerset(["HMMPanther", "Gene3D"]),
-                  complementerset()]
-        """
-
-        # The first stage is treated specially as we have to select a single
-        # source thas has the largest coverage. In the remaining stages, we
-        # are allowed to cherrypick from different sources.
-
-        # First, find the data source which covers the most of the sequence
-        # and is allowed in stage 1
-        first_stage = stages.pop(0)
-        coverage = {}
-        for source, assignments in assignments_by_source.items():
-            # Exclude those sources that we don't consider in the first stage
-            if source not in first_stage:
-                continue
-
-            # Calculate the coverage: we add all the residues covered by
-            # each sequence, not taking overlaps into consideration (by the
-            # moment)
-            seq = SequenceWithAssignments(name, seq_length)
-            for a, _ in assignments:
-                seq.assign(a, False, interpro=self.interpro)
-            coverage[source] = seq.coverage()
-
-        # Find the source giving the best coverage, add its domains into
-        # the current assignment.
-        seq = SequenceWithAssignments(name, seq_length)
-        if coverage:
-            best_source = max(coverage.keys(), key=coverage.__getitem__)
-            sorted_assignments = sorted(assignments_by_source[best_source],
-                                        key=lambda x:
-                                            x[0].get_assigned_length(),
-                                        reverse=True)
-            for a, line in sorted_assignments:
-                line = line.strip()
-                if seq.assign(a, True, interpro=self.interpro):
-                    tab_count = list(line).count("\t")
-                    if tab_count < 13:
-                        line = line + "\t" * (13-tab_count)
-                    result.append("%s\t%s" % (line, 1))
-        else:
-            best_source = None
-
-        # Collect the unused assignments (not from the best source)
-        # into unused_assignments
-        unused_assignments = []
-        for source, assignments in assignments_by_source.items():
-            if source == best_source:
-                continue
-            unused_assignments.extend(assignments)
-
-        if not unused_assignments:
-            return result
-
-        # Try to fill the unassigned regions with the rest of the assignments
-        # that were unused so far, starting from the longest assignment.
-        unused_assignments.sort(key=lambda x: -x[0].get_assigned_length())
-
-        # Okay, we're done with the first stage, process the rest.
-        # idx_to_stage will contain the indices of the selected
-        # assignments as keys and the number of the corresponding
-        # stage in which they were selected as values.
-        idx_to_stage = {}
-        for stage_no, sources in enumerate(stages):
-            for idx, (a, _) in enumerate(unused_assignments):
-                if a.source in sources and seq.assign(a, True,
-                                                      interpro=self.interpro):
-                    idx_to_stage[idx] = stage_no+2
-        for idx in sorted(idx_to_stage.keys()):
-            row = unused_assignments[idx][1].strip()
-            tab_count = list(row).count("\t")
-            if tab_count < 13:
-                row = row + "\t" * (13-tab_count)
-            result.append("%s\t%s" % (row, idx_to_stage[idx]))
-
-        if not result:
-            self.exclusion_logger.log_exclusion(
-                name, "no assignments were selected after "
-                "executing all the stages")
-
-        return result
-
-    def filter_and_print_assignments(self, name, assignments_by_source):
-        """Filters and prints the list of assignments of the gene with the
-        given `name`. `assignments_by_source` must contain the list of
-        domain assignments, sorted by data source."""
-        if name is None:
-            return
-        if name not in self.valid_sequence_ids:
-            self.exclusion_logger.log_exclusion(
-                name, "not in the list of valid gene IDs")
-            return
-        for row in self.filter_assignments(name, assignments_by_source):
-            print(row)
-
-    def get_stages_from_config(self):
-        """Turns to the configuration file specified at startup to
-        fetch the data sources to be used in each stage of the algorithm.
-        If there is no configuration file specified or it does not
-        contain the corresponding keys, it will simply use a default
-        stage setup which ignores HMMPanther and Gene3D in the first
-        and second steps, but uses all sources in the third step.
-
-        The method will be looking for configuration keys named like
-        ``stages.1``, ``stages.2`` and so on in the ``analysis:iprscan_filter``
-        section of the config file. The value of each such config key must
-        be an expression consisting of assignment source names and the
-        operators ``+`` and ``-``, with their usual meaning of addition
-        and exclusion. The special source name ``ALL`` means all possible
-        data sources, enabling us to write expressions like ``ALL-HMMPanther``
-        (meaning all the sources except HMMPanther). Some examples:
-
-        - ``HMMPanther`` means HMMPanther only.
-        - ``ALL`` means all possible data sources.
-        - ``HMMPanther+HMMPfam`` means HMMPanther or HMMPfam.
-        - ``ALL-HMMPanther-Gene3D`` means all possible data sources but
-          HMMPanther or Gene3D.
-        - ``ALL+HMMPanther`` does not really make sense as you are extending
-          all data sources with HMMPanther, so it is equivalent to ``ALL``.
-          GFam will figure out what you meant anyway.
-        """
-        cfg = self.parser.config
-        if cfg is None:
-            spec = ["ALL-HMMPanther-Gene3D", "ALL-HMMPanther-Gene3D",
-                    "ALL"]
-        else:
-            spec, idx = [], 1
-            section = "analysis:iprscan_filter"
-            while cfg.has_option(section, "stages.%d" % idx):
-                spec.append(cfg.get(section, "stages.%d" % idx))
-                idx += 1
-
-        regexp = re.compile(r"([-+])?\s*([^-+]+)")
-        result = []
-        for item in spec:
-            sources = set()
-            for match in regexp.finditer(item):
-                sign, source = match.groups()
-                if source == "ALL":
-                    source = complementerset()
-                else:
-                    source = set([source.strip()])
-                if sign == "-":
-                    sources -= source
-                else:
-                    sources |= source
-            result.append(sources)
-
-        return result
+        self._check_args()
+        stages_from_config = StagesFromConfigReader(
+            self.parser).get_stages_from_config()
+        task = AssignmentSourceFilterTask(ignored,
+                                          exclusion_logger,
+                                          valid_sequence_ids,
+                                          self.options.max_e,
+                                          stages_from_config,
+                                          interpro,
+                                          self.log)
+        task.process_infile(self.args[0])
+        exclusion_logger.close()
 
 
 if __name__ == "__main__":

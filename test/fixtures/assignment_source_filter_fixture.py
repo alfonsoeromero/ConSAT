@@ -28,5 +28,8 @@ class AssignmentSourceFilterFixture:
     def get_input_assignment_file(self) -> str:
         return os.path.join(self.data_dir, "uniprot_trembl.interpro")
 
+    def get_identifiers_file(self) -> str:
+        return os.path.join(self.data_dir, "first100IDS.txt")
+
     def get_parent_child_interpro_file(self) -> str:
         return os.path.join(self.data_dir, "ParentChildTreeFile.txt")
