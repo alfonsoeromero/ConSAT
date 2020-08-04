@@ -1,11 +1,9 @@
 import io
 import unittest
 from contextlib import redirect_stdout
-from test.fixtures.assignment_source_filter_fixture import AssignmentSourceFilterFixture
+from test.fixtures.assignment_source_filter_fixture import \
+    AssignmentSourceFilterFixture
 from typing import List
-
-import pandas as pd
-from pandas.testing import assert_frame_equal
 
 from gfam.scripts.assignment_source_filter import AssignmentSourceFilterApp
 
