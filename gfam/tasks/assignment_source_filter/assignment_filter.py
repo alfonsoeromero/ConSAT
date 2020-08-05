@@ -16,6 +16,7 @@ class AssignmentFilter:
         self.stages_from_config = stages_from_config
         self.interpro = interpro
         self.log = log
+        self.seq_length: int = 0
 
     def filter_and_print_assignments(self, name: str,
                                      assignments_by_source:
@@ -23,38 +24,65 @@ class AssignmentFilter:
         """Filters and prints the list of assignments of the gene with the
             given `name`. `assignments_by_source` must contain the list of
             domain assignments, sorted by data source."""
-        for row in self._filter_assignments(name, assignments_by_source):
-            print(row)
 
-    def _filter_assignments(self, name,
+        if not assignments_by_source:
+            self.exclusion_logger.log_exclusion(
+                name, "no assignments in the input data file " +
+                "passed the filters")
+        else:
+            results = self._filter_assignments(name, assignments_by_source)
+            if not results:
+                self.exclusion_logger.log_exclusion(
+                    name, "no assignments were selected after "
+                    "executing all the stages")
+            else:
+                for row in results:
+                    print(row)
+
+    def _assignments_are_of_different_length(self,
+                                             assignments_by_source,
+                                             name) -> bool:
+        # Determine the length of the sequence (and check that the length is
+        # the same across all assignments; if not, then the input file is
+        # inconsistent and the sequence will be skipped).
+
+        source = list(assignments_by_source.keys())[0]
+        self.seq_length = assignments_by_source[source][0][0].length
+        for _source, assignments in assignments_by_source.items():
+            if any(assignment.length != self.seq_length
+                   for assignment, _ in assignments):
+                self.log.warning(f"Sequence {name} has multiple assignments "
+                                 "with different sequence lengths in the "
+                                 "input file, skipping")
+                self.exclusion_logger.log_exclusion(
+                    name, "ambiguous sequence length in input file")
+                return True
+        return False
+
+    def _get_coverage_for_assignments(self, name: str,
+                                      assignments) -> int:
+        seq = SequenceWithAssignments(name, self.seq_length)
+        for a, _ in assignments:
+            seq.assign(a, False, interpro=self.interpro)
+        return seq.coverage()
+
+    def _complete_line_until_n_tabs(self, line: str, n_tabs: int = 13) -> str:
+        tab_count = list(line).count("\t")
+        if tab_count < n_tabs:
+            return line + "\t" * (n_tabs-tab_count)
+        else:
+            return line
+
+    def _filter_assignments(self, name: str,
                             assignments_by_source: DefaultDict[str, List])\
             -> List:
         """Given a sequence name and its assignments ordered in a dict by
         their sources, selects a representative assignment set based on the
         rules outlined in the documentation of `FindUnassignedApp`.
         """
-        # case 1: no assignment
-
-        if not assignments_by_source:
-            self.exclusion_logger.log_exclusion(
-                name, "no assignments in the input data file " +
-                "passed the filters")
+        if self._assignments_are_of_different_length(assignments_by_source,
+                                                     name):
             return []
-
-        # Determine the length of the sequence (and check that the length is
-        # the same across all assignments; if not, then the input file is
-        # inconsistent and the sequence will be skipped).
-        source = list(assignments_by_source.keys())[0]
-        seq_length = assignments_by_source[source][0][0].length
-        for _source, assignments in assignments_by_source.items():
-            if any(assignment.length != seq_length
-                   for assignment, _ in assignments):
-                self.log.warning("Sequence %s has multiple assignments with "
-                                 "different sequence lengths in the "
-                                 "input file, skipping" % name)
-                self.exclusion_logger.log_exclusion(
-                    name, "ambiguous sequence length in input file")
-                return []
 
         # Initially, the result is empty
         result = []
@@ -78,14 +106,12 @@ class AssignmentFilter:
             # Calculate the coverage: we add all the residues covered by
             # each sequence, not taking overlaps into consideration (by the
             # moment)
-            seq = SequenceWithAssignments(name, seq_length)
-            for a, _ in assignments:
-                seq.assign(a, False, interpro=self.interpro)
-            coverage[source] = seq.coverage()
+            coverage[source] = self._get_coverage_for_assignments(
+                name, assignments)
 
         # Find the source giving the best coverage, add its domains into
         # the current assignment.
-        seq = SequenceWithAssignments(name, seq_length)
+        seq = SequenceWithAssignments(name, self.seq_length)
         best_source: Optional[str]
         if coverage:
             best_source = max(coverage.keys(), key=coverage.__getitem__)
@@ -94,12 +120,9 @@ class AssignmentFilter:
                                             x[0].get_assigned_length(),
                                         reverse=True)
             for a, line in sorted_assignments:
-                line = line.strip()
                 if seq.assign(a, True, interpro=self.interpro):
-                    tab_count = list(line).count("\t")
-                    if tab_count < 13:
-                        line = line + "\t" * (13-tab_count)
-                    result.append("%s\t%s" % (line, 1))
+                    line = self._complete_line_until_n_tabs(line.strip())
+                    result.append(f"{line}\t1")
         else:
             best_source = None
 
@@ -118,6 +141,17 @@ class AssignmentFilter:
         unused_assignments.sort(
             key=lambda x: x[0].get_assigned_length(), reverse=True)
 
+        self._fill_with_unused_assignments(unused_assignments,
+                                           result, seq, stages)
+        return result
+
+    def _fill_with_unused_assignments(self, unused_assignments,
+                                      result, seq, stages) -> None:
+        """Try to fill the unassigned regions with the rest of the assignments
+        that were unused so far, starting from the longest assignment."""
+        unused_assignments.sort(
+            key=lambda x: x[0].get_assigned_length(), reverse=True)
+
         # Okay, we're done with the first stage, process the rest.
         # idx_to_stage will contain the indices of the selected
         # assignments as keys and the number of the corresponding
@@ -130,15 +164,6 @@ class AssignmentFilter:
                     idx_to_stage[idx] = stage_no + 2
 
         for idx in sorted(idx_to_stage.keys()):
-            row = unused_assignments[idx][1].strip()
-            tab_count = list(row).count("\t")
-            if tab_count < 13:
-                row = row + "\t" * (13-tab_count)
-            result.append("%s\t%s" % (row, idx_to_stage[idx]))
-
-        if not result:
-            self.exclusion_logger.log_exclusion(
-                name, "no assignments were selected after "
-                "executing all the stages")
-
-        return result
+            row = self._complete_line_until_n_tabs(
+                unused_assignments[idx][1].strip())
+            result.append(f"{row}\t{idx_to_stage[idx]}")
