@@ -13,31 +13,22 @@ when one tries to resume the calculation.
 Python package as well.
 """
 
-from __future__ import with_statement
-from __future__ import print_function
-
 import logging
 import os
 import shutil
 import sys
 import textwrap
+from configparser import ConfigParser
 from functools import wraps
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 import gfam.modula as modula
 from gfam.modula.hash import sha1
 from gfam.modula.module import CalculationModule
 from gfam.modula.storage import DiskStorageEngine, NotFoundError
+from gfam.result_file import ResultFileCombiner, ResultFileFilter
 from gfam.scripts import CommandLineApp
 from gfam.utils import redirected
-from gfam.result_file import ResultFileFilter, ResultFileCombiner
 
 __author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -152,7 +143,7 @@ class GFamCalculation(CalculationModule):
         try:
             self.extra_args
             if self.extra_args is None:
-                self.extra_args =[]
+                self.extra_args = []
         except NameError:
             self.extra_args = []
         args.extend(self.extra_args)
@@ -481,7 +472,7 @@ class GFamMasterScript(CommandLineApp):
                                "file.function_arch.general_arch_file"):
                 infile_arch1 = self.config.get("generated",
                                                "file.overrep.arch_file") +\
-                               "_unfiltered"
+                    "_unfiltered"
                 infile_arch2 = self.config.get(
                     "generated", "file.function_arch.general_arch_file") +\
                     "_unfiltered"

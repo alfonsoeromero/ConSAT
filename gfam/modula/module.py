@@ -2,16 +2,13 @@
 Classes for module handling in Modula
 """
 
-from gfam.modula.log import get_logger
-from gfam.modula.storage import NotFoundError
-
 import inspect
 import os
 import sys
-try:
-    from configparser import NoSectionError
-except ImportError:
-    from ConfigParser import NoSectionError
+from configparser import NoSectionError
+
+from gfam.modula.log import get_logger
+from gfam.modula.storage import NotFoundError
 
 
 class Module(object):

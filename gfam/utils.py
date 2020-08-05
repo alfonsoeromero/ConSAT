@@ -1,6 +1,17 @@
 """Common routines and utility classes for GFam that fit nowhere else."""
 from __future__ import print_function
 
+import bz2
+import gzip
+import os
+import platform
+import sys
+from contextlib import contextmanager
+from math import ceil
+from shutil import rmtree
+from tempfile import mkdtemp
+from urllib.request import urlopen
+
 __author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "tamas@cs.rhul.ac.uk, aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2014, Tamas Nepusz"
@@ -10,29 +21,7 @@ __all__ = ["bidict", "complementerset", "Histogram",
            "open_anything", "redirected", "RunningMean",
            "search_file", "temporary_dir", "UniqueIdGenerator"]
 
-try:
-    import bz2
-except ImportError:
-    pass
 
-try:
-    import gzip
-except ImportError:
-    pass
-
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen
-
-import os
-import platform
-import sys
-
-from contextlib import contextmanager
-from math import ceil
-from shutil import rmtree
-from tempfile import mkdtemp
 if sys.version_info[0] >= 3:
     from io import IOBase
     file = IOBase
