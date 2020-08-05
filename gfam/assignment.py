@@ -1,25 +1,21 @@
 """Classes corresponding to domain assignments (`Assignment`) and
 sequences with corresponding domain assignments (`SequenceWithAssignments`).
 """
-from collections import defaultdict
-from collections import namedtuple
-from itertools import combinations
 import operator
-from gfam.enum import Enum
+from collections import defaultdict
+from dataclasses import replace
+from enum import Enum
+from itertools import combinations
+
+from gfam.assignment_utils.assignment import Assignment
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
-__all__ = ["Assignment", "AssignmentOverlapChecker", "OverlapType",
+__all__ = ["AssignmentOverlapChecker", "OverlapType",
            "SequenceWithAssignments", "EValueFilter", "TreeRepresentation"]
-
-try:
-    basestring
-except NameError:
-    basestring = str
-
 
 # pylint: disable-msg=C0103,E1101
 # C0103: invalid name
@@ -27,67 +23,17 @@ except NameError:
 # trickery.
 
 
-class Assignment(namedtuple("Assignment",
-                            "id length start end source " +
-                            "domain evalue interpro_id comment")):
-    """Class representing a record in an InterPro ``iprscan`` output.
-
-    An InterPro domain assignment has the following fields:
-
-    - ``id``: the ID of the sequence
-    - ``length``: the length of the sequence
-    - ``start``: the starting position of the region in the sequence
-      that is assigned to some InterPro domain (inclusive)
-    - ``end``: the ending position (inclusive)
-    - ``source``: the assignment source as reported by ``iprscan``
-    - ``domain``: the ID of the domain being assigned, according to the
-      assignment source
-    - ``evalue``: E-value of the assignment if that makes sense,
-      ``None`` otherwise
-    - ``interpro_id``: the InterPro ID corresponding to ``domain`` in
-      ``source``.
-    - ``comment``: an arbitrary comment
-    """
-
-    __slots__ = ()
-
-    def get_assigned_length(self):
-        """Returns the number of amino acids covered by the assignment
-        within the sequence."""
-        return self.end - self.start + 1
-
-    def resolve_interpro_ids(self, interpro):
-        """If the assignment has an InterPro ID, this method makes sure
-        that the domain is equal to the highest common ancestor of the
-        InterPro ID in the InterPro tree. If the assignment does not have
-        an InterPro ID yet, this method tries to look it up.
-
-        Returns a new tuple which might or might not be equal to this one.
-        """
-        if self.interpro_id:
-            anc = interpro.tree.get_most_remote_ancestor(self.interpro_id)
-        else:
-            anc = interpro.mapping.get(self.domain)
-        if self.domain == anc:
-            return self
-        return self._replace(domain=anc)
-
-    def short_repr(self):
-        """Short representation of this assignment, used in error messages"""
-        return "%s(%d-%d)" % (self.domain, self.start, self.end)
-
-
 class OverlapType(Enum):
     """Enum describing the different overlap types that can be detected
     by `AssignmentOverlapChecker`. See the documentation of
     `AssignmentOverlapChecker.check_single` for more details.
     """
-    NO_OVERLAP = "NO_OVERLAP"
-    INSERTION = "INSERTION"
-    INSERTION_DIFFERENT = "INSERTION_DIFFERENT"
-    SYNONYM_INSERTION = "SYNONYM_INSERTION"
-    DIFFERENT = "DIFFERENT"
-    OVERLAP = "OVERLAP"
+    NO_OVERLAP: str = "NO_OVERLAP"
+    INSERTION: str = "INSERTION"
+    INSERTION_DIFFERENT: str = "INSERTION_DIFFERENT"
+    SYNONYM_INSERTION: str = "SYNONYM_INSERTION"
+    DIFFERENT: str = "DIFFERENT"
+    OVERLAP: str = "OVERLAP"
 
 
 class TreeRepresentation(object):
@@ -97,6 +43,7 @@ class TreeRepresentation(object):
     and the second one, b, is a list (possibly empty) containing the
     "descendants" of that tree node
     """
+
     def __init__(self, assignments, interpro=None):
         self.interpro = interpro
         self.assignments = assignments
@@ -238,7 +185,7 @@ class AssignmentOverlapChecker(object):
             return True
         else:
             return interpro.tree.get_most_remote_ancestor(ipr1) ==\
-                   interpro.tree.get_most_remote_ancestor(ipr2)
+                interpro.tree.get_most_remote_ancestor(ipr2)
 
     @classmethod
     def check_single(cls, assignment, other_assignment, interpro=None):
@@ -275,18 +222,18 @@ class AssignmentOverlapChecker(object):
         other_start, other_end = other_assignment.start, other_assignment.end
 
         if ((other_start <= start and other_end >= end)
-           or (other_start >= start and other_end <= end)):
+                or (other_start >= start and other_end <= end)):
             # Domains are one inside the other: could be INSERTION,
             # INSERTION_DIFFERENT,
             # SYNONYM_INSERTION or OVERLAP
-            similar_IPRs = (cls.similar(assignment.interpro_id,
+            similar_iprs = (cls.similar(assignment.interpro_id,
                                         other_assignment.interpro_id,
                                         interpro) or
                             assignment.domain == other_assignment.domain)
 
             if abs(other_start-start) + abs(other_end-end)\
                < cls.min_parent_inserted_size:
-                if similar_IPRs and\
+                if similar_iprs and\
                    (abs(other_start - start) < cls.min_parent_inserted_size):
                     return OverlapType.SYNONYM_INSERTION
                 else:
@@ -294,7 +241,7 @@ class AssignmentOverlapChecker(object):
             elif other_assignment.source == assignment.source:
                 # This is a valid domain insertion, other_assignment is
                 # inserted into assignment
-                if not similar_IPRs or\
+                if not similar_iprs or\
                    (abs(other_start - start) >= cls.min_parent_inserted_size):
                     return OverlapType.INSERTION
                 else:
@@ -391,7 +338,7 @@ class SequenceWithAssignments(object):
                                 evalue=None, length=self.length, comment=None)
         return self.assign(assignment, *args, **kwds)
 
-    def assign(self, assignment, overlap_check=True, interpro=None):
+    def assign(self, assignment: Assignment, overlap_check=True, interpro=None):
         """Assigns a fragment of this sequence using the given assignment.
         If `overlap_check` is ``False``, we will not check for overlaps or
         conflicts with existing assignments.
@@ -403,7 +350,7 @@ class SequenceWithAssignments(object):
             # Remove subfamily info from domain
             # pylint: disable-msg=W0212
             new_domain = assignment.domain[0:assignment.domain.index(":SF")]
-            assignment = assignment._replace(domain=new_domain)
+            assignment = replace(assignment, domain=new_domain)
 
         if overlap_check:
             overlap_state = self.overlap_checker.check(self, assignment,
@@ -426,7 +373,7 @@ class SequenceWithAssignments(object):
             for a in self.assignments:
                 ok[a.start:(a.end+1)] = [1] * ((a.end+1)-a.start)
         else:
-            if isinstance(sources, basestring):
+            if isinstance(sources, str):
                 sources = [sources]
             for a in self.assignments:
                 if a.source in sources:
@@ -460,7 +407,7 @@ class SequenceWithAssignments(object):
                                     key=operator.attrgetter("start"))
         if sources is None:
             return [a.domain for a in sorted_assignments]
-        if isinstance(sources, basestring):
+        if isinstance(sources, str):
             sources = [sources]
         return [a.domain for a in sorted_assignments if a.source in sources]
 
@@ -522,7 +469,7 @@ class EValueFilter(object):
         return assignment.evalue <= threshold
 
     @classmethod
-    def FromString(cls, description):
+    def from_string(cls, description):
         """Constructs an E-value filter from a string description that
         can be used in command line arguments and configuration files.
 

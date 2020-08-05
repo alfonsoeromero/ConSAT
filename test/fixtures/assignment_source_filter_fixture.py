@@ -1,6 +1,8 @@
 import os
 from typing import List
 
+import pandas as pd
+
 
 class AssignmentSourceFilterFixture:
     def __init__(self):
@@ -12,8 +14,8 @@ class AssignmentSourceFilterFixture:
         interpro_parent_child_file: str = self.get_parent_child_interpro_file()
 
         args = [assignment_file,
-                "-x", "HAMAP PatternScan FPrintScan Seg Coil",
-                "-e", "1e-3;superfamily=inf;HMMPanther=inf;Gene3D=inf;HMMPIR=inf",
+                "-x", "HAMAP PatternScan FPrintScan Seg Coil", "-e",
+                "1e-3;superfamily=inf;HMMPanther=inf;Gene3D=inf;HMMPIR=inf",
                 "-i", interpro_parent_child_file,
                 "--max-overlap", "20"]
         return args
@@ -24,6 +26,12 @@ class AssignmentSourceFilterFixture:
         with open(output_file, "r") as f_in:
             out_str = f_in.read()
         return out_str
+
+    def get_expected_assignment_file_as_dataframe(self) -> pd.DataFrame:
+        output_file = os.path.join(
+            self.data_dir, "assignment_source_filter100.txt")
+        df = pd.read_csv(output_file, sep="\t", header=None)
+        return df
 
     def get_input_assignment_file(self) -> str:
         return os.path.join(self.data_dir, "uniprot_trembl.interpro")

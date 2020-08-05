@@ -1,9 +1,10 @@
 import logging
+from typing import Optional
 
 from gfam import fasta
 from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
 
-from gfam.interpro import Assignment
+from gfam.assignment_utils.assignment import Assignment
 from gfam.sequence import SeqRecord
 from gfam.tasks.find_unassigned.readers.random_access_assignment_reader import\
     RandomAccessAssignmentReader
@@ -18,24 +19,25 @@ class FindUnassignedTask(LoggedTask):
                  max_overlap: int,
                  min_fragment_length: int,
                  min_length: int,
-                 sequence_id_regexp: str = None,
+                 sequence_id_regexp: Optional[str] = None,
                  logger: logging.Logger = None):
         super().__init__(logger)
         AssignmentOverlapChecker.max_overlap = max_overlap
         self.min_fragment_length = min_fragment_length
         self.min_length = min_length
         self.sequence_id_regexp = sequence_id_regexp
-        self.assignment_reader = None
-        self.seg_reader = None
-
+        self.assignment_reader: RandomAccessAssignmentReader
+        self.seg_reader: RandomAccessSEGReader
         self.maximum = max(self.min_length,
                            self.min_fragment_length)
 
-    def _preload_readers(self, assignment_file: str, seg_file: str) -> None:
+    def _preload_readers(self, assignment_file: str, seg_file: Optional[str])\
+            -> None:
         self.assignment_reader = RandomAccessAssignmentReader(assignment_file)
         if seg_file is not None and seg_file:
-            self.seg_reader = RandomAccessSEGReader(seg_file,
-                                                    self.sequence_id_regexp)
+            reader: RandomAccessSEGReader = RandomAccessSEGReader(
+                seg_file, self.sequence_id_regexp)
+            self.seg_reader = reader
 
     def _remove_temp_files(self) -> None:
         self.assignment_reader.delete_temp_file()
@@ -73,7 +75,7 @@ class FindUnassignedTask(LoggedTask):
                 print(f"{protein_id}\t{start}\t{end}")
 
     def run(self, assignment_file: str, fasta_file: str,
-            seg_file: str = None) -> None:
+            seg_file: Optional[str] = None) -> None:
         # preloads the reader
         self._preload_readers(assignment_file, seg_file)
 
