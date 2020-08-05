@@ -21,3 +21,4 @@ etc/logo/pdf/*
 __pycache__*
 venv
 .coverage
+htmlcov/
