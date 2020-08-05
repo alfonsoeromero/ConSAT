@@ -1,11 +1,11 @@
 """
 Overrepresentation analysis of Gene Ontology terms
 """
-from __future__ import print_function
 import sys
 from collections import Counter
 from math import exp, log
 from operator import itemgetter
+
 from gfam.utils import bidict
 
 __author__ = "Tamas Nepusz"

@@ -3,9 +3,6 @@
 domains against a set of sequences
 """
 
-from __future__ import with_statement
-from __future__ import print_function
-
 import os
 import os.path
 import subprocess
@@ -240,8 +237,8 @@ class HMMScanApp(CommandLineApp):
         at all to check the overlap, just the positions
         """
         for accepted_hit in accepted_hits:
-            if max(0, min(int(hit[2]), int(accepted_hit[2])) - max(int(hit[1]),
-                   int(accepted_hit[1]))) > 0:
+            if max(0, min(int(hit[2]), int(accepted_hit[2])) -
+                   max(int(hit[1]), int(accepted_hit[1]))) > 0:
                 return True
         return False
 

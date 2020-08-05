@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-from __future__ import print_function
-import sys
 import os.path
+import sys
 from collections import defaultdict
+
 from gfam.go import Tree as GOTree
 from gfam.utils import open_anything
+
 from result_file import ResultFileReader
 
 __author__ = "Alfonso E. Romero"
@@ -80,8 +81,8 @@ class Evaluation(object):
         annotation
         """
         li = self._read_result_file(assoc, name)
-        return [prot for prot in li if len([p
-                for p in li[prot] if p[1] <= significance]) == 0]
+        return [prot for prot in li if
+                len([p for p in li[prot] if p[1] <= significance]) == 0]
 
     def _evaluate_orphans(self, overrep_file, transfer_file):
         orphan_file = os.path.join(self.output_dir, "01_orphans")

@@ -7,12 +7,10 @@ the temporary files afterwards. It also detects whether the legacy
 C-based BLAST tools or the newer C++-based tools are installed, and
 adjusts the command line accordingly.
 """
-
-from __future__ import with_statement
-
 import os
 import subprocess
 import sys
+
 from gfam.scripts import CommandLineApp
 from gfam.utils import search_file, temporary_dir
 
@@ -156,10 +154,9 @@ class AllAgainstAllBLASTApp(CommandLineApp):
         """
         self.log.info("Invoking formatdb...")
 
-        args = ["-n","database", "-i", sequence_file,"-p"]
-        #args = ["-out","database", "-in", sequence_file,"-input_type","fasta","-dbtype","prot"]
+        args = ["-n", "database", "-i", sequence_file, "-p"]
         args = self.get_blast_cmdline("formatdb", args)
-        
+
         if not args:
             self.log.fatal("cannot find formatdb in %s"
                            % self.options.formatdb_path)

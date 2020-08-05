@@ -13,18 +13,18 @@ of terms.
 The terms associated to a certain sequence can be easily retrieved with the
 files produced.
 """
-from __future__ import print_function
-import os
 import io
-import sys
 import math
+import os
 import re
-import unicodedata
 import string
+import sys
+import unicodedata
 from collections import Counter, defaultdict
-from gfam.scripts import CommandLineApp
-from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+
 import gfam.scripts
+from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+from gfam.scripts import CommandLineApp
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -270,7 +270,7 @@ class GetText(CommandLineApp):
                 fields = line.split("\t")
                 if fields[16].strip():
                     seq_id, pmids = fields[0], fields[15]
-                    if pmids is not '':
+                    if pmids:
                         seq2pmid[seq_id] = set(map(int, pattern.split(pmids)))
 
         self.log.info("Writing text file")
@@ -328,10 +328,11 @@ class GetText(CommandLineApp):
                     pubmedid = line.split("pubmed/")[1].split("\"")[0]
                 elif "</rdf:Description>" in line:
                     # we process here the record
-                    if pubmedid is not "":
+                    if pubmedid:
                         filename = os.path.join(self.cachepubmed, pubmedid)
                         with open(filename, "w") as out:
-                            out.write("{} {}".format(title, " ".join(abstract)))
+                            out.write("{} {}".format(title,
+                                                     " ".join(abstract)))
                         pubmedid, title, abstract = "", "", []
                         opentitle, openabstract = False, False
                 elif "<rdfs:comment>" in line:

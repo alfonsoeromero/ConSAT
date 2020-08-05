@@ -1,5 +1,4 @@
 """Common routines and utility classes for GFam that fit nowhere else."""
-from __future__ import print_function
 
 import bz2
 import gzip

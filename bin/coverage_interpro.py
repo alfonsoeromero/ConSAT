@@ -2,10 +2,8 @@
 """Script to compute the coverage of interpro domains
 over a set of proteins and a set of architectures outputted by
 ConSAT"""
-from __future__ import print_function
 import sys
-from collections import defaultdict
-from collections import Counter
+from collections import Counter, defaultdict
 
 
 def fasta(seq_file):
@@ -128,11 +126,10 @@ def count_architectures(output_file, arch_table_file, sequences, residues):
         out.write("\n\n")
         out.write("Number of different architectures found: {}\n".format(
             len(proteins_per_arch)))
-        out.write("\t of which {} ({}%) are participated by" +
-                  " CPPDs domains\n".format(
-                      len(archs_with_gfams),
-                      float(len(archs_with_gfams)) /
-                      len(proteins_per_arch)*100.0))
+        out.write(f"\t of which {len(archs_with_gfams)} " +
+                  f"({len(archs_with_gfams) / len(proteins_per_arch)*100}%) " +
+                  " are participated by CPPDs domains\n")
+
         out.write("\t where {} are architectures only formed by CPPDs".format(
             len(archs_with_only_gfams)))
         out.write("\n\n\n")
@@ -185,13 +182,13 @@ def count(ipr_file, output_file, sequences, residues):
             residues_with_assignments,
             residues_with_assignments/float(residues)*100.0))
         for source, num in sequences_per_source.items():
-            out.write("Total sequences with assignments from source {}: " +
-                      "{} ({}%)\n".format(source,
-                                          num,
-                                          float(num)/sequences*100.0))
-            out.write("Total residues covered by source {}: {}\n".format(
-                source, residues_per_source[source],
-                float(residues_per_source[source])*100.0/float(residues)))
+            out.write(
+                "Total sequences with assignments from source {source}: " +
+                "{} ({}%)\n".format(num,
+                                    float(num)/sequences*100.0))
+            out.write(f"Total residues covered by source {source}: " +
+                      f"{residues_per_source[source]}" +
+                      f"{residues_per_source[source]*100.0/residues}\n")
 
 
 def count_residues_sequences(fasta_file_name):
@@ -208,8 +205,8 @@ def count_residues_sequences(fasta_file_name):
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
-        print("USE: {} fasta_file_uniprot intepro_file architectures_table" +
-              " output_file".format(sys.argv[0]))
+        print(f"USE: {sys.argv[0]} fasta_file_uniprot intepro_file " +
+              " architectures_table output_file")
         sys.exit(-1)
     fasta_file, interpro_file, arch_table, output_file = sys.argv[1:]
 

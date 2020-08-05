@@ -2,8 +2,6 @@
 of sequences that are not assigned to any InterPro domain in a
 given InterPro domain assignment file"""
 
-from __future__ import print_function
-
 import sys
 
 from gfam.scripts import CommandLineApp

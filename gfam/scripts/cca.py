@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 """Script that runs a breadth-first search on a weighted undirected graph"""
 
-from __future__ import print_function
 import sys
-
 from collections import defaultdict, deque
+
 from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything, UniqueIdGenerator
+from gfam.utils import UniqueIdGenerator, open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"

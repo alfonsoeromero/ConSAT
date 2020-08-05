@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Gene Ontology label assignment application"""
 
-from __future__ import print_function
 import sys
+
 from gfam.go import Tree as GOTree
 from gfam.interpro import InterPro2GOMapping
 from gfam.scripts import CommandLineApp

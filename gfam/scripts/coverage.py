@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 import sys
-
 from collections import defaultdict
+
 from gfam import fasta
 from gfam.assignment import SequenceWithAssignments
 from gfam.interpro import AssignmentReader
