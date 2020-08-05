@@ -1,3 +1,4 @@
+dataclasses
 six
 scipy
 pandas

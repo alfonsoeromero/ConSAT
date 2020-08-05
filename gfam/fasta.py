@@ -175,6 +175,6 @@ class FastWriter(object):
         """
         print(">%s" % seq_record.id, file=self.handle)
         num_residues = len(seq_record.seq)
-        pos = range(0, num_residues, 70) + [num_residues]
+        pos = list(range(0, num_residues, 70)) + [num_residues]
         for beg_pos, end_pos in self._pairwise(pos):
             print(seq_record.seq[beg_pos:end_pos], file=self.handle)
