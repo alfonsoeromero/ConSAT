@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 
@@ -28,22 +28,22 @@ class Assignment:
     end: int
     source: str
     domain: str
-    evalue: Optional[float]
-    interpro_id: Optional[str]
-    comment: Optional[str]
+    evalue: Optional[float] = None
+    interpro_id: Optional[str] = None
+    comment: Optional[str] = None
 
     def get_assigned_length(self):
         """Returns the number of amino acids covered by the assignment
         within the sequence."""
         return self.end - self.start + 1
 
-    def resolve_interpro_ids(self, interpro):
+    def resolve_interpro_ids(self, interpro) -> 'Assignment':
         """If the assignment has an InterPro ID, this method makes sure
         that the domain is equal to the highest common ancestor of the
         InterPro ID in the InterPro tree. If the assignment does not have
         an InterPro ID yet, this method tries to look it up.
 
-        Returns a new tuple which might or might not be equal to this one.
+        Returns a new assignment which might or might not be equal to this one.
         """
         if self.interpro_id:
             anc = interpro.tree.get_most_remote_ancestor(self.interpro_id)
@@ -51,8 +51,9 @@ class Assignment:
             anc = interpro.mapping.get(self.domain)
         if self.domain == anc:
             return self
-        return self._replace(domain=anc)
+        return replace(self, domain=anc)
 
-    def short_repr(self):
-        """Short representation of this assignment, used in error messages"""
-        return "%s(%d-%d)" % (self.domain, self.start, self.end)
+    def short_repr(self) -> str:
+        """Short representation of this assignment as a string,
+        used in error messages"""
+        return f"{self.domain}({self.start}-{self.end})"
