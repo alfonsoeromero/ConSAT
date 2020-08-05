@@ -75,7 +75,7 @@ class AssignmentFilter:
 
     def _filter_assignments(self, name: str,
                             assignments_by_source: DefaultDict[str, List])\
-            -> List:
+            -> List[str]:
         """Given a sequence name and its assignments ordered in a dict by
         their sources, selects a representative assignment set based on the
         rules outlined in the documentation of `FindUnassignedApp`.
