@@ -83,10 +83,6 @@ def hypergeom_sf(k, M, n, N):
     tot, good = M, n
     bad = tot - good
     den = logchoose(tot, N)
-    # result = 0.
-    # for x in xrange(k, N+1):
-    #    a = exp(logchoose(good, x) + logchoose(bad, N-x) - den)
-    #     result += a
     result = sum([exp(logchoose(good, x) + logchoose(bad, N-x) - den)
                   for x in range(k, N+1)])
     return result
