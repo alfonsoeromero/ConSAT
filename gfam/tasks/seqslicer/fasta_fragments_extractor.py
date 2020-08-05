@@ -32,7 +32,9 @@ class FastaFragmentsExtractor:
             writers.append(writer_file)
         return writers
 
-    def _get_seq_id_from_sequence(self, seq: SeqRecord, dict_slices: Dict[str, Slice]) -> Tuple[str, bool]:
+    def _get_seq_id_from_sequence(self, seq: SeqRecord,
+                                  dict_slices: Dict[str, Slice]) ->\
+            Tuple[str, bool]:
         seq_id = seq.id
         is_found = True
         if seq_id not in dict_slices:
@@ -44,7 +46,8 @@ class FastaFragmentsExtractor:
                 is_found = False
         return seq_id, is_found
 
-    def process_sequences_file(self, seq_file: str, dict_slices: Dict[str, List[Slice]]) -> int:
+    def process_sequences_file(self, seq_file: str,
+                               dict_slices: Dict[str, List[Slice]]) -> int:
         """Processes the sequences one by one, extracting all the pieces into
         an output fasta file"""
 

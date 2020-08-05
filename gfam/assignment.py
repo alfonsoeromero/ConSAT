@@ -338,7 +338,8 @@ class SequenceWithAssignments(object):
                                 evalue=None, length=self.length, comment=None)
         return self.assign(assignment, *args, **kwds)
 
-    def assign(self, assignment: Assignment, overlap_check=True, interpro=None):
+    def assign(self, assignment: Assignment, overlap_check=True,
+               interpro=None):
         """Assigns a fragment of this sequence using the given assignment.
         If `overlap_check` is ``False``, we will not check for overlaps or
         conflicts with existing assignments.
