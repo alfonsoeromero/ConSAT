@@ -116,7 +116,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         else:
             self.interpro = InterPro()
 
-        self.interpro_names = InterProNames.FromFile(
+        self.interpro_names = InterProNames.from_file(
             self.options.interpro_names_file)
 
         if self.options.details:

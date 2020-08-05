@@ -4,12 +4,15 @@ from gfam.tasks.assignment_source_filter.exclusion_logger.empty_logger import \
     EmptyLogger
 from gfam.tasks.assignment_source_filter.exclusion_logger.file_logger import \
     FileLogger
+from gfam.tasks.assignment_source_filter.exclusion_logger.log_strategy import \
+    LogStrategy
 
 
 class ExclusionLogger:
     """Manages the logging of the exclusion reasons of certain sequences"""
 
     def __init__(self, logger_file: Optional[str] = None):
+        self._exclusion_logger: LogStrategy
         if logger_file is None or not logger_file:
             self._exclusion_logger = EmptyLogger()
         else:

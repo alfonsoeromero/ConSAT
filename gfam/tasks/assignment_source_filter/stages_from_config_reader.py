@@ -1,5 +1,5 @@
 import re
-from typing import List, Optional, Set, Union
+from typing import List, Set, Union
 
 from gfam.utils import complementerset
 
@@ -7,15 +7,16 @@ from gfam.utils import complementerset
 class StagesFromConfigReader:
     def __init__(self, parser):
         self.parser = parser
-        self._stages_from_config: Optional[Union[Set[str],
-                                                 complementerset]] = None
+        self._stages_read: bool = False
+        self._stages_from_config: List[Union[Set[str], complementerset]]
 
     def get_stages_from_config(self) -> List[Union[Set[str], complementerset]]:
-        if self._stages_from_config is None:
+        if not self._stages_read:
             self._stages_from_config = self._get_stages_from_config()
         return self._stages_from_config
 
-    def _get_stages_from_config(self) -> List[Union[Set[str], complementerset]]:
+    def _get_stages_from_config(self) -> List[Union[Set[str],
+                                                    complementerset]]:
         """Turns to the configuration file specified at startup to
         fetch the data sources to be used in each stage of the algorithm.
         If there is no configuration file specified or it does not

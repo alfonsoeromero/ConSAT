@@ -86,7 +86,6 @@ class AssignmentReader(object):
         except:
             return None
 
-
         return assignment
 
     def __iter__(self):
@@ -251,7 +250,7 @@ class InterProNames(object):
         return self.names.get(name, name)
 
     @classmethod
-    def FromFile(cls, filename):
+    def from_file(cls, filename):
         """Shortcut method that does exactly what the following snippet does::
 
             >>> names = InterProNames()
@@ -281,7 +280,7 @@ class InterPro(object):
         self.mapping = InterProIDMapper()
 
     @classmethod
-    def FromFile(cls, filename):
+    def from_file(cls, filename):
         """Constructs this object from an InterPro parent-child mapping file,
         pointed to by the given filename. Both the tree and the ID-name mapping
         will be built from the same file.

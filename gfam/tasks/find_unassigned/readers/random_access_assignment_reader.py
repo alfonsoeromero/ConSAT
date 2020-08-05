@@ -2,17 +2,18 @@ import json
 import os
 import sqlite3
 import tempfile
+from dataclasses import asdict
 from typing import List
 
 from gfam.interpro import Assignment, AssignmentReader
 
 
 def _assignment_from_string(s: str) -> Assignment:
-    return Assignment(*json.loads(s))
+    return Assignment(**json.loads(s))
 
 
 def _assignment_to_string(assignment: Assignment) -> str:
-    return json.dumps(assignment)
+    return json.dumps(asdict(assignment))
 
 
 class RandomAccessAssignmentReader:
@@ -32,7 +33,7 @@ class RandomAccessAssignmentReader:
         conn = sqlite3.connect(self.db_file)
         return conn.cursor()
 
-    def _create_db(self) -> None:
+    def _create_db(self) -> str:
         db_name = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
         conn = sqlite3.connect(db_name.name, isolation_level="DEFERRED")
         c = conn.cursor()
@@ -47,11 +48,11 @@ class RandomAccessAssignmentReader:
         c.execute(create_sql)
 
         cache = []
-        MAX_CACHE_SIZE: int = 100000
+        max_cache_size: int = 100000
         for assignment in AssignmentReader(self.filename):
             cache.append((assignment.id, _assignment_to_string(assignment)))
 
-            if len(cache) > MAX_CACHE_SIZE:
+            if len(cache) > max_cache_size:
                 c.executemany("insert into assignments values (?, ?);", cache)
                 cache = []
 

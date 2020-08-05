@@ -9,4 +9,4 @@ class InterproFileFactory:
         if interpro_file is None:
             return InterPro()
         else:
-            return InterPro.FromFile(interpro_file)
+            return InterPro.from_file(interpro_file)

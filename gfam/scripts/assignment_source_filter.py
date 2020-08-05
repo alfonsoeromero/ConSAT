@@ -5,8 +5,12 @@ from __future__ import print_function
 import sys
 from typing import List, Set
 
-from gfam.assignment import AssignmentOverlapChecker
+from gfam.assignment import AssignmentOverlapChecker, EValueFilter
 from gfam.scripts import CommandLineApp
+from gfam.tasks.assignment_source_filter.assignment_filter import \
+    AssignmentFilter
+from gfam.tasks.assignment_source_filter.assignment_reader_with_filters import\
+    AssignmentReaderWithFilters
 from gfam.tasks.assignment_source_filter.assignment_source_filter_task import \
     AssignmentSourceFilterTask
 from gfam.tasks.assignment_source_filter.exclusion_logger.exclusion_logger\
@@ -124,14 +128,17 @@ class AssignmentSourceFilterApp(CommandLineApp):
         self._check_args()
         stages_from_config = StagesFromConfigReader(
             self.parser).get_stages_from_config()
-        task = AssignmentSourceFilterTask(ignored,
-                                          exclusion_logger,
-                                          valid_sequence_ids,
-                                          self.options.max_e,
-                                          stages_from_config,
-                                          interpro,
+        evalue_filter = EValueFilter.from_string(self.options.max_e)
+        assignment_reader_with_filters = AssignmentReaderWithFilters(
+            self.args[0], evalue_filter, ignored)
+        assignment_filter = AssignmentFilter(exclusion_logger,
+                                             stages_from_config,
+                                             interpro,
+                                             self.log)
+        task = AssignmentSourceFilterTask(assignment_reader_with_filters,
+                                          assignment_filter,
                                           self.log)
-        task.process_infile(self.args[0])
+        task.process_infile(valid_sequence_ids)
         exclusion_logger.close()
 
 

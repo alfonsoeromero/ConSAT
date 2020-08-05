@@ -2,11 +2,12 @@ import os
 import re
 import sqlite3
 import tempfile
+from typing import Optional, Pattern
 
 
 class RandomAccessSEGReader:
     def __init__(self, seg_filename: str,
-                 sequence_id_regexp: str = ""):
+                 sequence_id_regexp: Optional[str] = ""):
         """Constructor
 
         Parameters
@@ -18,6 +19,7 @@ class RandomAccessSEGReader:
             (should contain the <ID> field), default ""
         """
         self.seg_filename = seg_filename
+        self.regexp: Optional[Pattern[str]]
         if sequence_id_regexp:
             self.regexp = re.compile(sequence_id_regexp)
             self._process_protein_id = self._process_protein_id_with_regex
@@ -32,7 +34,7 @@ class RandomAccessSEGReader:
         conn = sqlite3.connect(self.db_file)
         return conn.cursor()
 
-    def _create_db(self) -> None:
+    def _create_db(self) -> str:
         db_name = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
         conn = sqlite3.connect(db_name.name, isolation_level="DEFERRED")
         c = conn.cursor()
@@ -48,7 +50,7 @@ class RandomAccessSEGReader:
         c.execute(create_sql)
 
         cache = []
-        MAX_CACHE_SIZE: int = 100000
+        max_cache_size: int = 100000
         current_prot_id = ""
         for line in open(self.seg_filename):
             if line.startswith(">"):
@@ -60,7 +62,7 @@ class RandomAccessSEGReader:
 
                 cache.append((current_prot_id, left, right))
 
-                if len(cache) > MAX_CACHE_SIZE:
+                if len(cache) > max_cache_size:
                     c.executemany(
                         "insert into lcr values (?, ?, ?);", cache)
                     cache = []
