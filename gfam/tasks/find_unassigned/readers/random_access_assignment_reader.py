@@ -69,7 +69,7 @@ class RandomAccessAssignmentReader:
         conn.close()
         return db_name.name
 
-    def assignments_for_protein(self, protein_id: str) -> List[str]:
+    def assignments_for_protein(self, protein_id: str) -> List[Assignment]:
         """Get the list of proteins associated to a given protein
             identifier
 
@@ -78,10 +78,10 @@ class RandomAccessAssignmentReader:
         protein_id : str
             protein identifier that we query for
 
-        Yields
+        Returns
         -------
-        Assignment
-            assignments associated to that protein identifier
+        assignments
+            list of assignments associated to that protein identifier
         """
         self.db_handle.execute(
             "SELECT assignment FROM assignments" +

@@ -33,7 +33,7 @@ class FastaFragmentsExtractor:
         return writers
 
     def _get_seq_id_from_sequence(self, seq: SeqRecord,
-                                  dict_slices: Dict[str, Slice]) ->\
+                                  dict_slices: Dict[str, List[Slice]]) ->\
             Tuple[str, bool]:
         seq_id = seq.id
         is_found = True
@@ -100,8 +100,8 @@ class FastaFragmentsExtractor:
             writers[1].close()
 
         if ids_to_process:
-            self.log.fatal("The following identifiers of sequences (%s) were"
-                           "found in the fragments file, but not in the "
-                           "fasta file ", ",".join(ids_to_process))
+            self.log.critical("The following identifiers of sequences (%s)"
+                              " were found in the fragments file, but not in "
+                              " the fasta file ", ",".join(ids_to_process))
             return 1
         return 0
