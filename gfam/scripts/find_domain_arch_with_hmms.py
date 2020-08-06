@@ -9,9 +9,10 @@ from collections import defaultdict
 from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
                              TreeRepresentation)
 from gfam.interpro import InterProNames
-from gfam.scripts import CommandLineApp
 from gfam.tasks.assignment_source_filter.interpro_file_factory import \
     InterproFileFactory
+from gfam.tasks.find_domain_arch.base_find_domain_arch import \
+    BaseFindDomainArch
 from gfam.tasks.find_domain_arch.stats.architecture_stats import \
     ArchitectureStats
 from gfam.tasks.find_domain_arch.stats.stats_file_printer import \
@@ -26,7 +27,7 @@ __license__ = "GPL"
 __all__ = ["FindDomainArchitectureWithHMMsApp"]
 
 
-class FindDomainArchitectureWithHMMsApp(CommandLineApp):
+class FindDomainArchitectureWithHMMsApp(BaseFindDomainArch):
     """\
     Usage: %prog [options] interpro_file hmms_file
 
@@ -54,56 +55,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
     def create_parser(self):
         """Creates the command line parser for this application"""
         parser = super(FindDomainArchitectureWithHMMsApp, self).create_parser()
-        parser.add_option("-s", "--min-size", dest="min_size",
-                          metavar="N",
-                          help="consider only clusters with at least "
-                               "N elements as novel domains",
-                          config_key="analysis:find_domain_arch/"
-                                     "min_novel_domain_size",
-                          default=2, type=int)
-        parser.add_option("-S", "--sequences",
-                          dest="sequences_file", metavar="FILE",
-                          help="FASTA file containing all the sequences"
-                               " of the representative gene model",
-                          config_key="file.input.sequences", default=None)
-        parser.add_option("-i", "--interpro-parent-child-file",
-                          dest="interpro_parent_child_file",
-                          metavar="FILE",
-                          help="use the InterPro parent-child FILE "
-                               "to remap IDs",
-                          config_key="file.mapping.interpro_parent_child",
-                          default=None)
-        parser.add_option("--details",
-                          dest="details", metavar="FILE",
-                          help="print more details about the domain "
-                               "architecture into FILE",
-                          config_key="generated/"
-                                     "file.domain_architecture_details",
-                          default=None)
-        parser.add_option("--stats",
-                          dest="stats", metavar="FILE",
-                          help="print genome-level statistics about "
-                               "the domain architectures into FILE",
-                          config_key="generated/"
-                                     "file.domain_architecture_stats",
-                          default=None)
-        parser.add_option("-n", "--names",
-                          dest="interpro_names_file",
-                          metavar="FILE",
-                          help="use the given FILE to assign "
-                               "InterPro IDs to names",
-                          config_key="file.mapping.interpro2name",
-                          default=None)
-        parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
-                          help="remap sequence IDs using REGEXP",
-                          config_key="sequence_id_regexp",
-                          dest="sequence_id_regexp")
-        parser.add_option("--max-overlap", metavar="SIZE",
-                          help="sets the maximum overlap size allowed between "
-                               "assignments of the same data source."
-                               " Default: %default",
-                          config_key="max_overlap",
-                          dest="max_overlap", type=int, default=20)
+        self._add_common_options(parser)
         return parser
 
     def run_real(self):
@@ -124,7 +76,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             self.details_file = None
 
         interpro_file, hmmer_file = self.args
-        self.process_interpro_file(interpro_file)
+        self.process_interpro_file(interpro_file, True)
         self.process_hmmer_file(hmmer_file)
         self.sort_by_domain_architecture()
 
@@ -136,7 +88,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
         for domain_arch, members in self.domain_archs:
             if domain_arch:
-                arch_str = domain_arch  # ";".join(domain_arch)
+                arch_str = domain_arch
             else:
                 arch_str = "NO_ASSIGNMENT"
                 arch_str_pos = "NO_ASSIGNMENT"
@@ -218,30 +170,15 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             covered_residues,
             covered_residues_nonnovel)
 
-    def process_interpro_file(self, interpro_file):
-        from gfam.scripts.find_unassigned import FindUnassignedApp
-        unassigned_app = FindUnassignedApp()
-        unassigned_app.set_sequence_id_regexp(self.options.sequence_id_regexp)
-        unassigned_app.process_sequences_file(self.options.sequences_file)
-        unassigned_app.process_infile(interpro_file, self.interpro)
-        self.seqcat = unassigned_app.seqcat
-        unassigned_ids = set(unassigned_app.seq_ids_to_length.keys())
-        seqcat_ids = set(self.seqcat.keys())
-        for seq_id in unassigned_ids - seqcat_ids:
-            self.seqcat[seq_id] = SequenceWithAssignments(
-                seq_id, unassigned_app.seq_ids_to_length[seq_id])
-
     def process_hmmer_file(self, fname):
-        hmmer_file = open(fname)
         self.hmm_domains = set()
-        for line in hmmer_file:
+        for line in open(fname):
             id_prot, model, _ = line.strip().split()
             # evalue is not used, at the moment
             seq_id, _, limits = id_prot.rpartition(":")
             start, end = map(int, limits.split("-"))
             self.seqcat[seq_id].assign_(start, end, model)
             self.hmm_domains.add(model)
-        hmmer_file.close()
 
     def sort_by_domain_architecture(self):
         self.domain_archs = defaultdict(list)
