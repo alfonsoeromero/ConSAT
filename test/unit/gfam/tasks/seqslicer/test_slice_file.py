@@ -21,4 +21,5 @@ class TestSliceFile(unittest.TestCase):
         # assert
         self.assertEqual(len(dict_slices), self.expected_number_of_proteins)
         self.assertEqual(
-            sum([len(x) for x in dict_slices.values()]), self.expected_number_of_slices)
+            sum([len(x) for x in dict_slices.values()]),
+            self.expected_number_of_slices)

@@ -8,9 +8,16 @@ from collections import defaultdict
 
 from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
                              TreeRepresentation)
-from gfam.interpro import InterPro, InterProNames
-from gfam.scripts import CommandLineApp
-from gfam.utils import complementerset, redirected
+from gfam.interpro import InterProNames
+from gfam.tasks.assignment_source_filter.interpro_file_factory import \
+    InterproFileFactory
+from gfam.tasks.find_domain_arch.base_find_domain_arch import \
+    BaseFindDomainArch
+from gfam.tasks.find_domain_arch.stats.architecture_stats import \
+    ArchitectureStats
+from gfam.tasks.find_domain_arch.stats.stats_file_printer import \
+    StatsFilePrinter
+from gfam.utils import complementerset
 
 __author__ = "Alfonso E. Romero, Tamas Nepusz"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -20,7 +27,7 @@ __license__ = "GPL"
 __all__ = ["FindDomainArchitectureWithHMMsApp"]
 
 
-class FindDomainArchitectureWithHMMsApp(CommandLineApp):
+class FindDomainArchitectureWithHMMsApp(BaseFindDomainArch):
     """\
     Usage: %prog [options] interpro_file hmms_file
 
@@ -48,56 +55,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
     def create_parser(self):
         """Creates the command line parser for this application"""
         parser = super(FindDomainArchitectureWithHMMsApp, self).create_parser()
-        parser.add_option("-s", "--min-size", dest="min_size",
-                          metavar="N",
-                          help="consider only clusters with at least "
-                               "N elements as novel domains",
-                          config_key="analysis:find_domain_arch/"
-                                     "min_novel_domain_size",
-                          default=2, type=int)
-        parser.add_option("-S", "--sequences",
-                          dest="sequences_file", metavar="FILE",
-                          help="FASTA file containing all the sequences"
-                               " of the representative gene model",
-                          config_key="file.input.sequences", default=None)
-        parser.add_option("-i", "--interpro-parent-child-file",
-                          dest="interpro_parent_child_file",
-                          metavar="FILE",
-                          help="use the InterPro parent-child FILE "
-                               "to remap IDs",
-                          config_key="file.mapping.interpro_parent_child",
-                          default=None)
-        parser.add_option("--details",
-                          dest="details", metavar="FILE",
-                          help="print more details about the domain "
-                               "architecture into FILE",
-                          config_key="generated/"
-                                     "file.domain_architecture_details",
-                          default=None)
-        parser.add_option("--stats",
-                          dest="stats", metavar="FILE",
-                          help="print genome-level statistics about "
-                               "the domain architectures into FILE",
-                          config_key="generated/"
-                                     "file.domain_architecture_stats",
-                          default=None)
-        parser.add_option("-n", "--names",
-                          dest="interpro_names_file",
-                          metavar="FILE",
-                          help="use the given FILE to assign "
-                               "InterPro IDs to names",
-                          config_key="file.mapping.interpro2name",
-                          default=None)
-        parser.add_option("-r", "--seq-id-regexp", metavar="REGEXP",
-                          help="remap sequence IDs using REGEXP",
-                          config_key="sequence_id_regexp",
-                          dest="sequence_id_regexp")
-        parser.add_option("--max-overlap", metavar="SIZE",
-                          help="sets the maximum overlap size allowed between "
-                               "assignments of the same data source."
-                               " Default: %default",
-                          config_key="max_overlap",
-                          dest="max_overlap", type=int, default=20)
+        self._add_common_options(parser)
         return parser
 
     def run_real(self):
@@ -107,15 +65,8 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
 
-        if self.options.interpro_parent_child_file:
-            self.log.info("Loading InterPro parent-child"
-                          " assignments from %s..." %
-                          self.options.interpro_parent_child_file)
-            self.interpro = InterPro.FromFile(
-                self.options.interpro_parent_child_file)
-        else:
-            self.interpro = InterPro()
-
+        self.interpro = InterproFileFactory.get_from_file(
+            self.options.interpro_file)
         self.interpro_names = InterProNames.from_file(
             self.options.interpro_names_file)
 
@@ -125,7 +76,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
             self.details_file = None
 
         interpro_file, hmmer_file = self.args
-        self.process_interpro_file(interpro_file)
+        self.process_interpro_file(interpro_file, True)
         self.process_hmmer_file(hmmer_file)
         self.sort_by_domain_architecture()
 
@@ -137,7 +88,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
         for domain_arch, members in self.domain_archs:
             if domain_arch:
-                arch_str = domain_arch  # ";".join(domain_arch)
+                arch_str = domain_arch
             else:
                 arch_str = "NO_ASSIGNMENT"
                 arch_str_pos = "NO_ASSIGNMENT"
@@ -161,112 +112,73 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         self.details_file.close()
 
         if self.options.stats:
-            stats_file = open(self.options.stats, "w")
+            architecture_stats = self._compute_architecture_stats()
+            stats_printer = StatsFilePrinter()
+            stats_printer.print_stats_file(self.options.stats,
+                                           architecture_stats)
 
-            total_residues = 0.0
-            covered_residues, covered_residues_nonnovel = 0, 0
-            nonnovel_sources = complementerset(["Novel"])
+    def _compute_architecture_stats(self) -> ArchitectureStats:
+        total_residues = 0.0
+        covered_residues, covered_residues_nonnovel = 0, 0
+        nonnovel_sources = complementerset(["Novel"])
 
-            for seq in self.seqcat.values():
-                total_residues += seq.length
-                covered_residues += round(seq.coverage() * seq.length)
-                covered_residues_nonnovel += round(
-                    seq.coverage(sources=nonnovel_sources) * seq.length)
+        for seq in self.seqcat.values():
+            total_residues += seq.length
+            covered_residues += round(seq.coverage() * seq.length)
+            covered_residues_nonnovel += round(
+                seq.coverage(sources=nonnovel_sources) * seq.length)
 
-            all_archs = set(arch for arch, _ in self.domain_archs)
-            num_archs = len(all_archs)
-            if "" in self.domain_archs:
-                num_archs -= 1
+        all_archs = set(arch for arch, _ in self.domain_archs)
+        num_archs = len(all_archs)
+        if "" in self.domain_archs:
+            num_archs -= 1
 
-            def split_arch(arch):
-                return [x for x in arch.replace("{", ";").replace("}", ";")
-                                                         .split(";") if x]
+        def split_arch(arch):
+            return [x for x in arch.replace("{", ";").replace("}", ";")
+                                                     .split(";") if x]
 
-            def exclude_novel_domains(domain_architecture):
-                """Excludes novel domains from a domain architecture and returns
-                the filtered domain architecture as a tuple."""
-                return tuple(a for a in split_arch(domain_architecture)
-                             if a not in self.hmm_domains)
+        def exclude_novel_domains(domain_architecture):
+            """Excludes novel domains from a domain architecture and returns
+            the filtered domain architecture as a tuple."""
+            return tuple(a for a in split_arch(domain_architecture)
+                         if a not in self.hmm_domains)
 
-            archs_without_novel = set(exclude_novel_domains(arch)
-                                      for arch in all_archs)
-            if () in archs_without_novel:
-                archs_without_novel.remove(())
-            num_archs_without_novel = len(archs_without_novel)
-            num_seqs_with_nonempty_domain_arch = sum(
-                len(value) for key, value in self.domain_archs if key
-                and key != "NO_ASSIGNMENT")
-            num_seqs_with_nonempty_domain_arch_ignore_novel = sum(
-                len(value) for key, value in self.domain_archs
-                if exclude_novel_domains(key) in archs_without_novel
-                and key != "NO_ASSIGNMENT")
-            num_seqs_with_nonempty_nonnovel_domain_arch = sum(
-                len(value) for ke, value in self.domain_archs
-                if ke and not any(a in self.hmm_domains for a in ke)
-                and ke != "NO_ASSIGNMENT")
-
-            with redirected(stdout=stats_file):
-                print("Domain architectures")
-                print("====================")
-                print()
-                print("Non-empty: %d" % num_archs)
-                print("Non-empty (when ignoring novel domains): %d" %
-                      num_archs_without_novel)
-                print()
-                print("Sequences")
-                print("=========")
-                print()
-                print("Total: %d" % len(self.seqcat))
-                print("With at least one domain: %d (%.4f%%)" %
-                      (num_seqs_with_nonempty_domain_arch,
-                       100.0 * num_seqs_with_nonempty_domain_arch /
-                       len(self.seqcat)))
-                print("With at least one non-novel domain: %d (%.4f%%)" %
-                      (num_seqs_with_nonempty_domain_arch_ignore_novel,
-                       100. * num_seqs_with_nonempty_domain_arch_ignore_novel /
-                       len(self.seqcat)))
-                print("With at least one domain and no novel"
-                      "domains: %d (%.4f%%)" %
-                      (num_seqs_with_nonempty_nonnovel_domain_arch,
-                       100.0 * num_seqs_with_nonempty_nonnovel_domain_arch /
-                       len(self.seqcat)))
-                print()
-                print("Residues")
-                print("========")
-                print()
-                print("Total: %d" % total_residues)
-                print("Covered: %d (%.4f%%)" % (covered_residues,
-                                                100.0 * covered_residues /
-                                                total_residues))
-                print("Covered by non-novel: %d (%.4f%%)" % (
-                      covered_residues_nonnovel,
-                      100.0 * covered_residues_nonnovel/total_residues))
-            stats_file.close()
-
-    def process_interpro_file(self, interpro_file):
-        from gfam.scripts.find_unassigned import FindUnassignedApp
-        unassigned_app = FindUnassignedApp()
-        unassigned_app.set_sequence_id_regexp(self.options.sequence_id_regexp)
-        unassigned_app.process_sequences_file(self.options.sequences_file)
-        unassigned_app.process_infile(interpro_file, self.interpro)
-        self.seqcat = unassigned_app.seqcat
-        unassigned_ids = set(unassigned_app.seq_ids_to_length.keys())
-        seqcat_ids = set(self.seqcat.keys())
-        for seq_id in unassigned_ids - seqcat_ids:
-            self.seqcat[seq_id] = SequenceWithAssignments(
-                seq_id, unassigned_app.seq_ids_to_length[seq_id])
+        archs_without_novel = set(exclude_novel_domains(arch)
+                                  for arch in all_archs)
+        if () in archs_without_novel:
+            archs_without_novel.remove(())
+        num_archs_without_novel = len(archs_without_novel)
+        num_seqs_with_nonempty_domain_arch = sum(
+            len(value) for key, value in self.domain_archs if key
+            and key != "NO_ASSIGNMENT")
+        num_seqs_with_nonempty_domain_arch_ignore_novel = sum(
+            len(value) for key, value in self.domain_archs
+            if exclude_novel_domains(key) in archs_without_novel
+            and key != "NO_ASSIGNMENT")
+        num_seqs_with_nonempty_nonnovel_domain_arch = sum(
+            len(value) for ke, value in self.domain_archs
+            if ke and not any(a in self.hmm_domains for a in ke)
+            and ke != "NO_ASSIGNMENT")
+        return ArchitectureStats(
+            num_archs,
+            len(self.seqcat),
+            total_residues,
+            num_archs_without_novel,
+            num_seqs_with_nonempty_domain_arch,
+            num_seqs_with_nonempty_domain_arch_ignore_novel,
+            num_seqs_with_nonempty_nonnovel_domain_arch,
+            covered_residues,
+            covered_residues_nonnovel)
 
     def process_hmmer_file(self, fname):
-        hmmer_file = open(fname)
         self.hmm_domains = set()
-        for line in hmmer_file:
+        for line in open(fname):
             id_prot, model, _ = line.strip().split()
             # evalue is not used, at the moment
             seq_id, _, limits = id_prot.rpartition(":")
             start, end = map(int, limits.split("-"))
             self.seqcat[seq_id].assign_(start, end, model)
             self.hmm_domains.add(model)
-        hmmer_file.close()
 
     def sort_by_domain_architecture(self):
         self.domain_archs = defaultdict(list)
