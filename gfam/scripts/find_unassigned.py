@@ -36,9 +36,6 @@ class FindUnassignedApp(CommandLineApp):
         super(FindUnassignedApp, self).__init__(*args, **kwds)
         self.seqcat = {}
         self.seq_ids_to_length = None
-        self.regions = None
-        self.low_complexity_regions = None
-        self.filename_shelve = ""
         self.sequence_id_regexp = ""
 
     def create_parser(self):
