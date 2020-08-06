@@ -92,27 +92,6 @@ class Parser(object):
     def __iter__(self):
         return self.sequences()
 
-    @classmethod
-    def to_dict(cls, *args, **kwds):
-        """Creates a dictionary out of a FASTA file.
-
-        The resulting dictionary will map sequence IDs to their
-        corresponding `SeqRecord` objects. The arguments are passed on intact
-        to the constructor of `Parser`.
-
-        Usage example::
-
-            seq_dict = Parser.to_dict("test.ffa")
-
-        .. todo:: implement a proper caching and indexing mechanism like
-           the `SeqIO.index` function in BioPython_. This would speed up
-           :mod:`gfam.scripts.seqslicer` significantly.
-
-        .. _BioPython: http://www.biopython.org
-        """
-        result = dict(zip(seq.id, seq) for seq in cls(*args, **kwds))
-        return result
-
 
 def regexp_remapper(iterable, regexp=None, replacement=r'\g<id>'):
     """Regexp-based sequence ID remapper.

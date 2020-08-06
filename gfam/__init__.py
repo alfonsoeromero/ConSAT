@@ -11,9 +11,6 @@ in one of the following submodules:
   Classes and functions related to handling BLAST output files and external
   BLAST utilities.
 
-:mod:`gfam.compat`
-  Classes and functions to maintain compatibility with Python 2.5.
-
 :mod:`gfam.config`
   An extension of Python's built-in :mod:`optparse` module to allow supplying
   default values for command line options from a configuration file.

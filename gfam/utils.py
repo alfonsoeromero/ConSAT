@@ -66,14 +66,11 @@ class bidict(object):
         >>> bd.add_left("foo", "baz")
         >>> bd.get_left("foo") == set(['bar', 'baz'])
         True
-        >>> bd.add_right("baz", "frob")
         >>> bd.get_right("bar")
         set(['foo'])
         >>> bd.get_right("baz") == set(['foo', 'frob'])
         True
         >>> bd.len_left()
-        2
-        >>> bd.len_right()
         2
     """
 
@@ -111,11 +108,6 @@ class bidict(object):
         except KeyError:
             self.right[v2] = set([v1])
 
-    def add_right(self, v1, v2):
-        """Adds a pair of items `v1` and `v2` to the mapping s.t. `v1` as a
-        right item is mapped to `v2` as a left item."""
-        return self.add_left(v2, v1)
-
     def add_left_multi(self, v1, v2s):
         """Associates multiple items in `v2s` to `v1` when `v1` is interpreted
         as a left item"""
@@ -128,13 +120,6 @@ class bidict(object):
                 self.right[v2].add(v1)
             except KeyError:
                 self.right[v2] = set([v1])
-
-    def add_right_multi(self, v2, v1s):
-        """Associates multiple items in `v1s` to `v2` when `v2` is interpreted
-        as a right item"""
-        self.right[v2].update(v1s)
-        for v1 in v1s:
-            self.left[v1].add(v2)
 
     def get_left(self, v1, default=None):
         """Returns the items associated to `v1` when `v1` is looked up from the
@@ -152,17 +137,9 @@ class bidict(object):
         """Returns the number of unique left items"""
         return len(self.left)
 
-    def len_right(self):
-        """Returns the number of unique right items"""
-        return len(self.right)
-
     def iteritems_left(self):
         """Iterates over the left dictionary"""
         return self.left.items()
-
-    def iteritems_right(self):
-        """Iterates over the right dictionary"""
-        return self.right.items()
 
 
 def open_anything(fname, *args, **kwds):
@@ -317,11 +294,6 @@ class UniqueIdGenerator(object):
         in this `UniqueIDGenerator`"""
         return len(self._ids)
 
-    def reverse_dict(self):
-        """Returns the reversed mapping, i.e., the one that maps generated IDs
-        to their corresponding items"""
-        return dict((v, k) for k, v in self._ids.items())
-
     def values(self):
         """Returns the list of items added so far. Items are ordered according
         to the standard sorting order of their keys, so the values will be
@@ -373,21 +345,6 @@ class complementerset(object):
             False
         """
         self._set.update(*args)
-
-    def discard(self, member):
-        """Removes an element from the complementer set if it is a member.
-
-        Example::
-
-            >>> s = complementerset()
-            >>> s.discard(2)
-            >>> print s
-            complementerset([2])
-            >>> s.discard(2)
-            >>> print s
-            complementerset([2])
-        """
-        self._set.add(member)
 
     def iterexcluded(self):
         """Iterates over the items excluded from the complementer set.

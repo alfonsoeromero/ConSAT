@@ -81,31 +81,6 @@ class Tree(object):
             for parent in self.parents(first):
                 queue.append((parent, path + [parent]))
 
-    def to_igraph(self, rel="is_a"):
-        """Returns an :mod:`igraph` graph representing this GO tree. This is
-        handy if you happen to use igraph_.
-
-        .. _igraph: http://igraph.sf.net
-        """
-        import igraph
-        graph = igraph.Graph(n=len(self.terms), directed=True)
-        graph.vs["id"] = self.terms.keys()
-        graph.vs["name"] = [term.name for term in self.terms.values()]
-
-        term_id_to_idx = dict(zip(self.terms.keys(),
-                                  range(len(self.terms))))
-        edgelist = []
-        for identifier, term in self.terms.items():
-            source = term_id_to_idx[identifier]
-            for parent_id in term.tags.get(rel, []):
-                target = term_id_to_idx.get(parent_id.value, None)
-                if target is None:
-                    continue
-                edgelist.append((source, target))
-
-        graph.add_edges(edgelist)
-        return graph
-
     @classmethod
     def from_obo(cls, f_pointer):
         """Constructs a GO tree from an OBO file. `f_pointer` is a file pointer

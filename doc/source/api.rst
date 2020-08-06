@@ -20,12 +20,6 @@ API documentation
 .. automodule:: gfam.blast
    :members:
 
-:mod:`gfam.compat` -- Compatibility classes for Python 2.5
-----------------------------------------------------------
-
-.. automodule:: gfam.compat
-   :members:
-
 :mod:`gfam.config` -- Configuration file handling
 -------------------------------------------------
 
