@@ -56,50 +56,36 @@ class HMM(CommandLineApp):
 
     def read_table(self, table_file):
         table = defaultdict()
-
-        table_file_desc = open(table_file, 'r')
-        for line in table_file_desc:
+        for line in open(table_file, 'r'):
             fields = line.strip().split("\t")
             table[fields[0]] = fields[1:]
-        table_file_desc.close()
-
         return table
+
+    def _create_dir(self, dir_name: str):
+        try:
+            os.makedirs(dir_name, exist_ok=True)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise IOError(f"Could not create directory {dir_name}." +
+                              " Check if media is writable and " +
+                              " there is space.")
 
     def create_directories(self):
         # 1.- we create the output directory
         maindir = self.options.directory
-        try:
-            os.makedirs(maindir)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
-
-        if not maindir.endswith(os.path.sep):
-            maindir += os.path.sep
+        self._create_dir(maindir)
 
         # 2.- inside it, we create the sequences directory
-        self.sequences_dir = maindir + "sequences"
-        try:
-            os.makedirs(self.sequences_dir)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
+        self.sequences_dir = os.path.join(maindir, "sequences")
+        self._create_dir(self.sequences_dir)
 
         # 3.- ... the alignments directory
-        self.alignments_dir = maindir + "alignments"
-        try:
-            os.makedirs(self.alignments_dir)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
+        self.alignments_dir = os.path.join(maindir, "alignments")
+        self._create_dir(self.alignments_dir)
 
         # 4.- ... and the hmms directory
-        self.hmms_dir = maindir + "hmms"
-        try:
-            os.makedirs(self.hmms_dir)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
+        self.hmms_dir = os.path.join(maindir, "hmms")
+        self._create_dir(self.hmms_dir)
 
     def separate_sequences(self, table, sequences_file):
         """Separates the fasta sequence file in individual fasta files,
@@ -108,7 +94,7 @@ class HMM(CommandLineApp):
         seqs = dict(((seq.id, seq) for seq in reader))
 
         for cluster_name, cluster_seqs in table.items():
-            output_file_name = self.sequences_dir + os.path.sep + cluster_name
+            output_file_name = os.path.join(self.sequences_dir, cluster_name)
             output_fd = open(output_file_name + ".faa", "w")
             writer = fasta.Writer(output_fd)
 
@@ -120,17 +106,12 @@ class HMM(CommandLineApp):
 
     def building_alignments(self, cluster_names):
         """Builds the alignments, one for each cluster name"""
-        seq_dir = self.sequences_dir + os.path.sep
-        align_dir = self.alignments_dir + os.path.sep
-
         for cluster in cluster_names:
-            seq = seq_dir + cluster + ".faa"
-            align = align_dir + cluster + ".sto"
-            # print >> sys.stderr, "CLUSTER: ", cluster
+            seq = os.path.join(self.sequences_dir, cluster + ".faa")
+            align = os.path.join(self.alignments_dir, cluster + ".sto")
             call(["clustalo",
                   "--infile=" + seq,
                   "--outfmt=st", "--outfile=" + align])
-    # no errors are checked, in the future the call should be checked
 
     def building_hmms(self, cluster_names):
         """Builds the HMMs, one for each alignment"""
@@ -166,7 +147,6 @@ class HMM(CommandLineApp):
         sequences_file, table_file = self.args
 
         # TODO: require the presence of hmmbuild and clustalo
-
         self.log.info("Reading cluster table from %s...", table_file)
         table = self.read_table(table_file)
 
