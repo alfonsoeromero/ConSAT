@@ -42,16 +42,7 @@ class StagesFromConfigReader:
           all data sources with HMMPanther, so it is equivalent to ``ALL``.
           GFam will figure out what you meant anyway.
         """
-        cfg = self.parser.config
-        if cfg is None:
-            spec = ["ALL-HMMPanther-Gene3D", "ALL-HMMPanther-Gene3D",
-                    "ALL"]
-        else:
-            spec, idx = [], 1
-            section = "analysis:iprscan_filter"
-            while cfg.has_option(section, "stages.%d" % idx):
-                spec.append(cfg.get(section, "stages.%d" % idx))
-                idx += 1
+        spec = self._get_spec_from_config(self.parser.config)
 
         regexp = re.compile(r"([-+])?\s*([^-+]+)")
         result = []
@@ -71,3 +62,15 @@ class StagesFromConfigReader:
             result.append(sources)
 
         return result
+
+    def _get_spec_from_config(self, cfg) -> List[str]:
+        if cfg is None:
+            spec = ["ALL-HMMPanther-Gene3D", "ALL-HMMPanther-Gene3D",
+                    "ALL"]
+        else:
+            spec, idx = [], 1
+            section = "analysis:iprscan_filter"
+            while cfg.has_option(section, "stages.%d" % idx):
+                spec.append(cfg.get(section, "stages.%d" % idx))
+                idx += 1
+        return spec
