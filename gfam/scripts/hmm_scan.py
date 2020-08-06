@@ -8,6 +8,7 @@ import os.path
 import subprocess
 import sys
 import tempfile
+from collections import defaultdict
 from operator import itemgetter
 
 from gfam.scripts import CommandLineApp
@@ -67,7 +68,7 @@ class HMMScanApp(CommandLineApp):
                           metavar="PATH")
         return parser
 
-    def create_temp_file(self):
+    def _create_temp_file(self):
         file_h = tempfile.NamedTemporaryFile(delete=True)
         file_h.close()
         return file_h.name
@@ -96,7 +97,7 @@ class HMMScanApp(CommandLineApp):
             setattr(self.options, optkey, os.path.abspath(path))
 
         # we create a temporal file to store the HMM output
-        hmm_output = self.create_temp_file()
+        hmm_output = self._create_temp_file()
         if not self.press_hmm_library():
             return 1
         if not self.run_hmm_search(hmm_output):
@@ -112,8 +113,8 @@ class HMMScanApp(CommandLineApp):
 
     def press_hmm_library(self):
         """Runs ``hmmpress`` on the collection of HMM to make
-    it a binary file an make it able to be run with hmmsearch
-    """
+        it a binary file an make it able to be run with hmmsearch
+        """
         # First, we check whether the binary files exist
         binary_filenames = [self.hmm_file + ".h3" + i for
                             i in ["f", "i", "m", "p"]]
@@ -190,20 +191,13 @@ class HMMScanApp(CommandLineApp):
         list of lists, where each element of the list contains three elements:
         IDsequence:begin-end, HMM_model producing the hit AND score of the hit
         (evalue"""
-        hits_per_sequence = dict()
+        hits_per_sequence = defaultdict(list)
         # first, we retrieve all hits per sequence
-        with open(hmm_output) as f_hmm_out:
-            for line in f_hmm_out:
-                if not line.startswith("#"):
-                    [seq, model, sco, sfrom, sto] = self.process_hmm_line(line)
-                    # self.log.info("Seq: " + seq + ", model: "
-                    # + model + ", sco: " + sco + ", sfrom: "
-                    # + sfrom + ", sto: " + sto)
-                    hit = [model, sfrom, sto, sco]
-                    if seq not in hits_per_sequence:
-                        hits_per_sequence[seq] = [hit]
-                    else:
-                        hits_per_sequence[seq].append(hit)
+        for line in open(hmm_output):
+            if not line.startswith("#"):
+                [seq, model, sco, sfrom, sto] = self.process_hmm_line(line)
+                hit = [model, sfrom, sto, sco]
+                hits_per_sequence[seq].append(hit)
 
         # second, an assignment table is built for all sequences,
         # combining hits
@@ -214,7 +208,6 @@ class HMMScanApp(CommandLineApp):
             for hit in sorted_hits:
                 if not self.overlaps(hit, accepted_hits):
                     accepted_hits.append(hit)
-#           self.log.info("Processing sequence " + sequence +"\n")
             [real_sequence, limits] = sequence.split(":")
             [base_begin, _] = limits.split("-")
 
