@@ -57,3 +57,24 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(a.evalue, other_assignment.evalue)
         self.assertEqual(a.interpro_id,
                          other_assignment.interpro_id)
+
+    def test_resolve_interpro_id_without_interpro_term_should_use_domain(self):
+        # arrange
+        a = Assignment("my_prot", 120, 5, 50, "HMMPfam",
+                       "PFAM0001")
+
+        # act
+        other_assignment = a.resolve_interpro_ids(self.interpro)
+
+        # assert
+        self.assertEqual(a, other_assignment)
+        self.assertEqual(a.id, other_assignment.id)
+        self.assertEqual(a.length, other_assignment.length)
+        self.assertEqual(a.start, other_assignment.start)
+        self.assertEqual(a.end, other_assignment.end)
+        self.assertEqual(a.source, other_assignment.source)
+        self.assertEqual(a.domain, other_assignment.domain)
+        self.assertEqual(a.comment, other_assignment.comment)
+        self.assertEqual(a.evalue, other_assignment.evalue)
+        self.assertEqual(a.interpro_id,
+                         other_assignment.interpro_id)
