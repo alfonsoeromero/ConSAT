@@ -8,9 +8,15 @@ from collections import defaultdict
 
 from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
                              TreeRepresentation)
-from gfam.interpro import InterPro, InterProNames
+from gfam.interpro import InterProNames
 from gfam.scripts import CommandLineApp
-from gfam.utils import complementerset, redirected
+from gfam.tasks.assignment_source_filter.interpro_file_factory import \
+    InterproFileFactory
+from gfam.tasks.find_domain_arch.stats.architecture_stats import \
+    ArchitectureStats
+from gfam.tasks.find_domain_arch.stats.stats_file_printer import \
+    StatsFilePrinter
+from gfam.utils import complementerset
 
 __author__ = "Alfonso E. Romero, Tamas Nepusz"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -107,15 +113,8 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
 
         AssignmentOverlapChecker.max_overlap = self.options.max_overlap
 
-        if self.options.interpro_parent_child_file:
-            self.log.info("Loading InterPro parent-child"
-                          " assignments from %s..." %
-                          self.options.interpro_parent_child_file)
-            self.interpro = InterPro.FromFile(
-                self.options.interpro_parent_child_file)
-        else:
-            self.interpro = InterPro()
-
+        self.interpro = InterproFileFactory.get_from_file(
+            self.options.interpro_file)
         self.interpro_names = InterProNames.from_file(
             self.options.interpro_names_file)
 
@@ -161,87 +160,63 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         self.details_file.close()
 
         if self.options.stats:
-            stats_file = open(self.options.stats, "w")
+            architecture_stats = self._compute_architecture_stats()
+            stats_printer = StatsFilePrinter()
+            stats_printer.print_stats_file(self.options.stats,
+                                           architecture_stats)
 
-            total_residues = 0.0
-            covered_residues, covered_residues_nonnovel = 0, 0
-            nonnovel_sources = complementerset(["Novel"])
+    def _compute_architecture_stats(self) -> ArchitectureStats:
+        total_residues = 0.0
+        covered_residues, covered_residues_nonnovel = 0, 0
+        nonnovel_sources = complementerset(["Novel"])
 
-            for seq in self.seqcat.values():
-                total_residues += seq.length
-                covered_residues += round(seq.coverage() * seq.length)
-                covered_residues_nonnovel += round(
-                    seq.coverage(sources=nonnovel_sources) * seq.length)
+        for seq in self.seqcat.values():
+            total_residues += seq.length
+            covered_residues += round(seq.coverage() * seq.length)
+            covered_residues_nonnovel += round(
+                seq.coverage(sources=nonnovel_sources) * seq.length)
 
-            all_archs = set(arch for arch, _ in self.domain_archs)
-            num_archs = len(all_archs)
-            if "" in self.domain_archs:
-                num_archs -= 1
+        all_archs = set(arch for arch, _ in self.domain_archs)
+        num_archs = len(all_archs)
+        if "" in self.domain_archs:
+            num_archs -= 1
 
-            def split_arch(arch):
-                return [x for x in arch.replace("{", ";").replace("}", ";")
-                                                         .split(";") if x]
+        def split_arch(arch):
+            return [x for x in arch.replace("{", ";").replace("}", ";")
+                                                     .split(";") if x]
 
-            def exclude_novel_domains(domain_architecture):
-                """Excludes novel domains from a domain architecture and returns
-                the filtered domain architecture as a tuple."""
-                return tuple(a for a in split_arch(domain_architecture)
-                             if a not in self.hmm_domains)
+        def exclude_novel_domains(domain_architecture):
+            """Excludes novel domains from a domain architecture and returns
+            the filtered domain architecture as a tuple."""
+            return tuple(a for a in split_arch(domain_architecture)
+                         if a not in self.hmm_domains)
 
-            archs_without_novel = set(exclude_novel_domains(arch)
-                                      for arch in all_archs)
-            if () in archs_without_novel:
-                archs_without_novel.remove(())
-            num_archs_without_novel = len(archs_without_novel)
-            num_seqs_with_nonempty_domain_arch = sum(
-                len(value) for key, value in self.domain_archs if key
-                and key != "NO_ASSIGNMENT")
-            num_seqs_with_nonempty_domain_arch_ignore_novel = sum(
-                len(value) for key, value in self.domain_archs
-                if exclude_novel_domains(key) in archs_without_novel
-                and key != "NO_ASSIGNMENT")
-            num_seqs_with_nonempty_nonnovel_domain_arch = sum(
-                len(value) for ke, value in self.domain_archs
-                if ke and not any(a in self.hmm_domains for a in ke)
-                and ke != "NO_ASSIGNMENT")
-
-            with redirected(stdout=stats_file):
-                print("Domain architectures")
-                print("====================")
-                print()
-                print("Non-empty: %d" % num_archs)
-                print("Non-empty (when ignoring novel domains): %d" %
-                      num_archs_without_novel)
-                print()
-                print("Sequences")
-                print("=========")
-                print()
-                print("Total: %d" % len(self.seqcat))
-                print("With at least one domain: %d (%.4f%%)" %
-                      (num_seqs_with_nonempty_domain_arch,
-                       100.0 * num_seqs_with_nonempty_domain_arch /
-                       len(self.seqcat)))
-                print("With at least one non-novel domain: %d (%.4f%%)" %
-                      (num_seqs_with_nonempty_domain_arch_ignore_novel,
-                       100. * num_seqs_with_nonempty_domain_arch_ignore_novel /
-                       len(self.seqcat)))
-                print("With at least one domain and no novel"
-                      "domains: %d (%.4f%%)" %
-                      (num_seqs_with_nonempty_nonnovel_domain_arch,
-                       100.0 * num_seqs_with_nonempty_nonnovel_domain_arch /
-                       len(self.seqcat)))
-                print()
-                print("Residues")
-                print("========")
-                print()
-                print("Total: %d" % total_residues)
-                print("Covered: %d (%.4f%%)" % (covered_residues,
-                                                100.0 * covered_residues /
-                                                total_residues))
-                print("Covered by non-novel: %d (%.4f%%)" % (
-                      covered_residues_nonnovel,
-                      100.0 * covered_residues_nonnovel/total_residues))
-            stats_file.close()
+        archs_without_novel = set(exclude_novel_domains(arch)
+                                  for arch in all_archs)
+        if () in archs_without_novel:
+            archs_without_novel.remove(())
+        num_archs_without_novel = len(archs_without_novel)
+        num_seqs_with_nonempty_domain_arch = sum(
+            len(value) for key, value in self.domain_archs if key
+            and key != "NO_ASSIGNMENT")
+        num_seqs_with_nonempty_domain_arch_ignore_novel = sum(
+            len(value) for key, value in self.domain_archs
+            if exclude_novel_domains(key) in archs_without_novel
+            and key != "NO_ASSIGNMENT")
+        num_seqs_with_nonempty_nonnovel_domain_arch = sum(
+            len(value) for ke, value in self.domain_archs
+            if ke and not any(a in self.hmm_domains for a in ke)
+            and ke != "NO_ASSIGNMENT")
+        return ArchitectureStats(
+            num_archs,
+            len(self.seqcat),
+            total_residues,
+            num_archs_without_novel,
+            num_seqs_with_nonempty_domain_arch,
+            num_seqs_with_nonempty_domain_arch_ignore_novel,
+            num_seqs_with_nonempty_nonnovel_domain_arch,
+            covered_residues,
+            covered_residues_nonnovel)
 
     def process_interpro_file(self, interpro_file):
         from gfam.scripts.find_unassigned import FindUnassignedApp
