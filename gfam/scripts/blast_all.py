@@ -98,7 +98,7 @@ class AllAgainstAllBLASTApp(CommandLineApp):
             # The path does not exist. Assume that this is a file referring to
             # the old BLAST tools, but the user has the new one. Try to extract
             # the folder and see if the folder exists.
-            base, tool_name = os.path.split(tool_path)
+            _, tool_name = os.path.split(tool_path)
 
         # Okay, first check for the actual tool in the folder
         full_path = os.path.join(tool_path, tool_name)
