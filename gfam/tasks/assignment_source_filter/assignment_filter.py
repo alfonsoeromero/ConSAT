@@ -1,7 +1,9 @@
 import logging
 from typing import List, DefaultDict, Optional
 
-from gfam.assignment import SequenceWithAssignments
+
+from gfam.assignment_utils.sequence_with_assignments import \
+    SequenceWithAssignments
 from gfam.interpro import InterPro
 from gfam.tasks.assignment_source_filter.exclusion_logger.exclusion_logger\
     import ExclusionLogger

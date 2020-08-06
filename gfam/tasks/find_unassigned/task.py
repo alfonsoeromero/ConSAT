@@ -2,15 +2,17 @@ import logging
 from typing import Optional
 
 from gfam import fasta
-from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
-
 from gfam.assignment_utils.assignment import Assignment
+from gfam.assignment_utils.assignment_overlap_checker import \
+    AssignmentOverlapChecker
+from gfam.assignment_utils.sequence_with_assignments import \
+    SequenceWithAssignments
 from gfam.sequence import SeqRecord
-from gfam.tasks.find_unassigned.readers.random_access_assignment_reader import\
-    RandomAccessAssignmentReader
+from gfam.tasks.base import LoggedTask
+from gfam.tasks.find_unassigned.readers.random_access_assignment_reader\
+    import RandomAccessAssignmentReader
 from gfam.tasks.find_unassigned.readers.random_access_seg_reader import \
     RandomAccessSEGReader
-from gfam.tasks.base import LoggedTask
 from gfam.utils import open_anything
 
 

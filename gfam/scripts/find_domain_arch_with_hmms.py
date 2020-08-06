@@ -6,8 +6,11 @@ import operator
 import sys
 from collections import defaultdict
 
-from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
-                             TreeRepresentation)
+from gfam.assignment_utils.assignment_overlap_checker import \
+    AssignmentOverlapChecker
+from gfam.assignment_utils.sequence_with_assignments import \
+    SequenceWithAssignments
+from gfam.assignment_utils.tree_representation import TreeRepresentation
 from gfam.interpro import InterProNames
 from gfam.tasks.assignment_source_filter.interpro_file_factory import \
     InterproFileFactory

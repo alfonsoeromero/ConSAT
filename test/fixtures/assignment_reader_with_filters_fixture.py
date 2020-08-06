@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from gfam.assignment import EValueFilter
+from gfam.assignment_utils.evalue_filter import EValueFilter
 
 
 class AssignmentReaderWithFiltersFixture:

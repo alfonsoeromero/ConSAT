@@ -1,6 +1,7 @@
 from typing import Iterator, Set, Tuple
 
-from gfam.assignment import Assignment, EValueFilter
+from gfam.assignment_utils.assignment import Assignment
+from gfam.assignment_utils.evalue_filter import EValueFilter
 from gfam.interpro import AssignmentReader
 
 

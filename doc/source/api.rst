@@ -8,10 +8,10 @@ API documentation
 
 .. automodule:: gfam
 
-:mod:`gfam.assignment` -- Routines related to sequence-domain annotations
+:mod:`gfam.assignment_utils` -- Routines related to sequence-domain annotations
 -------------------------------------------------------------------------
 
-.. automodule:: gfam.assignment
+.. automodule:: assignment_utils
    :members:
 
 :mod:`gfam.blast` -- Handling BLAST file formats and utilities

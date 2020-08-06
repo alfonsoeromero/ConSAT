@@ -3,7 +3,7 @@
 On its own, this module contains nothing, all the functionality is implemented
 in one of the following submodules:
 
-:mod:`gfam.assignment`
+:mod:`gfam.assignment_utils`
   Contains routines related to assignments, i.e. the objects describing the
   fact that a given section of a sequence is assigned to a given domain.
 

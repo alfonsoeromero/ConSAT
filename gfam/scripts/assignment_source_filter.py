@@ -3,7 +3,9 @@
 import sys
 from typing import List, Set
 
-from gfam.assignment import AssignmentOverlapChecker, EValueFilter
+from gfam.assignment_utils.assignment_overlap_checker import \
+    AssignmentOverlapChecker
+from gfam.assignment_utils.evalue_filter import EValueFilter
 from gfam.scripts import CommandLineApp
 from gfam.tasks.assignment_source_filter.assignment_filter import \
     AssignmentFilter

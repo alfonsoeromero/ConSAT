@@ -4,7 +4,8 @@ import sys
 from collections import defaultdict
 
 from gfam import fasta
-from gfam.assignment import SequenceWithAssignments
+from gfam.assignment_utils.sequence_with_assignments import \
+    SequenceWithAssignments
 from gfam.interpro import AssignmentReader
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, open_anything

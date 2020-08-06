@@ -1,4 +1,5 @@
-from gfam.assignment import SequenceWithAssignments
+from gfam.assignment_utils.sequence_with_assignments import \
+    SequenceWithAssignments
 from gfam.config import ConfigurableOptionParser
 from gfam.scripts import CommandLineApp
 from gfam.scripts.find_unassigned import FindUnassignedApp

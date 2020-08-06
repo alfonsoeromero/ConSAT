@@ -1,10 +1,10 @@
 """Classes related to handling InterPro-related files in HyFam"""
 
 import re
-
-from gfam.assignment import Assignment
-from gfam.utils import bidict, open_anything
 from collections import Mapping
+
+from gfam.assignment_utils.assignment import Assignment
+from gfam.utils import bidict, open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
