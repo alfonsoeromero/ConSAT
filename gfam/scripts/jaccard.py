@@ -77,7 +77,6 @@ class JaccardSimilarityApp(CommandLineApp):
                 vals.add(k)
 
         all_ids = sorted(neis.keys())
-        # lens = dict((id, len(neis1)) for id, neis1 in enumerate(neis))
         for id1 in all_ids:
             neis1 = neis[id1]
             len1 = float(len(neis1))

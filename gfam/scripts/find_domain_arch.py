@@ -303,9 +303,9 @@ class FindDomainArchitectureApp(BaseFindDomainArch):
                 # this set of sequences
                 domain_id = self.find_domain_id(fragments)
                 if domain_id != -1:
-                    domain_name = self.prefix + "%05d" % domain_id
+                    domain_name = self.prefix + f"{domain_id:05}"
                 else:
-                    domain_name = self.prefix + "%05d" % self.current_cluster_id
+                    domain_name = self.prefix + f"{self.current_cluster_id:05}"
                     self.current_cluster_id += 1
             sequences = []
             for frag_id in fragments:  # something wrong here...

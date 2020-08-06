@@ -240,9 +240,8 @@ class AutomatedConSAT(CommandLineApp):
             self.error(self.mode + " mode should have a 'models' file"
                                    " (option -m)")
 
-        if self.options.data_dir:
-            if not os.path.exists(self.options.data_dir):
-                self.error("Specified data dir does not exist")
+        if self.options.data_dir and not os.path.exists(self.options.data_dir):
+            self.error("Specified data dir does not exist")
 
         if not self.mode.startswith("uniprot") and not self.options.sequences:
             self.error("No sequence file specified (-s option)")
