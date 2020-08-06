@@ -162,31 +162,6 @@ class ResultFileWriter(object):
                 self.out.write("\t{:.5f}: {}\n".format(pvalue, goterm))
         self.out.write("\n")
 
-    def write_result_from_dict(self, d, valid_proteins=None, significance=None,
-                               go_names=None):
-        """Writes a result file from a dictionary structure where,
-        for each protein identifier we get a list of tuples
-        (goterm, pvalue) representing the assignment itself.
-        There is no need for up-propagation as the result files
-        should be already up-propagated. If we specify a `significance`
-        value, then only entries with a p-value less than `significance`
-        will be considered.
-        If `valid_proteins` is specified, only sequences in the
-        intersection of that list and the keys of the dictionary will
-        be written. If we specify a `significance`
-        value, then only entries with a p-value less than `significance`
-        will be considered.
-        """
-        sorted_proteins = sorted(d.keys())
-        if valid_proteins is not None:
-            sorted_proteins = sorted(set(sorted_proteins) &
-                                     set(valid_proteins))
-        # filter_pvalue = significance is not None
-        for protein in sorted_proteins:
-            goterm_pvalues = d[protein]
-            self.write_single_register(protein, goterm_pvalues,
-                                       significance, go_names)
-
 
 class ResultFileReader(object):
     """Class implementing a parser of the

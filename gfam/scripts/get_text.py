@@ -168,13 +168,6 @@ class GetText(CommandLineApp):
                               open(stopwords_file_name)])
         self.stopwords = self.stopwords | set(GetText.my_stopwords)
 
-    def check_not_exists(self, file_name):
-        """Checks that a file does not exists. If it does, exists and
-        shows an error message"""
-        if os.path.exists(file_name):
-            self.error("The file " + file_name +
-                       " already exists. Cannot overwrite")
-
     def read_lexicon_file(self, file_name):
         """ Reads a previously generated lexicon file and maintains compatibility
             with its identifiers. The document frequency, however, is discarded
@@ -501,7 +494,7 @@ class GetText(CommandLineApp):
                     output_file.write(
                         "{} {}\n".format(seq_id,
                                          " ".join(["{}:{:.5f}".format(feat[0],
-                                                   feat[1]*idf[feat[0]])
+                                                                      feat[1]*idf[feat[0]])
                                                    for feat in features])))
                 else:
                     output_file.write("{}\n".format(seq_id))

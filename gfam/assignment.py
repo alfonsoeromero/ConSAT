@@ -412,11 +412,6 @@ class SequenceWithAssignments(object):
             sources = [sources]
         return [a.domain for a in sorted_assignments if a.source in sources]
 
-    def is_completely_unassigned(self, start, end):
-        """Checks whether the given region is completely unassigned.
-        start and end positions are both inclusive"""
-        return all(a.end < start or a.start > end for a in self.assignments)
-
     def resolve_interpro_ids(self, interpro):
         """Calls `Assignment.resolve_interpro_ids` on each assignment of this
         sequence"""

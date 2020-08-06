@@ -17,7 +17,7 @@ __copyright__ = "Copyright (c) 2014, Tamas Nepusz"
 __license__ = "GPL"
 
 __all__ = ["bidict", "complementerset", "Histogram",
-           "open_anything", "redirected", "RunningMean",
+           "open_anything", "redirected",
            "search_file", "temporary_dir", "UniqueIdGenerator"]
 
 

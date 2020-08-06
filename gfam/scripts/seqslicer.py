@@ -45,7 +45,6 @@ class SeqSlicerApp(CommandLineApp):
 
     def __init__(self, *args, **kwds):
         super(SeqSlicerApp, self).__init__(*args, **kwds)
-        self.seqs = None
         self.output_file = ""
 
     def create_parser(self):

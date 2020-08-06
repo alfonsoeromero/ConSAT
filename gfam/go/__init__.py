@@ -5,8 +5,6 @@ A higher level Gene Ontology representation in Python
 from collections import deque
 
 import gfam.go.obo
-from gfam.go.utils import ParseError
-from gfam.utils import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -14,7 +12,7 @@ __copyright__ = "Copyright (c) 2009, Tamas Nepusz"
 __license__ = "MIT"
 __version__ = "0.1"
 
-__all__ = ["Annotation", "AnnotationFile", "Tree", "Term"]
+__all__ = ["Annotation", "Tree", "Term"]
 
 
 class Annotation(object):
@@ -104,41 +102,6 @@ class Annotation(object):
         params = ",".join("%s=%r" % (name, getattr(self, name))
                           for name in self.__slots__)
         return "%s(%s)" % (self.__class__.__name__, params)
-
-
-class AnnotationFile(object):
-    """A parser class that processes GO annotation files."""
-
-    def __init__(self, file_handle):
-        """Creates an annotation file parser that reads the given file-like
-        object. You can also specify filenames. If it ends in ``.gz``,
-        the file is assumed to contain gzipped data and it will be unzipped
-        on the fly. Example::
-
-          >>> import gfam.go as go
-          >>> parser = go.AnnotationFile("gene_association.sgd.gz")
-
-        To read the annotations in the file, you must iterate over the parser
-        as if it were a list. The iterator yields `Annotation` objects.
-        """
-        self.file_handle = open_anything(file_handle)
-        self.lineno = 0
-
-    def annotations(self):
-        """Iterates over the annotations in this annotation file,
-        yielding an `Annotation` object for each annotation."""
-        for line in self.file_handle:
-            self.lineno += 1
-            if not line or line[0] == '!':
-                # This is a comment line
-                continue
-            try:
-                yield Annotation(line)
-            except TypeError:
-                raise ParseError("cannot parse annotation", self.lineno)
-
-    def __iter__(self):
-        return self.annotations()
 
 
 class Tree(object):
