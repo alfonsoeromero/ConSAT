@@ -227,10 +227,8 @@ class CoverageApp(CommandLineApp):
         """Processes the given sequence `name` with the given `assignments`."""
         if not assignments:
             return
-
         seq = SequenceWithAssignments(name, assignments[0].length)
-        for assignment in assignments:
-            seq.assign(assignment, overlap_check=False)
+        seq.assign_list_without_checking_overlap(assignments)
         self.output_formatter.process_assignments(seq)
 
 
