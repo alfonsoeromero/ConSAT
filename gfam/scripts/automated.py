@@ -64,23 +64,18 @@ in this case:
 
 """
 
-from __future__ import with_statement
-from __future__ import print_function
+import gzip
+import logging
+import math
+import os
+import re
+import shutil
+import sys
+from subprocess import call
+from urllib.request import urlopen
 
 from gfam.scripts import CommandLineApp
 from gfam.uniprot import XMLIprscanToTxt
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen
-import os
-import gzip
-import shutil
-import logging
-from subprocess import call
-import sys
-import math
-import re
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aromero@cs.rhul.ac.uk"
@@ -390,10 +385,10 @@ class AutomatedConSAT(CommandLineApp):
             if not os.path.isfile(filename) or self.options.force:
                 shutil.copy(file_swissprot, self.gfam_dir["data"])
             self.params_gfam["file.input.sequences"] = os.path.join(
-                                                       self.gfam_dir["data"],
-                                                       "uniprot_sprot.fasta")
+                self.gfam_dir["data"],
+                "uniprot_sprot.fasta")
             out = self._create_mask_fasta_file(
-                  self.params_gfam["file.input.sequences"])
+                self.params_gfam["file.input.sequences"])
             self.params_gfam["low_complexity_regions_file"] = out
 
             file_trembl_base = os.path.basename(file_trembl)
@@ -401,12 +396,12 @@ class AutomatedConSAT(CommandLineApp):
             if not os.path.isfile(filename) or self.options.force:
                 shutil.copy(file_trembl, self.consat_dir["data"])
             self.params_consat["file.input.sequences"] = os.path.join(
-                                                         self.consat_dir[
-                                                             "data"],
-                                                         "uniprot_trembl.fasta"
-                                                         )
+                self.consat_dir[
+                    "data"],
+                "uniprot_trembl.fasta"
+            )
             out = self._create_mask_fasta_file(
-                  self.params_consat["file.input.sequences"])
+                self.params_consat["file.input.sequences"])
             self.params_consat["low_complexity_regions_file"] = out
 
             # we write in a file the set of swissprot ids
@@ -466,7 +461,7 @@ class AutomatedConSAT(CommandLineApp):
             file_goa = file_goa.replace(".gz", "")
             self.params["file.function.goa_file"] = file_goa
 
-            self.params["sequence_id_regexp"] = "(\w+\|)(?P<id>\w+)(\|\w+)+"
+            self.params["sequence_id_regexp"] = r"(\w+\|)(?P<id>\w+)(\|\w+)+"
             self.params["num_cpu_cores"] = "12"
 
             if self.options.models:
@@ -613,7 +608,7 @@ class AutomatedConSAT(CommandLineApp):
             out = self._create_mask_fasta_file(
                 self.params["file.input.sequences"])
             self.params["low_complexity_regions_file"] = out
-            self.params["sequence_id_regexp"] = "(\w+\|)(?P<id>\w+)(\|\w+)+"
+            self.params["sequence_id_regexp"] = r"(\w+\|)(?P<id>\w+)(\|\w+)+"
             self.params["num_cpu_cores"] = "12"
 
             # GOA
@@ -638,8 +633,8 @@ class AutomatedConSAT(CommandLineApp):
                 shutil.copy(self.options.lexicon, data)
                 self.params["file.lexicon"] = os.path.join(data,
                                                            os.path.basename(
-                                                            self.options
-                                                                .lexicon))
+                                                               self.options
+                                                               .lexicon))
 
             # we download the RDF data
             url_rdf = "http://www.uniprot.org/citations/" +\
@@ -807,7 +802,7 @@ class AutomatedConSAT(CommandLineApp):
 
         archs = dict()
         archs_sp = set()
-        pattern = re.compile('\s+')
+        pattern = re.compile(r'\s+')
         for _line in open(text_file_sp):
             line = _line.strip()
             if pattern.findall(line):

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 import sys
 from collections import defaultdict
+
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
 

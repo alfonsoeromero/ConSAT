@@ -3,14 +3,12 @@ Plot script that is used to generate figures showing general descriptive
 statistics of E-value distributions, overlap sizes and domain lengths.
 """
 
-from __future__ import division
-from __future__ import print_function
-
 import os
 import sys
+from collections import defaultdict
 from math import ceil, log10
 from textwrap import TextWrapper
-from collections import defaultdict
+
 import matplotlib
 from gfam.assignment import AssignmentOverlapChecker
 from gfam.interpro import AssignmentReader

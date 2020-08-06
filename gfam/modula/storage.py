@@ -3,14 +3,10 @@ Storage classes for Modula
 """
 
 import os
+import pickle
+
 from gfam.modula.hash import sha1
 from gfam.modula.log import get_logger
-
-try:
-    import cPickle as pickle
-except ImportError:
-    # Python 3
-    import pickle
 
 
 class NotFoundError(Exception):

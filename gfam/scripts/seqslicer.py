@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 """Sequence slicer application"""
 
-import array
 import sys
-from collections import defaultdict
 
-from gfam import fasta
 from gfam.scripts import CommandLineApp
-from gfam.sequence import SeqRecord
 from gfam.tasks.seqslicer.fasta_fragments_extractor import \
     FastaFragmentsExtractor
 from gfam.tasks.seqslicer.slice_file import SliceFile
-from gfam.utils import open_anything
 
 __authors__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -98,10 +93,11 @@ class SeqSlicerApp(CommandLineApp):
         slicer = SliceFile()
         dict_slices = slicer.get_slice_file_as_dict(slice_file)
         self.log.info("Processing fasta file %s...", seq_file)
-        extractor = FastaFragmentsExtractor(self.output_file,
-                                            self.options.sequence_id_regexp,
-                                            self.options.try_alternative_splicing,
-                                            self.options.keep_ids, self.log)
+        extractor = FastaFragmentsExtractor(
+            self.output_file,
+            self.options.sequence_id_regexp,
+            self.options.try_alternative_splicing,
+            self.options.keep_ids, self.log)
         return extractor.process_sequences_file(seq_file, dict_slices)
 
 

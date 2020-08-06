@@ -2,12 +2,11 @@
 """
 A higher level Gene Ontology representation in Python
 """
-from __future__ import print_function
 from collections import deque
-from gfam.go.utils import ParseError
-from gfam.utils import open_anything
 
 import gfam.go.obo
+from gfam.go.utils import ParseError
+from gfam.utils import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"

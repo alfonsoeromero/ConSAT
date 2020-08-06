@@ -2,12 +2,12 @@
 """Application that calculates the domain architecture of each gene and
 outputs them in a simple text-based format.
 """
-from __future__ import print_function
 import operator
 import sys
 from collections import defaultdict
-from gfam.assignment import AssignmentOverlapChecker, SequenceWithAssignments
-from gfam.assignment import TreeRepresentation
+
+from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
+                             TreeRepresentation)
 from gfam.interpro import InterPro, InterProNames
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, redirected
@@ -116,7 +116,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         else:
             self.interpro = InterPro()
 
-        self.interpro_names = InterProNames.FromFile(
+        self.interpro_names = InterProNames.from_file(
             self.options.interpro_names_file)
 
         if self.options.details:
@@ -149,8 +149,8 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                 if domain_arch:
                     arch_str_pos = seq.architecture_pos
                     arch_desc = ";".join(
-                            self.interpro_names[assignment.domain]
-                            for assignment in seq.assignments)
+                        self.interpro_names[assignment.domain]
+                        for assignment in seq.assignments)
                 print("%s\t%d\t%d\t%s\t%d\t%s\t%s" % (member, seq.length,
                                                       seq.num_covered(),
                                                       arch_str,
@@ -248,13 +248,13 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
         unassigned_app = FindUnassignedApp()
         unassigned_app.set_sequence_id_regexp(self.options.sequence_id_regexp)
         unassigned_app.process_sequences_file(self.options.sequences_file)
-        unassigned_app.process_infile(interpro_file,self.interpro)
+        unassigned_app.process_infile(interpro_file, self.interpro)
         self.seqcat = unassigned_app.seqcat
         unassigned_ids = set(unassigned_app.seq_ids_to_length.keys())
         seqcat_ids = set(self.seqcat.keys())
         for seq_id in unassigned_ids - seqcat_ids:
             self.seqcat[seq_id] = SequenceWithAssignments(
-                    seq_id, unassigned_app.seq_ids_to_length[seq_id])
+                seq_id, unassigned_app.seq_ids_to_length[seq_id])
 
     def process_hmmer_file(self, fname):
         hmmer_file = open(fname)
@@ -339,7 +339,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                                   file=self.details_file)
                         if anc in self.interpro_names:
                             print("{}{}".format(" "*(row.index(":")+1),
-                                  self.interpro_names[anc]),
+                                                self.interpro_names[anc]),
                                   file=self.details_file)
                     else:
                         print("", file=self.details_file)
@@ -347,7 +347,7 @@ class FindDomainArchitectureWithHMMsApp(CommandLineApp):
                             print("{}{}".format(
                                 " "*(row.index(":")+1),
                                 self.interpro_names[assignment.domain]),
-                                  file=self.details_file)
+                                file=self.details_file)
                 print("", file=self.details_file)
 
             seq.assignments = new_assignments

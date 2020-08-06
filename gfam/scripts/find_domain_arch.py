@@ -2,14 +2,13 @@
 """Application that calculates the domain architecture of each gene and
 outputs them in a simple text-based format.
 """
-from __future__ import print_function
-from collections import defaultdict
 import operator
-import sys
 import re
+import sys
+from collections import defaultdict
 
-from gfam.assignment import AssignmentOverlapChecker
-from gfam.assignment import SequenceWithAssignments, TreeRepresentation
+from gfam.assignment import (AssignmentOverlapChecker, SequenceWithAssignments,
+                             TreeRepresentation)
 from gfam.interpro import InterPro, InterProNames
 from gfam.scripts import CommandLineApp
 from gfam.utils import complementerset, redirected
@@ -144,7 +143,7 @@ class FindDomainArchitectureApp(CommandLineApp):
         else:
             self.interpro = InterPro()
 
-        self.interpro_names = InterProNames.FromFile(
+        self.interpro_names = InterProNames.from_file(
             self.options.interpro_names_file)
 
         if self.options.details:
@@ -428,7 +427,7 @@ class FindDomainArchitectureApp(CommandLineApp):
                     primary_source.add(assignment.source)
                 domains.append(new_assignment.domain)
                 new_assignments.append(new_assignment)
-            tree_arch = TreeRepresentation(new_assignments,self.interpro)
+            tree_arch = TreeRepresentation(new_assignments, self.interpro)
             seq.architecture = tree_arch.get_string()
             seq.architecture_pos = tree_arch.get_string_positions()
 
@@ -480,14 +479,15 @@ class FindDomainArchitectureApp(CommandLineApp):
                                   % (interpro_id, anc), file=self.details_file)
                         if anc in self.interpro_names:
                             print("{}{}".format(" " * (row.index(":") + 1),
-                                  self.interpro_names[anc]),
+                                                self.interpro_names[anc]),
                                   file=self.details_file)
                     else:
                         print("", file=self.details_file)
                         if assignment.domain in self.interpro_names:
-                            print("{}{}".format(" " * (row.index(":") + 1),
-                                  self.interpro_names[assignment.domain]),
-                                  file=self.details_file)
+                            print("{}{}".format(
+                                " " * (row.index(":") + 1),
+                                self.interpro_names[assignment.domain]),
+                                file=self.details_file)
                 print("", file=self.details_file)
 
             seq.assignments = new_assignments

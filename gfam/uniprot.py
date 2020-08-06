@@ -1,10 +1,9 @@
 """Utility classes for parsing UniProtKB files and related ones."""
 
-from __future__ import print_function
 import datetime
-from collections import defaultdict
 import re
 import sys
+from collections import defaultdict
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"

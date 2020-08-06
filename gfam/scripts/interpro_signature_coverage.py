@@ -3,7 +3,6 @@
     source and the fraction of those IDs that are also integrated
     into InterPro
 """
-from __future__ import print_function
 import sys
 from collections import defaultdict
 from gfam.interpro import AssignmentReader, InterPro

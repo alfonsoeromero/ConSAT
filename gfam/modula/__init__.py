@@ -3,11 +3,11 @@ Modula -- a modular calculation framework for Python
 
 Especially for scientific calculations and stuff
 """
-from __future__ import print_function
-from collections import deque
 import optparse
 import os
 import sys
+from collections import deque
+
 from gfam.modula.configuration import Configuration
 from gfam.modula.log import init_master_logger
 from gfam.modula.module import DefaultModuleManager

@@ -4,7 +4,6 @@ It is not meant to be a full-fledged FASTA parser (check BioPython_ if you
 need one), but it works well in most cases, at least for neatly formatted
 FASTA files.
 """
-from __future__ import print_function
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -16,6 +15,7 @@ __all__ = ["Parser", "regexp_remapper", "Writer"]
 import re
 from itertools import tee
 from textwrap import TextWrapper
+
 from gfam.sequence import SeqRecord, Sequence
 
 

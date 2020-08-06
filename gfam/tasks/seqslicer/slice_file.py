@@ -1,9 +1,5 @@
-import array
-import logging
 from collections import defaultdict
-from typing import Optional
 
-from gfam.modula.log import get_logger
 from gfam.tasks.seqslicer.slice_builder import SliceBuilder
 from gfam.utils import open_anything
 

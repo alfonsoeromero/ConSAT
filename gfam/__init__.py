@@ -18,10 +18,6 @@ in one of the following submodules:
   An extension of Python's built-in :mod:`optparse` module to allow supplying
   default values for command line options from a configuration file.
 
-:mod:`gfam.enum`
-  A simple enumeration class using some metaclass magic. Sadly enough, Python
-  does not have a built-in and flexible enumeration class like Java does.
-
 :mod:`gfam.fasta`
   A simple parser and emitter for the FASTA sequence format. Yes, we could
   have used BioPython_ instead, but this way we saved a dependency.

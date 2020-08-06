@@ -1,11 +1,11 @@
 """
 Overrepresentation analysis of Gene Ontology terms
 """
-from __future__ import print_function
 import sys
 from collections import Counter
 from math import exp, log
 from operator import itemgetter
+
 from gfam.utils import bidict
 
 __author__ = "Tamas Nepusz"
@@ -83,10 +83,6 @@ def hypergeom_sf(k, M, n, N):
     tot, good = M, n
     bad = tot - good
     den = logchoose(tot, N)
-    # result = 0.
-    # for x in xrange(k, N+1):
-    #    a = exp(logchoose(good, x) + logchoose(bad, N-x) - den)
-    #     result += a
     result = sum([exp(logchoose(good, x) + logchoose(bad, N-x) - den)
                   for x in range(k, N+1)])
     return result

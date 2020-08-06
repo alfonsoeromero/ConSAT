@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 """Gene Ontology overrepresentation analysis application"""
 
-from __future__ import print_function
 import sys
+
 from gfam.go import Tree as GOTree
 from gfam.go.overrepresentation import OverrepresentationAnalyser
 from gfam.interpro import InterPro2GOMapping
+from gfam.result_file import ResultFileFilter
 from gfam.scripts import CommandLineApp
 from gfam.utils import open_anything
-from gfam.result_file import ResultFileFilter
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -83,7 +83,7 @@ class OverrepresentationAnalysisApp(CommandLineApp):
         return parser
 
     def __parse_bool(self, _string):
-        if not isinstance(_string,bool):
+        if not isinstance(_string, bool):
             string = _string.strip()
         else:
             string = _string

@@ -12,11 +12,8 @@ __license__ = "GPL"
 
 __all__ = ["ConfigurableOption", "ConfigurableOptionParser"]
 
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
-from optparse import OptionParser, Option
+from configparser import ConfigParser
+from optparse import Option, OptionParser
 
 
 class ConfigurableOption(Option):

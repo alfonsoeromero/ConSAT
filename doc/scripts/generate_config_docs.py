@@ -3,12 +3,11 @@
 Generates a reStructuredText documentation from the configuration file
 template in `gfam.scripts.master`_.
 """
-from __future__ import print_function
 import re
 import string
+from textwrap import TextWrapper, dedent
 
 from gfam.scripts.master import CONFIGURATION_FILE_TEMPLATE
-from textwrap import dedent, TextWrapper
 
 
 def main():
