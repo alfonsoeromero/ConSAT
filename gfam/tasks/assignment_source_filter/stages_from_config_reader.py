@@ -43,25 +43,25 @@ class StagesFromConfigReader:
           GFam will figure out what you meant anyway.
         """
         spec = self._get_spec_from_config(self.parser.config)
-
         regexp = re.compile(r"([-+])?\s*([^-+]+)")
-        result = []
-        for item in spec:
-            sources: Union[Set[str], complementerset] = set()
-            for match in regexp.finditer(item):
-                sign, source = match.groups()
-                s_source: Union[Set[str], complementerset]
-                if source == "ALL":
-                    s_source = complementerset()
-                else:
-                    s_source = set([source.strip()])
-                if sign == "-":
-                    sources -= s_source
-                else:
-                    sources |= s_source
-            result.append(sources)
+        return [self._get_sources_from_item(item, regexp)
+                for item in spec]
 
-        return result
+    def _get_sources_from_item(self, item, regexp) ->\
+            Union[Set[str], complementerset]:
+        sources: Union[Set[str], complementerset] = set()
+        for match in regexp.finditer(item):
+            sign, source = match.groups()
+            s_source: Union[Set[str], complementerset]
+            if source == "ALL":
+                s_source = complementerset()
+            else:
+                s_source = set([source.strip()])
+            if sign == "-":
+                sources -= s_source
+            else:
+                sources |= s_source
+        return sources
 
     def _get_spec_from_config(self, cfg) -> List[str]:
         if cfg is None:
