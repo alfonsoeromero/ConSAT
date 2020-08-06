@@ -59,14 +59,12 @@ class FindUnassignedTask(LoggedTask):
             self.seg_reader.get_intervals_for_protein(protein_id)
 
         # 2.- assign every assignment and LCR interval, if any
-        for assignment in assignments_for_sequence:
-            seq.assign(assignment, False)
-
-        for interval in lcrs_for_sequence:
-            interval_assignment = Assignment(protein_id, protein_length,
-                                             interval[0], interval[1], "SEG",
-                                             "SEG", 0.0, None, "")
-            seq.assign(interval_assignment, False)
+        seq.assign_list_without_checking_overlap(assignments_for_sequence)
+        seq.assign_list_without_checking_overlap(
+            [Assignment(protein_id, protein_length,
+                        interval[0], interval[1], "SEG",
+                        "SEG", 0.0, None, "")
+             for interval in lcrs_for_sequence])
 
         # 3.- print unassigned regions
         for start, end in seq.unassigned_regions():

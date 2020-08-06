@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import replace
 from enum import Enum
 from itertools import combinations
+from typing import List
 
 from gfam.assignment_utils.assignment import Assignment
 
@@ -314,6 +315,19 @@ class SequenceWithAssignments(object):
                                 interpro_id=None, source=source, domain=domain,
                                 evalue=None, length=self.length, comment=None)
         return self.assign(assignment, *args, **kwds)
+
+    def assign_list_without_checking_overlap(
+            self, assignments: List[Assignment]) -> None:
+        """Assigns a list of assigments in batch to the sequence,
+            without checking the overlap
+
+        Parameters
+        ----------
+        assignments : List[Assignment]
+            list of assignments to assign to the sequence
+        """
+        for assignment in assignments:
+            self.assign(assignment, overlap_check=False)
 
     def assign(self, assignment: Assignment, overlap_check=True,
                interpro=None):
