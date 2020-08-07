@@ -17,19 +17,14 @@ Python package as well.
 import logging
 import os
 import shutil
-import sys
-import textwrap
 from configparser import ConfigParser
-from functools import wraps
-from io import StringIO
 
 import gfam.modula as modula
-from gfam.modula.hash import sha1
-from gfam.modula.module import CalculationModule
-from gfam.modula.storage import DiskStorageEngine, NotFoundError
 from gfam.result_file import ResultFileCombiner, ResultFileFilter
-from gfam.scripts import CommandLineApp
-from gfam.utils import redirected
+from gfam.tasks.master.base_master_script import BaseMasterScript
+from gfam.tasks.master.gfam_calculation import GFamCalculation
+from gfam.tasks.master.gfam_disk_storage_engine import GFamDiskStorageEngine
+from gfam.tasks.master.needs_config import needs_config
 
 __author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -86,120 +81,7 @@ switch.0=-a find_domain_arch_with_hmms
 """.format("find_domain_arch_with_hmms")
 
 
-class GFamCalculation(CalculationModule):
-    """Class representing a GFam calculation step. This is a subclass of
-    `modula.CalcuationModule`_ and it assumes that the name of the module
-    refers to a valid Python module in `gfam.scripts`_."""
-
-    def __init__(self, *args, **kwds):
-        super(GFamCalculation, self).__init__(*args, **kwds)
-        self.modula = None
-        self.extra_args = None
-
-    def add_extra_args(self, args):
-        """ Adds the possibility of "hotplugging" extra arguments after
-            the configuration file has been read
-        """
-        self.extra_args = args
-
-    def run(self):
-        """Runs the calculation"""
-        self.logger.info("Starting module %s", self.name)
-
-        self.prepare()
-
-        # Search for the CommandLineApp object in the module
-        app = []
-        for value in self.module.__dict__.values():
-            if isinstance(value, type) and value != CommandLineApp \
-                    and issubclass(value, CommandLineApp):
-                app.append(value)
-
-        if len(app) != 1:
-            raise ValueError("more than one CommandLineApp in %s" % self.name)
-
-        # Create the application
-        app = app[0](logger=self.logger)
-        args = ["-c", self.config.get("@global.config_file")]
-        # add some extra args, if any
-        try:
-            self.extra_args
-        except NameError:
-            self.extra_args = []
-        if self.extra_args is not None:
-            args.extend(self.extra_args)
-
-        for param, value in self.parameters.items():
-            if not param.startswith("switch."):
-                continue
-            switch, value = value.split(" ", 1)
-            value = modula.STORAGE_ENGINE.get_filename(value.strip())
-            args.extend([switch, value])
-
-        if "infile" in self.parameters:
-            infiles = self.parameters["infile"].split(",")
-            for infile in infiles:
-                infile = modula.STORAGE_ENGINE.get_filename(infile.strip())
-                args.append(infile)
-
-        if "stdin" in self.parameters:
-            stdin = modula.STORAGE_ENGINE.get_source(self.parameters["stdin"])
-        else:
-            stdin = None
-
-        out_fname = modula.STORAGE_ENGINE.get_filename(self.name)
-        stdout = modula.STORAGE_ENGINE.get_result_stream(self, mode="wb")
-        try:
-            with redirected(stdin=stdin, stdout=stdout):
-                retcode = app.run(args)
-            stdout.close()
-            if retcode:
-                raise RuntimeError("non-zero return code from child module")
-        except RuntimeError:
-            # If an error happens, remove the output file and re-raise
-            # the exception
-            stdout.close()
-            os.unlink(out_fname)
-            raise
-
-        self.logger.info("Finished module %s", self.name)
-
-
-class GFamDiskStorageEngine(DiskStorageEngine):
-    """Disk storage engine for GFam that has an empty `store` method.  This is
-    because `GFamCalculation` writes directly into the results file and always
-    returns ``None``, so there is no need to store the results explicitly.
-    """
-
-    def get_filename(self, source_or_module):
-        """Retrieves the filename corresponding to a data source."""
-        try:
-            module = self.module_manager.get(source_or_module)
-            if hasattr(module, "filename"):
-                return module.filename
-            return self._get_module_result_filename(module)
-        except Exception as ex:
-            raise NotFoundError(source_or_module, source_or_module, ex)
-
-    def store(self, module, result):
-        """Empty, does nothing"""
-        pass
-
-
-def needs_config(func):
-    """Decorator for methods in `ConSATMasterScript` that require a valid
-    configuration file.
-    """
-    @wraps(func)
-    def wrapper(self, *args, **kwds):
-        if self.config is None:
-            self.error("Configuration file not found: %s. Try gfam init "
-                       "to generate a new one." % self.options.config_file)
-        return func(self, *args, **kwds)
-    return wrapper
-
-
-class ConSATMasterScript(CommandLineApp):
+class ConSATMasterScript(BaseMasterScript):
     """\
     Usage: %prog [options] [command]
 
@@ -217,65 +99,12 @@ class ConSATMasterScript(CommandLineApp):
 
     short_name = "consat"
 
-    def __init__(self, *args, **kwds):
-        super(ConSATMasterScript, self).__init__(*args, **kwds)
-        self.modula = None
-        self.config = None
+    def get_modula_config_as_string(self) -> str:
+        return MODULA_CONFIG
 
-    def create_parser(self):
-        """Creates the command line parser for the ConSAT master script"""
-        parser = super(ConSATMasterScript, self).create_parser()
-        parser.add_option("-f", "--force", dest="force", action="store_true",
-                          help="force recalculation of results even "
-                               "when consat thinks everything is up-to-date")
-        parser.add_option("-s", "--silent", dest="silent", action="store_true",
-                          help="does not print any output to the terminal")
-        return parser
-
-    def get_modula_config(self, config):
-        """Based on the given `ConfigParser` instance in `config`, constructs
-        another `ConfigParser` that tells Modula which tasks to execute and
-        where each of the input files are to be found."""
-        modula_config_str = textwrap.dedent(MODULA_CONFIG)
-
-        modula_config = ConfigParser()
-        modula_config.readfp(StringIO(modula_config_str))
-
-        # Store the name of the config file
-        modula_config.set("@global", "config_file", self.options.config_file)
-
-        # Store the hash of the configuration as a default parameter for
-        # all the algorithms
-        config_str = StringIO()
-        config.write(config_str)
-        modula_config.set("DEFAULT", "config_file_hash",
-                          sha1(config_str.getvalue()).hexdigest())
-
-        # Set up the module and storage path
-        modula_config.set("@paths", "modules",
-                          os.path.dirname(sys.modules[__name__].__file__))
-        modula_config.set("@paths", "storage",
-                          config.get("DEFAULT", "folder.work"))
-
-        # Add the input files
-        for name, value in config.items("generated"):
-            if name.startswith("file."):
-                modula_config.set("@inputs", name, value)
-
-        return modula_config
-
-    def read_config(self):
-        """Reads the configuration from the given file and returns an
-        appropriate `ConfigParser` instance."""
-        self.options.config_file = self.options.config_file or "consat.cfg"
-
-        config_file = self.options.config_file
-        if not os.path.exists(config_file):
-            return None
-
-        config = ConfigParser()
-        config.read([config_file])
-        return config
+    def get_default_config_filename(self) -> str:
+        """Return default config filename for the script"""
+        return "consat.cfg"
 
     def run_real(self):
         """Runs the application"""
