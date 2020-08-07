@@ -36,9 +36,6 @@ class Bidict:
         self.left = {}
         self.right = {}
 
-        if items is None:
-            return
-
         if isinstance(items, Bidict):
             # Copying an existing Bidict
             self.left = dict(items.left)
@@ -48,7 +45,7 @@ class Bidict:
             # set of elements from the right dict
             for key, values in items.items():
                 self.add_left_multi(key, values)
-        else:
+        elif items is not None:
             raise TypeError("items must be dict or Bidict, got %r" %
                             type(items))
 
