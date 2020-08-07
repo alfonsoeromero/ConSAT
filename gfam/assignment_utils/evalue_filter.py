@@ -1,4 +1,4 @@
-class EValueFilter(object):
+class EValueFilter:
     """Given an `Assignment`, this filter tells whether the assignment's
     E-value is satisfactory to accept it.
 

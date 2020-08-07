@@ -1,4 +1,4 @@
-class Bidict(object):
+class Bidict:
     """Bidirectional many-to-many mapping.
 
     This class models many-to-many mappings that are used in some places in

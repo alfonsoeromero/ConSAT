@@ -19,7 +19,7 @@ from textwrap import TextWrapper
 from gfam.sequence import SeqRecord, Sequence
 
 
-class Parser(object):
+class Parser:
     """Parser for FASTA files.
 
     Usage example::
@@ -117,7 +117,7 @@ def regexp_remapper(iterable, regexp=None, replacement=r'\g<id>'):
         yield seq
 
 
-class Writer(object):
+class Writer:
     """Writes `SeqRecord` objects in FASTA format to a given file handle."""
 
     def __init__(self, handle):
@@ -135,7 +135,7 @@ class Writer(object):
         print("\n".join(self.wrapper.wrap(seq_record.seq)), file=self.handle)
 
 
-class FastWriter(object):
+class FastWriter:
     """Writes `SeqRecord` objects in FASTA format to a given file handle.
     This is a version of `Writer` which does not use `TextWrapper` for
     efficiency reasons`"""

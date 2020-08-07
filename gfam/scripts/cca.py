@@ -14,7 +14,7 @@ __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 
-class BreadthFirstSearch(object):
+class BreadthFirstSearch:
     """Breadth-first search implementation using an adjacency list"""
 
     def __init__(self, adj_list):

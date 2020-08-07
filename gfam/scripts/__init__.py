@@ -25,7 +25,7 @@ __license__ = "GPL"
 __all__ = ["CommandLineApp"]
 
 
-class CommandLineApp(object):
+class CommandLineApp:
     """Generic command line application class that provides
     common functionality for all GFam command line scripts.
     """

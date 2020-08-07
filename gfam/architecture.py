@@ -10,7 +10,7 @@ __license__ = "GPL"
 __all__ = ["ArchitectureFileReaderPerArch"]
 
 
-class ArchitectureFileReaderPerArch(object):
+class ArchitectureFileReaderPerArch:
     """Iterates over architectures in a GFam architecture file, returning
     for each architecture a tuple (architecture, [protein_ids]). Note
     that the whole architecture file is loaded into memory before

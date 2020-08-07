@@ -17,7 +17,7 @@ __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 
-class SequenceLevelOutputFormatter(object):
+class SequenceLevelOutputFormatter:
     """Output formatter class that prints sequence-level statistics for each
     sequence in the input data file.
 
@@ -57,7 +57,7 @@ class SequenceLevelOutputFormatter(object):
         pass
 
 
-class GenomeLevelOutputFormatter(object):
+class GenomeLevelOutputFormatter:
     """Output formatter class that prints genome-level statistics for the
     input data file.
 

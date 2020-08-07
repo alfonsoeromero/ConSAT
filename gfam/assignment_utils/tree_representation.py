@@ -7,7 +7,7 @@ from gfam.assignment_utils.assignment_overlap_checker import \
 from gfam.assignment_utils.overlap_type import OverlapType
 
 
-class TreeRepresentation(object):
+class TreeRepresentation:
     """A class for printing a nice tree-representation of the domains
     composing the architecture of a protein. "tree" is a list where
     each member is a tuple (a, b). The first component, a, is an assignment,

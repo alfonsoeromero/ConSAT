@@ -44,7 +44,7 @@ except ImportError:
         return min(summation, 1.0)
 
 
-class ResultFileFilter(object):
+class ResultFileFilter:
     """Filters a result file by p-value, keeping only
         those entries under a certain significance value
     """
@@ -64,7 +64,7 @@ class ResultFileFilter(object):
         writer.close()
 
 
-class ResultFileCombiner(object):
+class ResultFileCombiner:
     """Combines two result files using Fisher's method
     """
 
@@ -116,7 +116,7 @@ class ResultFileCombiner(object):
         return p_out
 
 
-class ResultFileWriter(object):
+class ResultFileWriter:
     """Class implementing a result file writer, with the
     format:
     protein_id
@@ -163,7 +163,7 @@ class ResultFileWriter(object):
         self.out.write("\n")
 
 
-class ResultFileReader(object):
+class ResultFileReader:
     """Class implementing a parser of the
     GFam result file, i.e., a text file with the
     following format:

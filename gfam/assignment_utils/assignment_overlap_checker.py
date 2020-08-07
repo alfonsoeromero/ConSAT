@@ -1,7 +1,7 @@
 from gfam.assignment_utils.overlap_type import OverlapType
 
 
-class AssignmentOverlapChecker(object):
+class AssignmentOverlapChecker:
     """Static class that contains the central logic of determining
     whether an assignment can be added to a partially assigned
     `SequenceWithAssignments`.

@@ -1,5 +1,5 @@
 
-class ComplementerSet(object):
+class ComplementerSet:
     """This object behaves more or less like a set, with one exception,
     the membership checking. For a `ComplementerSet` object, you can
     define the elements which are *not* in the set, everything else is

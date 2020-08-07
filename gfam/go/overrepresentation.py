@@ -111,14 +111,14 @@ def binomial_sf(k, M, n, N):
     return result
 
 
-class Correction(object):
+class Correction:
     none, off = 0, 0
     fdr = 1
     bonferroni = 2
     sidak = 3
 
 
-class OverrepresentationAnalyser(object):
+class OverrepresentationAnalyser:
     """Performs overrepresentation analysis of Gene Ontology
     terms on sets of entities that are annotated by some
     GO terms."""

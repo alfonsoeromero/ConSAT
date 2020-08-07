@@ -37,7 +37,7 @@ __all__ = ["ParseError", "Stanza", "Parser", "Value"]
 
 # pylint:disable-msg=R0903
 # R0903: too few public methods
-class Value(object):
+class Value:
     """Class representing a value and its modifiers in the OBO file
 
     This class has two member variables. `value` is the value itself,
@@ -67,7 +67,7 @@ class Value(object):
 
 # pylint:disable-msg=R0903
 # R0903: too few public methods
-class Stanza(object):
+class Stanza:
     """Class representing an OBO stanza.
 
     An OBO stanza looks like this::
@@ -112,7 +112,7 @@ class Stanza(object):
 
 # pylint:disable-msg=R0903
 # R0903: too few public methods
-class Parser(object):
+class Parser:
     """The main attraction, the OBO parser."""
 
     def __init__(self, file_handle):

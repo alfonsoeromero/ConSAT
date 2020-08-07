@@ -8,7 +8,7 @@ from gfam.assignment_utils.assignment_overlap_checker import \
 from gfam.assignment_utils.overlap_type import OverlapType
 
 
-class SequenceWithAssignments(object):
+class SequenceWithAssignments:
     """Class representing a sequence for which some parts are assigned to
     InterPro domains.
 

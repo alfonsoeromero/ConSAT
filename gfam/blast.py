@@ -10,7 +10,7 @@ __copyright__ = "Copyright (c) 2010, Tamas Nepusz"
 __license__ = "GPL"
 
 
-class BlastFilter(object):
+class BlastFilter:
     """Filters BLAST records, i.e. drops the ones that do not
     satisfy some criteria.
 

@@ -25,7 +25,7 @@ class NotFoundError(Exception):
         Exception.__init__(self, msg)
 
 
-class AbstractStorageEngine(object):
+class AbstractStorageEngine:
     """Abstract storage engine.
 
     This class defines the interface of storage engines. Each

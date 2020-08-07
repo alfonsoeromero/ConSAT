@@ -11,7 +11,7 @@ from gfam.modula.log import get_logger
 from gfam.modula.storage import NotFoundError
 
 
-class Module(object):
+class Module:
     """This class represents a Modula module (calculation, local file etc)"""
 
     def __init__(self, name, config):
@@ -119,7 +119,7 @@ class CalculationModule(Module):
         return result
 
 
-class ModuleManager(object):
+class ModuleManager:
     """Abstract module manager object.
 
     Module managers are responsible for resolving module names to

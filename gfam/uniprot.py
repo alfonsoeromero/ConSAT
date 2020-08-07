@@ -12,7 +12,7 @@ __license__ = "GPL"
 __all__ = ["XMLIprscanToTxt"]
 
 
-class XMLIprscanToTxt(object):
+class XMLIprscanToTxt:
     """\
         Usage: %prog [options] INPUT_XML_FILE INTERPRO2GOFILE
             LIST_SWISSPROT_IDS OUTPUT_TXT_FILE_SWISSPROT

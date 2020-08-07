@@ -15,7 +15,7 @@ __version__ = "0.1"
 __all__ = ["Tree", "Term"]
 
 
-class Tree(object):
+class Tree:
     """Class representing the GO tree. A GO tree contains many GO terms
     represented by `Term` objects.
     """
@@ -98,7 +98,7 @@ class Tree(object):
         return len(self.terms)
 
 
-class Term(object):
+class Term:
     """Class representing a single GO term"""
 
     __slots__ = ("id", "name", "tags")

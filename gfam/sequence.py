@@ -19,7 +19,7 @@ class Sequence(str):
     pass
 
 
-class SeqRecord(object):
+class SeqRecord:
     """A sequence with its associated metadata.
 
     This class is very close to `BioPython`_'s `SeqRecord` class;

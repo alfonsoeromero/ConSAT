@@ -16,7 +16,7 @@ __all__ = ["AssignmentReader", "InterPro", "InterProIDMapper",
            "InterProNames", "InterProTree", "InterPro2GOMapping"]
 
 
-class AssignmentReader(object):
+class AssignmentReader:
     """Iterates over assignments in an InterPro domain assignment file.
 
     This reader parses the output of ``iprscan`` and yields appropriate
@@ -152,7 +152,7 @@ class InterProTree(Mapping):
         del self._data[child]
 
 
-class InterProIDMapper(object):
+class InterProIDMapper:
     """Dict-like object that maps domain IDs from various data sources
     to their corresponding InterPro IDs.
 
@@ -205,7 +205,7 @@ class InterProIDMapper(object):
         return self._data.get(key, default or key)
 
 
-class InterProNames(object):
+class InterProNames:
     """Dict-like object mapping IDs to human-readable names, the only
     difference being that unknown IDs are handled gracefully instead of
     raising a `KeyError`.
@@ -258,7 +258,7 @@ class InterProNames(object):
         return result
 
 
-class InterPro(object):
+class InterPro:
     """Class that encapsulates the InterPro parent-child tree (an instance
     of `InterProTree`) and the InterPro ID mapper (an instance of
     `InterProIDMapper`) under the same hood. This makes it easier to pass

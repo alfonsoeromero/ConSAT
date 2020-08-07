@@ -7,7 +7,7 @@ from configparser import NoOptionError
 from configparser import SafeConfigParser as Parser
 
 
-class Configuration(object):
+class Configuration:
     """Class storing configuration details for Modula"""
 
     def __init__(self, rootdir=".", cfg=None):

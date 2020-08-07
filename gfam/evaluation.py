@@ -14,7 +14,7 @@ __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
 
-class Evaluation(object):
+class Evaluation:
     """\
     Usage: %prog [options]
 

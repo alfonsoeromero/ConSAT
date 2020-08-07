@@ -6,7 +6,7 @@ __copyright__ = "Copyright (c) 2013, Alfonso E. Romero"
 __license__ = "GPL"
 
 
-class IndexedReadOnlyFile(object):
+class IndexedReadOnlyFile:
     """ We provide a mechanism to easily access a set of blocks from
         a text file. We define a block as a set of lines starting with
         a string, matching a certain `regex`, and ending either with the

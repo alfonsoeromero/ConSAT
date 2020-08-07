@@ -1,4 +1,7 @@
-class UniqueIdGenerator(object):
+from typing import Iterator, Optional, Union
+
+
+class UniqueIdGenerator:
     """A dictionary-like class that can be used to assign unique integer IDs to
     names.
 
@@ -17,7 +20,7 @@ class UniqueIdGenerator(object):
     3
     """
 
-    def __init__(self, id_generator=None):
+    def __init__(self, id_generator: Optional[Union[int, Iterator]] = None):
         """Creates a new unique ID generator. `id_generator` specifies how do we
         assign new IDs to elements that do not have an ID yet. If it is `None`,
         elements will be assigned integer identifiers starting from 0. If it is
