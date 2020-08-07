@@ -6,7 +6,7 @@ import sys
 from gfam.go import Tree as GOTree
 from gfam.interpro import InterPro2GOMapping
 from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"

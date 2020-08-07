@@ -40,7 +40,7 @@ in one of the following submodules:
   A simple replacement for the ``Sequence`` and ``SeqRecord`` classes of
   BioPython_.
 
-:mod:`gfam.utils`
+:mod:`gfam.utilities`
   Various utility routines that did not fit anywhere else.
 
 .. _BioPython: http://www.biopython.org
@@ -51,7 +51,7 @@ General comments that apply for the whole GFam API:
   objects. If the filename ends in ``.bz2`` or ``.gz``, it will be
   decompressed on-the-fly in memory. If the filename starts with ``http://``,
   ``https://`` or ``ftp://``, it is assumed to be remote object and will
-  be downloaded accordingly. This is achieved by `gfam.utils.open_anything`,
+  be downloaded accordingly. This is achieved by `open_anything`,
   which is called whenever a filename or a file-like object is passed into
   a function.
 """

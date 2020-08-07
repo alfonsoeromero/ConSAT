@@ -5,7 +5,7 @@ from test.fixtures.assignment_source_filter_fixture import \
 
 from gfam.tasks.assignment_source_filter.valid_sequence_ids_factory import \
     ValidSequenceIdsFactory
-from gfam.utils import complementerset
+from gfam.utilities.complementer_set import ComplementerSet
 
 
 class TestValidSequenceIdsFactory(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestValidSequenceIdsFactory(unittest.TestCase):
         ids = sut.get()
 
         # assert
-        self.assertIsInstance(ids, complementerset)
+        self.assertIsInstance(ids, ComplementerSet)
 
     def test_get_with_file_should_give_a_set_of_file_lines(self):
         # arrange

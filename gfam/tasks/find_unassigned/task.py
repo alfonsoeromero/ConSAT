@@ -9,11 +9,11 @@ from gfam.assignment_utils.sequence_with_assignments import \
     SequenceWithAssignments
 from gfam.sequence import SeqRecord
 from gfam.tasks.base import LoggedTask
-from gfam.tasks.find_unassigned.readers.random_access_assignment_reader\
-    import RandomAccessAssignmentReader
+from gfam.tasks.find_unassigned.readers.random_access_assignment_reader import \
+    RandomAccessAssignmentReader
 from gfam.tasks.find_unassigned.readers.random_access_seg_reader import \
     RandomAccessSEGReader
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 
 class FindUnassignedTask(LoggedTask):

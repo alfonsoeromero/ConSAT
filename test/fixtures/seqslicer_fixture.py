@@ -25,10 +25,15 @@ class SeqslicerFixture:
         return file_content
 
     def get_number_of_slices(self) -> int:
-        return sum([1 for line in open(self.get_slice_file())])
+        with open(self.get_slice_file()) as f_in:
+            num_slices = sum([1 for _ in f_in])
+        return num_slices
 
     def get_number_of_proteins(self) -> int:
-        return len(set([f.split()[0] for f in open(self.get_slice_file())]))
+        with open(self.get_slice_file()) as f_in:
+            num_prots = len(set([f.split()[0]
+                                 for f in f_in]))
+        return num_prots
 
     def get_default_args_for_app(self) -> List[str]:
         slice_file = self.get_slice_file()

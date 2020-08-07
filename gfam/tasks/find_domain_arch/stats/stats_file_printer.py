@@ -1,6 +1,6 @@
 from gfam.tasks.find_domain_arch.stats.architecture_stats import\
     ArchitectureStats
-from gfam.utils import redirected
+from gfam.utilities.file_utils import redirected
 
 
 class StatsFilePrinter:

@@ -3,7 +3,7 @@ import os
 import gfam.modula as modula
 from gfam.modula.module import CalculationModule
 from gfam.scripts import CommandLineApp
-from gfam.utils import redirected
+from gfam.utilities.file_utils import redirected
 
 
 class GFamCalculation(CalculationModule):

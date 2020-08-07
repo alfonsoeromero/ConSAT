@@ -15,8 +15,8 @@ from gfam.go import Tree as GOTree
 from gfam.go.overrepresentation import OverrepresentationAnalyser
 from gfam.result_file import ResultFileFilter
 from gfam.scripts import CommandLineApp
-from gfam.utils import bidict, open_anything
-
+from gfam.utilities.bidict import Bidict
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -120,7 +120,7 @@ class TransferFunctionFromDomainArch(CommandLineApp):
         for each protein id it has a set of strings with the
         associated GO terms
         """
-        goa_mapping = bidict()
+        goa_mapping = Bidict()
         for line in open_anything(goa_file):
             if not line.startswith(("!", "#")):
                 # split line, obtain protein_id, go_term, and ev_code

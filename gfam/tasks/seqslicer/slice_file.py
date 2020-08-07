@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from gfam.tasks.seqslicer.slice_builder import SliceBuilder
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 
 class SliceFile:

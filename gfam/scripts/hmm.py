@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 """HMM application"""
 
-import sys
-import os
 import errno
-from subprocess import call
+import os
+import sys
 from collections import defaultdict
+from subprocess import call
+
 from gfam import fasta
 from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything
 from gfam.sequence import SeqRecord
-
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"

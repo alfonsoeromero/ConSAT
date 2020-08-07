@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 from gfam.scripts import CommandLineApp
-from gfam.utils import search_file, temporary_dir
+from gfam.utilities.file_utils import search_file, temporary_dir
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"

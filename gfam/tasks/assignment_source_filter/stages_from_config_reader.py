@@ -1,22 +1,22 @@
 import re
 from typing import List, Set, Union
 
-from gfam.utils import complementerset
+from gfam.utilities.complementer_set import ComplementerSet
 
 
 class StagesFromConfigReader:
     def __init__(self, parser):
         self.parser = parser
         self._stages_read: bool = False
-        self._stages_from_config: List[Union[Set[str], complementerset]]
+        self._stages_from_config: List[Union[Set[str], ComplementerSet]]
 
-    def get_stages_from_config(self) -> List[Union[Set[str], complementerset]]:
+    def get_stages_from_config(self) -> List[Union[Set[str], ComplementerSet]]:
         if not self._stages_read:
             self._stages_from_config = self._get_stages_from_config()
         return self._stages_from_config
 
     def _get_stages_from_config(self) -> List[Union[Set[str],
-                                                    complementerset]]:
+                                                    ComplementerSet]]:
         """Turns to the configuration file specified at startup to
         fetch the data sources to be used in each stage of the algorithm.
         If there is no configuration file specified or it does not
@@ -48,13 +48,13 @@ class StagesFromConfigReader:
                 for item in spec]
 
     def _get_sources_from_item(self, item, regexp) ->\
-            Union[Set[str], complementerset]:
-        sources: Union[Set[str], complementerset] = set()
+            Union[Set[str], ComplementerSet]:
+        sources: Union[Set[str], ComplementerSet] = set()
         for match in regexp.finditer(item):
             sign, source = match.groups()
-            s_source: Union[Set[str], complementerset]
+            s_source: Union[Set[str], ComplementerSet]
             if source == "ALL":
-                s_source = complementerset()
+                s_source = ComplementerSet()
             else:
                 s_source = set([source.strip()])
             if sign == "-":

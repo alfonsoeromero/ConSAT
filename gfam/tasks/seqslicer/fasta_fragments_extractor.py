@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 from gfam import fasta
 from gfam.sequence import SeqRecord
 from gfam.tasks.seqslicer.slice import Slice
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 
 class FastaFragmentsExtractor:

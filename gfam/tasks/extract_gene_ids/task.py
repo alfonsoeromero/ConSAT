@@ -1,6 +1,6 @@
 from gfam import fasta
 from gfam.tasks.base import LoggedTask
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 
 class ExtractGeneIDsTask(LoggedTask):

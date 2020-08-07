@@ -6,7 +6,7 @@ from gfam.tasks.assignment_source_filter.assignment_filter import \
     AssignmentFilter
 from gfam.tasks.assignment_source_filter.assignment_reader_with_filters import\
     AssignmentReaderWithFilters
-from gfam.utils import complementerset
+from gfam.utilities.complementer_set import ComplementerSet
 
 
 class AssignmentSourceFilterTask:
@@ -19,7 +19,7 @@ class AssignmentSourceFilterTask:
         self.log = log
 
     def process_infile(self,
-                       valid_sequence_ids: Union[complementerset, Set[str]]):
+                       valid_sequence_ids: Union[ComplementerSet, Set[str]]):
         self.log.info("Processing assignments...")
 
         current_id = None

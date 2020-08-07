@@ -6,7 +6,7 @@ from collections import Counter
 from math import exp, log
 from operator import itemgetter
 
-from gfam.utils import bidict
+from gfam.utilities.bidict import Bidict
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -130,7 +130,7 @@ class OverrepresentationAnalyser(object):
         their respective GO terms.
 
         `tree` must be an instance of `gfam.go.Tree`. `mapping` must be
-        a bidirectional dictionary object (`gfam.utils.bidict`) that
+        a bidirectional dictionary object (`gfam.utilities.bidict.Bidict`) that
         maps entities to GO terms and vice versa. For `mapping`, if an entity
         is annotated by a GO term, it is not necessary to list all the
         ancestors of that GO term for that entity, this will be taken care of
@@ -180,7 +180,7 @@ class OverrepresentationAnalyser(object):
         method ensures that all the ancestor terms of each GO term
         appear at the respective entities. Returns a copy of the mapping
         which contains these modifications."""
-        result = bidict(mapping)
+        result = Bidict(mapping)
         for entity, terms in result.iteritems_left():
             ancestors = self.tree.ancestors(*terms)
             result.add_left_multi(entity, ancestors)

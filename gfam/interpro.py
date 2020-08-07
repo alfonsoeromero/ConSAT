@@ -4,7 +4,8 @@ import re
 from collections import Mapping
 
 from gfam.assignment_utils.assignment import Assignment
-from gfam.utils import bidict, open_anything
+from gfam.utilities.bidict import Bidict
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -316,8 +317,8 @@ class InterPro(object):
         return result
 
 
-class InterPro2GOMapping(bidict):
-    """Bidirectional dictionary (`bidict`) that tells the corresponding Gene
+class InterPro2GOMapping(Bidict):
+    """Bidirectional dictionary (`Bidict`) that tells the corresponding Gene
     Ontology terms of every InterPro ID and vice versa.
 
     This object encapsulates two dictionaries: `self.terms` gives the Gene
@@ -325,7 +326,7 @@ class InterPro2GOMapping(bidict):
     InterPro domains annotated by a given GO term."""
 
     def __init__(self):
-        bidict.__init__(self)
+        Bidict.__init__(self)
         self.terms = self.left
         self.domains = self.right
 

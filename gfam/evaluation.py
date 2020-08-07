@@ -4,7 +4,7 @@ import sys
 from collections import defaultdict
 
 from gfam.go import Tree as GOTree
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 from result_file import ResultFileReader
 

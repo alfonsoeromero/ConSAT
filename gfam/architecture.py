@@ -1,6 +1,6 @@
 """Classes related to reading protein architecture files in GFam"""
 
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"

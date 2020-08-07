@@ -21,7 +21,8 @@ from gfam.tasks.find_domain_arch.stats.architecture_stats import \
     ArchitectureStats
 from gfam.tasks.find_domain_arch.stats.stats_file_printer import \
     StatsFilePrinter
-from gfam.utils import complementerset, redirected
+from gfam.utilities.complementer_set import ComplementerSet
+from gfam.utilities.file_utils import redirected
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -167,7 +168,7 @@ class FindDomainArchitectureApp(BaseFindDomainArch):
         total_residues = 0.0
         covered_residues = 0
         covered_residues_nonnovel = 0
-        nonnovel_sources = complementerset(["Novel"])
+        nonnovel_sources = ComplementerSet(["Novel"])
 
         for seq in self.seqcat.values():
             total_residues += seq.length

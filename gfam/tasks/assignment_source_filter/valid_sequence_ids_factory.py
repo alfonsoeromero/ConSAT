@@ -1,6 +1,8 @@
 import logging
 from typing import Optional, Set, Union
-from gfam.utils import complementerset, open_anything
+
+from gfam.utilities.complementer_set import ComplementerSet
+from gfam.utilities.open_anything import open_anything
 
 
 class ValidSequenceIdsFactory:
@@ -11,16 +13,16 @@ class ValidSequenceIdsFactory:
         self.log = log
         self.file_ids = file_ids
 
-    def get(self) -> Union[complementerset, Set]:
+    def get(self) -> Union[ComplementerSet, Set]:
         """Get list of valid ids (or nothing if the file was not given)
 
         Returns
         -------
-        Union[complementerset, Set]
+        Union[ComplementerSet, Set]
             list of valid ids
         """
         if self.file_ids is None:
-            return complementerset()
+            return ComplementerSet()
         else:
             self.log.info(f"Loading sequence IDs from {self.file_ids}...")
             return set([line.strip()

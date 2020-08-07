@@ -12,7 +12,7 @@ from collections import defaultdict
 from operator import itemgetter
 
 from gfam.scripts import CommandLineApp
-from gfam.utils import search_file
+from gfam.utilities.file_utils import search_file
 
 __author__ = "Alfonso E. Romero"
 __email__ = "aeromero@cs.rhul.ac.uk"

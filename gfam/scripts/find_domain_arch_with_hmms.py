@@ -20,7 +20,7 @@ from gfam.tasks.find_domain_arch.stats.architecture_stats import \
     ArchitectureStats
 from gfam.tasks.find_domain_arch.stats.stats_file_printer import \
     StatsFilePrinter
-from gfam.utils import complementerset
+from gfam.utilities.complementer_set import ComplementerSet
 
 __author__ = "Alfonso E. Romero, Tamas Nepusz"
 __email__ = "aeromero@cs.rhul.ac.uk"
@@ -123,7 +123,7 @@ class FindDomainArchitectureWithHMMsApp(BaseFindDomainArch):
     def _compute_architecture_stats(self) -> ArchitectureStats:
         total_residues = 0.0
         covered_residues, covered_residues_nonnovel = 0, 0
-        nonnovel_sources = complementerset(["Novel"])
+        nonnovel_sources = ComplementerSet(["Novel"])
 
         for seq in self.seqcat.values():
             total_residues += seq.length

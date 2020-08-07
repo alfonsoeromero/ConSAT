@@ -111,10 +111,10 @@ get usage information for each submodule by typing:
 
    $ python -m gfam.scripts.modulename --help
 
-:mod:`gfam.utils` -- Utility classes and functions
+:mod:`gfam.utilities` -- Utility classes and functions
 --------------------------------------------------
 
-.. automodule:: gfam.utils
+.. automodule:: gfam.utilities
    :members:
 
 

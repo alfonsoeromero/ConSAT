@@ -8,7 +8,8 @@ from gfam.assignment_utils.sequence_with_assignments import \
     SequenceWithAssignments
 from gfam.interpro import AssignmentReader
 from gfam.scripts import CommandLineApp
-from gfam.utils import complementerset, open_anything
+from gfam.utilities.complementer_set import ComplementerSet
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
@@ -176,16 +177,16 @@ class CoverageApp(CommandLineApp):
                 self.valid_sequence_ids.add(seq.id)
                 self.total_sequence_length += len(seq.seq)
         else:
-            self.valid_sequence_ids = complementerset()
+            self.valid_sequence_ids = ComplementerSet()
             self.total_sequence_length = None
 
         # Find which sources will be allowed
         if not self.options.include_sources:
-            self.sources = complementerset()
+            self.sources = ComplementerSet()
         else:
             self.sources = set(self.options.include_sources)
         self.sources.difference_update(self.options.exclude_sources)
-        if isinstance(self.sources, complementerset):
+        if isinstance(self.sources, ComplementerSet):
             self.log.info("Ignored sources: %s" %
                           ", ".join(self.sources.iterexcluded()))
         else:

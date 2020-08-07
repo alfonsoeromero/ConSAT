@@ -5,7 +5,8 @@ import sys
 from collections import defaultdict, deque
 
 from gfam.scripts import CommandLineApp
-from gfam.utils import UniqueIdGenerator, open_anything
+from gfam.utilities.open_anything import open_anything
+from gfam.utilities.unique_id_generator import UniqueIdGenerator
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"

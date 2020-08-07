@@ -4,7 +4,7 @@ import sys
 from collections import defaultdict
 
 from gfam.scripts import CommandLineApp
-from gfam.utils import open_anything
+from gfam.utilities.open_anything import open_anything
 
 __author__ = "Tamas Nepusz"
 __email__ = "tamas@cs.rhul.ac.uk"
