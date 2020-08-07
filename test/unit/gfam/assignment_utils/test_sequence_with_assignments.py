@@ -39,13 +39,16 @@ class TestSequenceWithAssignments(unittest.TestCase):
         # arrange
         name = "prot"
         id = "prot_assignment"
+        source = "HMMPFam"
         length = 100
         sut = SequenceWithAssignments(name, length)
-        assignment = Assignment(id, 100, 0, 99, "HMMPFam", "domain")
+        assignment = Assignment(id, 100, 0, 99, source, "domain")
 
         # act
         sut.assign(assignment)
         unassigned_regions = list(sut.unassigned_regions())
+        num_residues_covered = sut.num_covered(sources=source)
 
         # assert
         self.assertEqual(len(unassigned_regions), 0)
+        self.assertEqual(num_residues_covered, length)
