@@ -32,9 +32,11 @@ class AssignmentOverlapChecker(object):
     #: if there were an insertion, A would be accepted, as no further checks
     #: are done.
     priority = [OverlapType.OVERLAP,
-                OverlapType.DIFFERENT, OverlapType.SYNONYM_INSERTION,
+                OverlapType.DIFFERENT,
+                OverlapType.SYNONYM_INSERTION,
                 OverlapType.INSERTION_DIFFERENT,
-                OverlapType.INSERTION, OverlapType.NO_OVERLAP]
+                OverlapType.INSERTION,
+                OverlapType.NO_OVERLAP]
 
     @classmethod
     def check(cls, sequence, assignment, interpro):
