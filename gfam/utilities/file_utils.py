@@ -4,14 +4,14 @@ import sys
 from contextlib import contextmanager
 from shutil import rmtree
 from tempfile import mkdtemp
+from typing import Optional
 
 __author__ = "Tamas Nepusz, Alfonso E. Romero"
 __email__ = "tamas@cs.rhul.ac.uk, aeromero@cs.rhul.ac.uk"
 __copyright__ = "Copyright (c) 2014, Tamas Nepusz"
 __license__ = "GPL"
 
-__all__ = ["redirected",
-           "search_file", "temporary_dir"]
+__all__ = ["redirected", "search_file", "temporary_dir"]
 
 
 # pylint:disable-msg=W0613
@@ -45,7 +45,8 @@ def redirected(stdin=None, stdout=None, stderr=None):
             setattr(sys, sname, stream)
 
 
-def search_file(filename, search_path=None, executable=True):
+def search_file(filename: str, search_path: Optional[str] = None,
+                executable: bool = True) -> Optional[str]:
     """Finds the given `filename` in the given search path.
     If `executable` and we are on Windows, ``.exe`` will be
     appended to the filename. Returns the full path of the
@@ -54,21 +55,23 @@ def search_file(filename, search_path=None, executable=True):
         search_path = os.environ["PATH"]
 
     if executable and platform.system() == "Windows":
-        filename = filename+".exe"
+        filename = filename + ".exe"
 
     exists = os.path.exists
     join = os.path.join
 
+    found_file = None
     for path in search_path.split(os.pathsep):
         fullpath = join(path, filename)
         if exists(fullpath):
-            return os.path.abspath(fullpath)
+            found_file = os.path.abspath(fullpath)
+            break
 
-    return None
+    return found_file
 
 
 @contextmanager
-def temporary_dir(*args, **kwds):
+def temporary_dir(change: bool = True, *args, **kwds):
     """Context manager that creates a temporary directory when entering the
     context and removes it when exiting.
 
@@ -76,10 +79,6 @@ def temporary_dir(*args, **kwds):
     named `change` which tells whether we should change to the newly created
     temporary directory or not. The current directory will be restored when
     exiting the context manager."""
-    change = "change" in kwds
-    if change:
-        del kwds["change"]
-
     name = mkdtemp(*args, **kwds)
     try:
         if change:
