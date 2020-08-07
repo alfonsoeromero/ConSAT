@@ -1,10 +1,14 @@
-import unittest
 import itertools
 import random
+import unittest
+
 from gfam.utilities.unique_id_generator import UniqueIdGenerator
 
 
 class TestUniqueIDGenerator(unittest.TestCase):
+    def setUp(self):
+        random.seed(42)
+
     def test_generated_id_should_be_coherent(self):
         # arrange
         sut = UniqueIdGenerator()

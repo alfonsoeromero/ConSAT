@@ -1,9 +1,13 @@
+import random
 import unittest
 
 from gfam.utilities.bidict import Bidict
 
 
 class TestBidict(unittest.TestCase):
+    def setUp(self):
+        random.seed(42)
+
     def test_add_left_twice_with_same_left_elem_should_return_set_right(self):
         # arrange
         same_key = "foo"
@@ -22,6 +26,28 @@ class TestBidict(unittest.TestCase):
         self.assertDictEqual(elems_left, {val: set([same_key])
                                           for val in different_vals})
         self.assertEqual(sut.len_left(), 1)
+
+    def test_constructing_with_wrong_type_should_raise_exception(self):
+        # arrange
+        non_iterable = 1234
+        # act /  assert
+        with(self.assertRaises(TypeError)):
+            Bidict(non_iterable)
+
+    def test_iteritems_should_give_all_left_elems(self):
+        # arrange
+        num_generated = 1000
+        left_keys = [random.randint(1, 50) for _ in range(num_generated)]
+        right_values = [random.choice(range(5)) for _ in range(num_generated)]
+
+        # act
+        sut = Bidict()
+        for left, right in zip(left_keys, right_values):
+            sut.add_left(left, right)
+
+        # assert
+        self.assertListEqual(sorted([x for (x, _) in sut.iteritems_left()]),
+                             sorted(set(left_keys)))
 
     def test_copy_constructed_bidict_should_work_the_same(self):
         same_key = "foo"

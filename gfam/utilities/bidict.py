@@ -52,14 +52,20 @@ class Bidict:
     def add_left(self, v1, v2):
         """Adds a pair of items `v1` and `v2` to the mapping s.t. `v1` as a
         left item is mapped to `v2` as a right item."""
+        self._add_left_key_val(v1, v2)
+        self._add_right_key_val(v2, v1)
+
+    def _add_left_key_val(self, k, v):
         try:
-            self.left[v1].add(v2)
+            self.left[k].add(v)
         except KeyError:
-            self.left[v1] = set([v2])
+            self.left[k] = set([v])
+
+    def _add_right_key_val(self, k, v):
         try:
-            self.right[v2].add(v1)
+            self.right[k].add(v)
         except KeyError:
-            self.right[v2] = set([v1])
+            self.right[k] = set([v])
 
     def add_left_multi(self, v1, v2s):
         """Associates multiple items in `v2s` to `v1` when `v1` is interpreted
@@ -69,10 +75,7 @@ class Bidict:
         except KeyError:
             self.left[v1] = set(v2s)
         for v2 in v2s:
-            try:
-                self.right[v2].add(v1)
-            except KeyError:
-                self.right[v2] = set([v1])
+            self._add_right_key_val(v2, v1)
 
     def get_left(self, v1, default=None):
         """Returns the items associated to `v1` when `v1` is looked up from the
