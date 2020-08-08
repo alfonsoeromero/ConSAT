@@ -60,6 +60,6 @@ class TestComplementerSet(unittest.TestCase):
 
         # assert
         self.assertSetEqual(result1, set())
-        self.assertSetEqual(result2, set([1, 2]))
+        self.assertSetEqual(result2, set([1, 2, 3]))
         with self.assertRaises(NotImplementedError):
             2 - ComplementerSet()
