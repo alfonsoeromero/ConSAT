@@ -114,12 +114,11 @@ class ConfigurableOptionParser(OptionParser):
                 continue
 
             section, item = option.get_config_section_and_item()
-            if section is None:
+            if section is None or not config.has_option(section, item):
                 continue
 
-            if config.has_option(section, item):
-                option.process(option.config_key, config.get(section, item),
-                               options, self)
+            option.process(option.config_key, config.get(section, item),
+                           options, self)
 
         self.config = config
 

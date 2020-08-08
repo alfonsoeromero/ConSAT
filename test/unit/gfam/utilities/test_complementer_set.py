@@ -63,3 +63,12 @@ class TestComplementerSet(unittest.TestCase):
         self.assertSetEqual(result2, set([1, 2, 3]))
         with self.assertRaises(NotImplementedError):
             2 - ComplementerSet()
+
+    def test_equality_operator_should_work_with_different_types(self):
+        # arrange
+        s = ComplementerSet([1, 2])
+
+        # assert
+        self.assertTrue(s == ComplementerSet([1, 2]))
+        self.assertFalse(1 == s)
+        self.assertFalse(s == ComplementerSet([1, 2, 3]))
