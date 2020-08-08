@@ -23,7 +23,7 @@ import unicodedata
 from collections import Counter, defaultdict
 
 import gfam.scripts
-from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+from gfam.architecture_file_reader import ArchitectureFileReader as ArchReader
 from gfam.scripts import CommandLineApp
 
 __author__ = "Alfonso E. Romero"

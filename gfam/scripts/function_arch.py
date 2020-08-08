@@ -10,7 +10,7 @@ import os
 import sys
 from itertools import combinations
 
-from gfam.architecture import ArchitectureFileReaderPerArch as ArchReader
+from gfam.architecture_file_reader import ArchitectureFileReader as ArchReader
 from gfam.go import Tree as GOTree
 from gfam.go.overrepresentation import OverrepresentationAnalyser
 from gfam.result_file import ResultFileFilter
