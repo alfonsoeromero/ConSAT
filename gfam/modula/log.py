@@ -67,21 +67,16 @@ class ColoredConsoleHandler(logging.StreamHandler):
             color = '\x1b[31m\x1b[1m'
         elif level >= logging.WARNING:
             color = '\x1b[33m\x1b[1m'
-        elif level >= logging.INFO:
-            color = '\x1b[0m'
         elif level >= logging.DEBUG:
             color = '\x1b[35m'
         else:
             color = '\x1b[0m'
 
         msg = my_record.msg
-        if msg and msg[0] == "[":
-            try:
-                end_pos = msg.index("]")
-                msg = "'\x1b[35m%s\x1b[0m%s" % (msg[:end_pos+1],
-                                                msg[end_pos+1:])
-            except ValueError:
-                pass
+        if msg and msg[0] == "[" and "]" in msg:
+            end_pos = msg.index("]")
+            msg = "'\x1b[35m%s\x1b[0m%s" % (msg[:end_pos+1],
+                                            msg[end_pos+1:])
         my_record.msg = "%s%s\x1b[0m" % (color, msg)
         logging.StreamHandler.emit(self, my_record)
 
