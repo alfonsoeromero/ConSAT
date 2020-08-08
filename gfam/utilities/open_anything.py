@@ -20,9 +20,9 @@ def open_anything(fname, *args, **kwds):
     elif (fname.startswith("http://") or fname.startswith("ftp://") or
           fname.startswith("https://")) and not kwds and not args:
         infile = urlopen(fname)
-    elif fname[-4:] == ".bz2":
+    elif fname.endswith(".bz2"):
         infile = bz2.BZ2File(fname, *args, **kwds)
-    elif fname[-3:] == ".gz":
+    elif fname.endswith(".gz"):
         infile = gzip.GzipFile(fname, *args, **kwds)
     else:
         infile = open(fname, *args, **kwds)
