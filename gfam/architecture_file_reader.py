@@ -1,6 +1,6 @@
 """Classes related to reading protein architecture files in GFam"""
 
-from typing import List
+from typing import Iterator, List, Tuple
 
 from gfam.utilities.open_anything import open_anything
 
@@ -31,20 +31,24 @@ class ArchitectureFileReader:
         self.min_cov = min_coverage_prop
         self._f = filename
 
+    def _read_lines_with_minimum_coverage(self) -> Iterator[Tuple[str, str]]:
+        for line in open(self._f):
+            fields = line.split("\t")
+            prot = fields[0]
+            arch = fields[3]
+            coverage = float(fields[2]) / float(fields[1])
+            if coverage >= self.min_cov:
+                yield prot, arch
+
     def __iter__(self):
         prots: List[str] = []
         previous_arch: str = ""
-        for line in open_anything(self._f):
-            fields = line.split("\t")
-            prot = fields[0]
-            coverage = float(fields[2]) / float(fields[1])
-            arch = fields[3]
+        for prot, arch in self._read_lines_with_minimum_coverage():
             if previous_arch and previous_arch != arch:
                 if prots:
                     yield (previous_arch, prots)
                 prots = []
             previous_arch = arch
-            if coverage >= self.min_cov:
-                prots.append(prot)
+            prots.append(prot)
         if prots and previous_arch != "":
             yield (previous_arch, prots)
