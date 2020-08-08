@@ -27,14 +27,6 @@ class Parser:
         parser = Parser(open("test.ffa"))
         for sequence in parser:
             print sequence.seq
-
-    It also works with remote FASTA files if you use the :mod:`urllib2`
-    module::
-
-        from urllib2 import urlopen
-        parser = Parser(urlopen("ftp://whatever.org/remote_fasta_file.ffa"))
-        for sequence in parser:
-            print sequence.seq
     """
 
     def __init__(self, handle):
