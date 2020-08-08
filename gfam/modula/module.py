@@ -141,10 +141,6 @@ class ModuleManager:
         """Checks if a given module exists"""
         raise NotImplementedError
 
-    def list_modules(self):
-        """Returns a list containing all the valid module names"""
-        raise NotImplementedError
-
 
 class DefaultModuleManager(ModuleManager):
     """Default module manager implementation."""
@@ -177,12 +173,3 @@ class DefaultModuleManager(ModuleManager):
                                        "%s.py" % module_name)):
             return True
         return False
-
-    def list_modules(self):
-        """Returns a list containing all the valid module names"""
-        import fnmatch
-        result = []
-        for f in os.listdir(self.module_dir):
-            if fnmatch.fnmatch(f, '*.py'):
-                result.append(f[0:-3])
-        return result

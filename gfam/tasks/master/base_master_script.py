@@ -40,7 +40,7 @@ class BaseMasterScript(CommandLineApp):
         another `ConfigParser` that tells Modula which tasks to execute and
         where each of the input files are to be found."""
         modula_config_str = textwrap.dedent(
-            self._get_modula_config_as_string())
+            self.get_modula_config_as_string())
 
         modula_config = ConfigParser()
         modula_config.readfp(StringIO(modula_config_str))
@@ -71,7 +71,8 @@ class BaseMasterScript(CommandLineApp):
     def read_config(self):
         """Reads the configuration from the given file and returns an
         appropriate `ConfigParser` instance."""
-        self.options.config_file = self.options.config_file or "consat.cfg"
+        self.options.config_file = self.options.config_file or\
+            self.get_default_config_filename()
 
         config_file = self.options.config_file
         if not os.path.exists(config_file):

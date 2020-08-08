@@ -3,8 +3,6 @@ Modula -- a modular calculation framework for Python
 
 Especially for scientific calculations and stuff
 """
-import optparse
-import os
 import sys
 from collections import deque
 
@@ -49,54 +47,6 @@ def init(configuration=".",
     LOGGER = init_master_logger(debug=debug)
     MODULE_MANAGER = module_manager_factory(CONFIG)
     STORAGE_ENGINE = storage_engine_factory(CONFIG, MODULE_MANAGER)
-
-
-def init_project(rootdir):
-    """Initializes a Modula project in a directory"""
-
-    if not os.path.isdir(rootdir):
-        os.mkdir(rootdir)
-
-    for directory in ["lib", "figures", "modules", "storage"]:
-        full_path = os.path.join(rootdir, directory)
-        if not os.path.isdir(full_path):
-            os.mkdir(full_path)
-
-    modules_fh = os.path.join(rootdir, "modules.cfg")
-    if not os.path.isfile(modules_fh):
-        modules_fh = open(modules_fh, "w")
-        print("""[@global]
-
-[@inputs]
-# Enter input files here in the following format:
-# id1=path
-# id2=path
-# ...
-""", file=modules_fh)
-        modules_fh.close()
-
-
-def main():
-    """Main entry point when Modula is run from the command line"""
-    parser = optparse.OptionParser(usage="%prog [options] [command]")
-    parser.add_option("-f", "--force", dest="force", action="store_true",
-                      help="force the execution of the given command")
-
-    # Parse command line
-    options, args = parser.parse_args()
-    # Initialize the Modula engine
-    init()
-    # Extend the Python path
-    sys.path.insert(0, os.path.join(os.getcwd(), 'lib'))
-
-    # Start the shell
-    from modula.shell import Shell
-    if args:
-        if options.force:
-            args.append("--force")
-        Shell().onecmd(" ".join(args))
-    else:
-        Shell().cmdloop()
 
 
 def run(module_name, force=False, extra_args=None):

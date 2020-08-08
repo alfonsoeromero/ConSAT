@@ -31,12 +31,8 @@ class Configuration:
                 self[k] = v
 
         # Make sure all paths are absolute
-        for k, v in self.items("@paths"):
+        for k, v in list(self.items("@paths")) + list(self.items("@inputs")):
             self["@paths.%s" % k] = os.path.abspath(os.path.expanduser(v))
-
-        # Make sure all input files are absolute
-        for k, v in self.items("@inputs"):
-            self["@inputs.%s" % k] = os.path.abspath(os.path.expanduser(v))
 
     def _parse_name(self, name):
         if "." in name:
@@ -51,15 +47,6 @@ class Configuration:
 
     def get(self, name):
         return self.cfg.get(*self._parse_name(name))
-
-    def getInt(self, name):
-        return self.cfg.getint(*self._parse_name(name))
-
-    def getFloat(self, name):
-        return self.cfg.getfloat(*self._parse_name(name))
-
-    def getBoolean(self, name):
-        return self.cfg.getboolean(*self._parse_name(name))
 
     def items(self, section):
         return self.cfg.items(section)
