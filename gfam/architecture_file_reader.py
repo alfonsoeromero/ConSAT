@@ -44,11 +44,10 @@ class ArchitectureFileReader:
         prots: List[str] = []
         previous_arch: str = ""
         for prot, arch in self._read_lines_with_minimum_coverage():
-            if previous_arch and previous_arch != arch:
-                if prots:
-                    yield (previous_arch, prots)
+            if previous_arch and previous_arch != arch and prots:
+                yield (previous_arch, prots)
                 prots = []
             previous_arch = arch
             prots.append(prot)
-        if prots and previous_arch != "":
+        if previous_arch and prots:
             yield (previous_arch, prots)
