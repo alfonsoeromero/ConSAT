@@ -1,5 +1,6 @@
 import random
 import unittest
+from collections import defaultdict
 
 from gfam.utilities.bidict import Bidict
 
@@ -33,6 +34,21 @@ class TestBidict(unittest.TestCase):
         # act /  assert
         with(self.assertRaises(TypeError)):
             Bidict(non_iterable)
+
+    def test_constructing_with_dict_should_work(self):
+        # arrange
+        dictionary = {"a": [0, 1, 2], "b": [3, 4, 5]}
+        expected_left = {x: set(y) for x, y in dictionary.items()}
+        expected_right = defaultdict(set)
+        for x, y in dictionary.items():
+            for y_i in y:
+                expected_right[y_i].add(x)
+        # act
+        sut = Bidict(dictionary)
+
+        # assert
+        self.assertDictEqual(sut.left, expected_left)
+        self.assertDictEqual(sut.right, expected_right)
 
     def test_iteritems_should_give_all_left_elems(self):
         # arrange
