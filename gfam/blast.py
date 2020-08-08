@@ -1,7 +1,7 @@
 """
 Classes and functions related to BLAST files and utilities
 """
-from gfam import fasta
+from gfam.fasta.parser import Parser
 from gfam.utilities.open_anything import open_anything
 
 __author__ = "Tamas Nepusz"
@@ -78,7 +78,7 @@ class BlastFilter:
         """Loads the sequences from the given file. The file must
         be in FASTA format. You are allowed to pass file pointers
         or names of gzipped/bzipped files here."""
-        return self.load_sequences(fasta.Parser(open_anything(fname)))
+        return self.load_sequences(Parser(open_anything(fname)))
 
     def _normalize_smaller(self, query_id, hit_id, length):
         """Calculates a normalized alignment length by dividing the

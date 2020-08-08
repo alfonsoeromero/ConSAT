@@ -1,15 +1,16 @@
 import logging
 from typing import Optional
 
-from gfam import fasta
 from gfam.assignment_utils.assignment import Assignment
 from gfam.assignment_utils.assignment_overlap_checker import \
     AssignmentOverlapChecker
 from gfam.assignment_utils.sequence_with_assignments import \
     SequenceWithAssignments
+from gfam.fasta import regexp_remapper
+from gfam.fasta.parser import Parser
 from gfam.sequence import SeqRecord
 from gfam.tasks.base import LoggedTask
-from gfam.tasks.find_unassigned.readers.random_access_assignment_reader import \
+from gfam.tasks.find_unassigned.readers.random_access_assignment_reader import\
     RandomAccessAssignmentReader
 from gfam.tasks.find_unassigned.readers.random_access_seg_reader import \
     RandomAccessSEGReader
@@ -80,9 +81,9 @@ class FindUnassignedTask(LoggedTask):
         self._preload_readers(assignment_file, seg_file)
 
         self.log.info(f"Loading sequences from {fasta_file}...")
-        parser = fasta.Parser(open_anything(fasta_file))
-        parser = fasta.regexp_remapper(parser,
-                                       self.sequence_id_regexp)
+        parser = Parser(open_anything(fasta_file))
+        parser = regexp_remapper(parser,
+                                 self.sequence_id_regexp)
         # loop for each sequence and process it
         for i, seq in enumerate(parser):
             if i % 1000000 == 0:

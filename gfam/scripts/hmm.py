@@ -7,7 +7,8 @@ import sys
 from collections import defaultdict
 from subprocess import call
 
-from gfam import fasta
+from gfam.fasta.parser import Parser
+from gfam.fasta.writer import Writer
 from gfam.scripts import CommandLineApp
 from gfam.sequence import SeqRecord
 from gfam.utilities.open_anything import open_anything
@@ -90,13 +91,13 @@ class HMM(CommandLineApp):
     def separate_sequences(self, table, sequences_file):
         """Separates the fasta sequence file in individual fasta files,
            one per cluster"""
-        reader = fasta.Parser(open_anything(sequences_file))
+        reader = Parser(open_anything(sequences_file))
         seqs = dict(((seq.id, seq) for seq in reader))
 
         for cluster_name, cluster_seqs in table.items():
             output_file_name = os.path.join(self.sequences_dir, cluster_name)
             output_fd = open(output_file_name + ".faa", "w")
-            writer = fasta.Writer(output_fd)
+            writer = Writer(output_fd)
 
             for sequence in cluster_seqs:
                 obj = SeqRecord(seqs[sequence].seq, sequence, "", "")

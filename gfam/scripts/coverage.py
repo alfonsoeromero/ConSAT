@@ -3,9 +3,10 @@
 import sys
 from collections import defaultdict
 
-from gfam import fasta
 from gfam.assignment_utils.sequence_with_assignments import \
     SequenceWithAssignments
+from gfam.fasta import regexp_remapper
+from gfam.fasta.parser import Parser
 from gfam.interpro import AssignmentReader
 from gfam.scripts import CommandLineApp
 from gfam.utilities.complementer_set import ComplementerSet
@@ -170,9 +171,9 @@ class CoverageApp(CommandLineApp):
                           % self.options.sequences_file)
             self.total_sequence_length = 0
             self.valid_sequence_ids = set()
-            parser = fasta.Parser(open_anything(self.options.sequences_file))
-            parser = fasta.regexp_remapper(parser,
-                                           self.options.sequence_id_regexp)
+            parser = Parser(open_anything(self.options.sequences_file))
+            parser = regexp_remapper(parser,
+                                     self.options.sequence_id_regexp)
             for seq in parser:
                 self.valid_sequence_ids.add(seq.id)
                 self.total_sequence_length += len(seq.seq)

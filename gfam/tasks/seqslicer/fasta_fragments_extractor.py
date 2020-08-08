@@ -2,7 +2,9 @@ import logging
 import sys
 from typing import Dict, List, Optional, Tuple
 
-from gfam import fasta
+from gfam.fasta import regexp_remapper
+from gfam.fasta.parser import Parser
+from gfam.fasta.fast_writer import FastWriter
 from gfam.sequence import SeqRecord
 from gfam.tasks.seqslicer.slice import Slice
 from gfam.utilities.open_anything import open_anything
@@ -24,11 +26,11 @@ class FastaFragmentsExtractor:
             self.log = log
 
     def _setup_writers(self) -> List:
-        writer = fasta.FastWriter(sys.stdout)
+        writer = FastWriter(sys.stdout)
         writers = [writer]
         if self.output_file is not None:
             output_fd = open(self.output_file, "w")
-            writer_file = fasta.FastWriter(output_fd)
+            writer_file = FastWriter(output_fd)
             writers.append(writer_file)
         return writers
 
@@ -51,8 +53,8 @@ class FastaFragmentsExtractor:
         """Processes the sequences one by one, extracting all the pieces into
         an output fasta file"""
 
-        parser = fasta.Parser(open_anything(seq_file))
-        parser = fasta.regexp_remapper(parser, self.sequence_id_regexp)
+        parser = Parser(open_anything(seq_file))
+        parser = regexp_remapper(parser, self.sequence_id_regexp)
 
         ids_to_process = set(dict_slices.keys())
 

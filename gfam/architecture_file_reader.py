@@ -32,7 +32,7 @@ class ArchitectureFileReader:
         self._f = filename
 
     def _read_lines_with_minimum_coverage(self) -> Iterator[Tuple[str, str]]:
-        for line in open(self._f):
+        for line in open_anything(self._f):
             fields = line.split("\t")
             prot = fields[0]
             arch = fields[3]
