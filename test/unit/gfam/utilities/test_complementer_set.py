@@ -38,3 +38,28 @@ class TestComplementerSet(unittest.TestCase):
         # assert
         with(self.assertRaises(KeyError)):
             sut.remove(2)
+
+    def test_any_unhashable_value_is_always_contained(self):
+        # arrange
+        sut = ComplementerSet()
+
+        # act
+        membership = set() in sut
+
+        # assert
+        self.assertTrue(membership)
+
+    def test_difference_should_result_in_intersection_set_or_break_if_not_set(
+            self):
+        # arrange
+        s1 = set([1, 2, 3])
+
+        # act
+        result1 = s1 - ComplementerSet()
+        result2 = s1 - ComplementerSet([1, 2, 3, 4])
+
+        # assert
+        self.assertSetEqual(result1, set())
+        self.assertSetEqual(result2, set([1, 2])])
+        with self.assertRaises(NotImplementedError):
+            2 - ComplementerSet()
